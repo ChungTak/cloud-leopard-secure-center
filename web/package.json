@@ -1,0 +1,19 @@
+{
+  "name": "cloud-leopard-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint && eslint .",
+    "format": "pnpm -r --if-present format"
+  },
+  "devDependencies": {
+    "eslint": "9.20.1",
+    "prettier": "3.5.3",
+    "typescript": "7.0.2"
+  }
+}

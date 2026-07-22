@@ -1,0 +1,15 @@
+[package]
+name = "domain-configuration"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+repository.workspace = true
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+foundation = { path = "../foundation" }
