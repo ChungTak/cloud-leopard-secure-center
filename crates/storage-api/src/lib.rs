@@ -1,7 +1,9 @@
 //! Storage port traits (repository contract, unit of work).
 
 use async_trait::async_trait;
+use domain_identity::api_key::ApiKey;
 use domain_identity::credential::Credential;
+use domain_identity::mfa::MfaFactor;
 use domain_identity::session::RefreshToken;
 use domain_identity::tenant::Tenant;
 use domain_identity::user::User;
@@ -200,6 +202,58 @@ pub trait SessionRepository: Send + Sync {
         user_id: UserId,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
+}
+
+/// Repository contract for API keys.
+#[async_trait]
+pub trait ApiKeyRepository: Send + Sync {
+    /// Persist a new API key.
+    async fn create(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError>;
+
+    /// Find an API key by id.
+    async fn by_id(&self, id: Uuid, ctx: &RequestContext) -> Result<ApiKey, PlatformError>;
+
+    /// Find an API key by its token hash.
+    async fn by_token_hash(
+        &self,
+        token_hash: &str,
+        ctx: &RequestContext,
+    ) -> Result<Option<ApiKey>, PlatformError>;
+
+    /// Update an existing API key.
+    async fn update(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError>;
+
+    /// List API keys for an owner.
+    async fn list_by_owner(
+        &self,
+        owner_id: UserId,
+        ctx: &RequestContext,
+    ) -> Result<Page<ApiKey>, PlatformError>;
+}
+
+/// Repository contract for MFA factors.
+#[async_trait]
+pub trait MfaRepository: Send + Sync {
+    /// Persist a new factor and its recovery codes.
+    async fn save_factor(
+        &self,
+        factor: &MfaFactor,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Update an existing factor.
+    async fn update_factor(
+        &self,
+        factor: &MfaFactor,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Find the active factor for a user, if any.
+    async fn find_active_factor_by_user(
+        &self,
+        user_id: UserId,
+        ctx: &RequestContext,
+    ) -> Result<Option<MfaFactor>, PlatformError>;
 }
 
 pub fn version() -> &'static str {
