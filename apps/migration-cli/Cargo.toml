@@ -1,0 +1,18 @@
+[package]
+name = "migration-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+application = { path = "../../crates/application" }
+storage-postgres = { path = "../../crates/storage-postgres" }
+message-local = { path = "../../crates/message-local" }
+foundation = { path = "../../crates/foundation" }
