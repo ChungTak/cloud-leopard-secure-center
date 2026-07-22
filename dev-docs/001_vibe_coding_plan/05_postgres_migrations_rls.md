@@ -42,10 +42,10 @@
 
 **前置：** DB-001。
 
-- [ ] audit/login-attempt 按月分区并预建未来分区；默认分区只用于告警，不长期承载数据。
-- [ ] 清理使用有界 batch 和可恢复 checkpoint。
-- [ ] 提供 pg_dump/restore 验证脚本和分区 runbook。
-- [ ] CI 使用 PostgreSQL 17；兼容流水线覆盖下一受支持 major。
+- [x] audit/login-attempt 按月分区并预建未来分区；默认分区只用于告警，不长期承载数据。
+- [x] 清理使用有界 batch 和可恢复 checkpoint。
+- [x] 提供 pg_dump/restore 验证脚本和分区 runbook。
+- [x] CI 使用 PostgreSQL 17；兼容流水线覆盖下一受支持 major。
 
 ## 完成条件
 

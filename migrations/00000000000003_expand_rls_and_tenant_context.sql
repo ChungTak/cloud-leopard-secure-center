@@ -34,10 +34,11 @@ DECLARE
     has_tenant_id boolean;
 BEGIN
     FOR cmd IN
-        SELECT schema_name, split_part(object_identity, '.', 2) AS table_name
-        FROM pg_event_trigger_ddl_commands()
-        WHERE object_type = 'table'
-          AND schema_name IN ('iam', 'org', 'authz', 'resource', 'audit', 'config')
+        SELECT d.schema_name, split_part(d.object_identity, '.', 2) AS table_name, c.relispartition
+        FROM pg_event_trigger_ddl_commands() d
+        JOIN pg_class c ON c.oid = d.objid
+        WHERE d.object_type = 'table'
+          AND d.schema_name IN ('iam', 'org', 'authz', 'resource', 'audit', 'config')
     LOOP
         SELECT EXISTS (
             SELECT 1
@@ -48,22 +49,28 @@ BEGIN
         ) INTO has_tenant_id;
 
         IF has_tenant_id THEN
-            EXECUTE format(
-                'ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;',
-                cmd.schema_name, cmd.table_name
-            );
-            EXECUTE format(
-                'DROP POLICY IF EXISTS tenant_isolation ON %I.%I;',
-                cmd.schema_name, cmd.table_name
-            );
-            EXECUTE format(
-                'CREATE POLICY tenant_isolation ON %I.%I USING (tenant_id = app.current_tenant_id()) WITH CHECK (tenant_id = app.current_tenant_id());',
-                cmd.schema_name, cmd.table_name
-            );
+            -- Privileges must be granted on each partition as well as the parent.
             EXECUTE format(
                 'GRANT SELECT, INSERT, UPDATE, DELETE ON %I.%I TO clsc_app;',
                 cmd.schema_name, cmd.table_name
             );
+
+            -- Partitions inherit RLS/policies from the partitioned parent, so
+            -- only enable and create policies on the parent table.
+            IF NOT cmd.relispartition THEN
+                EXECUTE format(
+                    'ALTER TABLE %I.%I ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;',
+                    cmd.schema_name, cmd.table_name
+                );
+                EXECUTE format(
+                    'DROP POLICY IF EXISTS tenant_isolation ON %I.%I;',
+                    cmd.schema_name, cmd.table_name
+                );
+                EXECUTE format(
+                    'CREATE POLICY tenant_isolation ON %I.%I USING (tenant_id = app.current_tenant_id()) WITH CHECK (tenant_id = app.current_tenant_id());',
+                    cmd.schema_name, cmd.table_name
+                );
+            END IF;
         END IF;
     END LOOP;
 END;
