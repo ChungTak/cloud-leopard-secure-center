@@ -119,6 +119,11 @@ impl Revision {
         Self(self.0 + 1)
     }
 
+    /// Return the previous revision, saturating at 1.
+    pub const fn prev(self) -> Self {
+        Self(self.0.saturating_sub(1))
+    }
+
     /// Access the underlying value.
     pub const fn value(&self) -> u64 {
         self.0

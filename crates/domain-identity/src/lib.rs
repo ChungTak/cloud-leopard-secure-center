@@ -1,5 +1,8 @@
 //! Identity aggregate (users, sessions, credentials).
 
+pub mod auth;
+pub mod credential;
+pub mod password;
 pub mod tenant;
 pub mod user;
 
