@@ -1,5 +1,7 @@
 //! Application layer: use cases, transactions, permission checks, projection, outbox.
 
+pub mod authenticate;
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

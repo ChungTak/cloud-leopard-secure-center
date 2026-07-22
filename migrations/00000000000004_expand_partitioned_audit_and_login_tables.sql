@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS audit.login_attempts (
     tenant_id UUID NOT NULL,
     identity TEXT NOT NULL,
     success BOOLEAN NOT NULL,
-    ip_address INET,
+    ip_address TEXT,
     user_agent TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 ) PARTITION BY RANGE (created_at);

@@ -1,6 +1,7 @@
 //! Storage port traits (repository contract, unit of work).
 
 use async_trait::async_trait;
+use domain_identity::credential::Credential;
 use domain_identity::tenant::Tenant;
 use domain_identity::user::User;
 use foundation::{PlatformError, RequestContext, Revision, TenantId, UserId};
@@ -92,6 +93,73 @@ pub trait UserRepository: Send + Sync {
 
     /// List users visible in the current tenant context.
     async fn list(&self, ctx: &RequestContext) -> Result<Page<User>, PlatformError>;
+}
+
+/// Repository contract for a user's `Credential`.
+#[async_trait]
+pub trait CredentialRepository: Send + Sync {
+    /// Find the credential for a user by type.
+    async fn by_user_and_type(
+        &self,
+        user_id: UserId,
+        credential_type: &str,
+        ctx: &RequestContext,
+    ) -> Result<Credential, PlatformError>;
+
+    /// Persist a new credential.
+    async fn create(
+        &self,
+        credential: &Credential,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Update an existing credential.
+    async fn update(
+        &self,
+        credential: &Credential,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Remove a user's credential.
+    async fn delete(
+        &self,
+        user_id: UserId,
+        credential_type: &str,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+}
+
+/// Repository contract for recording and querying login attempts.
+#[async_trait]
+pub trait LoginAttemptRepository: Send + Sync {
+    /// Record a login attempt for audit and rate-limiting.
+    async fn record(
+        &self,
+        tenant_id: TenantId,
+        identity: &str,
+        ip: Option<String>,
+        success: bool,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Count recent failed attempts for the given identity.
+    async fn count_failures_by_identity(
+        &self,
+        tenant_id: TenantId,
+        identity: &str,
+        window_seconds: i64,
+        ctx: &RequestContext,
+    ) -> Result<i64, PlatformError>;
+
+    /// Count recent failed attempts from the given source IP.
+    async fn count_failures_by_source(
+        &self,
+        tenant_id: TenantId,
+        ip: String,
+        window_seconds: i64,
+        ctx: &RequestContext,
+    ) -> Result<i64, PlatformError>;
 }
 
 pub fn version() -> &'static str {

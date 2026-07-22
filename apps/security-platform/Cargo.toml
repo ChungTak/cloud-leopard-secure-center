@@ -16,3 +16,10 @@ application = { path = "../../crates/application" }
 http-api = { path = "../../crates/http-api" }
 observability = { path = "../../crates/observability" }
 foundation = { path = "../../crates/foundation" }
+
+[dev-dependencies]
+domain-identity = { path = "../../crates/domain-identity" }
+storage-api = { path = "../../crates/storage-api" }
+storage-postgres = { path = "../../crates/storage-postgres" }
+tokio = { version = "=1.52.3", features = ["full"] }
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-none", "postgres", "migrate", "macros", "chrono", "uuid"] }
