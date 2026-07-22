@@ -1387,6 +1387,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "domain-identity",
+ "domain-organization",
  "foundation",
 ]
 
@@ -1396,6 +1397,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "domain-identity",
+ "domain-organization",
  "foundation",
  "sqlx",
  "storage-api",
