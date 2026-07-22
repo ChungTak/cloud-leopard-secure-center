@@ -33,10 +33,10 @@
 
 **前置：** BAS-003、BAS-004。
 
-- [ ] PR jobs：fmt、clippy、nextest、frontend、migration、OpenAPI、Buf、deny/audit、secret scan。
-- [ ] nightly jobs：PostgreSQL/NATS integration、浏览器矩阵、容器扫描、SBOM、aarch64。
-- [ ] 缓存 key 包含工具链和 lockfile hash；生成任务在完成后检查 `git diff --exit-code`。
-- [ ] Renovate/Dependabot 仅创建独立升级 PR，禁止自动合并 major。
+- [x] PR jobs：fmt、clippy、nextest、frontend、migration、OpenAPI、Buf、deny/audit、secret scan。
+- [x] nightly jobs：PostgreSQL/NATS integration、浏览器矩阵、容器扫描、SBOM、aarch64。
+- [x] 缓存 key 包含工具链和 lockfile hash；生成任务在完成后检查 `git diff --exit-code`。
+- [x] Renovate/Dependabot 仅创建独立升级 PR，禁止自动合并 major。
 
 **完成条件：** 故意破坏 Rust、TS、migration、许可证和生成 snapshot 时相应 job 必须失败。
 

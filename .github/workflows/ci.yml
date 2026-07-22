@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: short
+
+jobs:
+  rust-fmt:
+    name: Rust fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  rust-clippy:
+    name: Rust clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: clippy
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  rust-nextest:
+    name: Rust nextest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+      - uses: taiki-e/install-action@cargo-nextest
+      - run: cargo nextest run --workspace
+
+  rust-aarch64:
+    name: Rust aarch64 cross-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - run: cargo check --workspace --target aarch64-unknown-linux-gnu
+
+  rust-deny:
+    name: Rust deny / audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+
+  rust-lint-fixture:
+    name: Lint violation fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: clippy
+      - run: |
+          if cargo clippy --manifest-path fixtures/lint-violation/Cargo.toml -- -D clippy::unwrap_used; then
+            echo "lint fixture unexpectedly passed"
+            exit 1
+          else
+            echo "lint fixture failed as expected"
+          fi
+
+  migration-smoke:
+    name: Migration CLI smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.1
+      - run: cargo run -p migration-cli | grep '"status":"ready"'
+
+  web-check:
+    name: Web typecheck/test/build/lint/format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm --dir web install --frozen-lockfile
+      - run: pnpm --dir web typecheck
+      - run: pnpm --dir web test
+      - run: pnpm --dir web build
+      - run: pnpm --dir web lint
+      - run: pnpm --dir web format
+
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
