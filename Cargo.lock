@@ -344,9 +344,13 @@ name = "domain-identity"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "base64ct",
  "foundation",
+ "hmac",
  "rand_core 0.6.4",
  "serde",
+ "sha1",
+ "sha2 0.11.0",
  "thiserror",
 ]
 

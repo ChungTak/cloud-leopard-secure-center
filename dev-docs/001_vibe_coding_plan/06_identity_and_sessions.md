@@ -16,16 +16,16 @@
 
 ### IAM-003：Token 与 refresh rotation
 **前置：** IAM-002。
-- [ ] access token 只含 subject、tenant、session/version、aud/iss/exp/jti。
-- [ ] refresh token 只存 hash；每次刷新轮换，同 family 重用触发全族撤销。
-- [ ] 用户禁用、密码修改和显式退出递增 session_version/撤销 session。
+- [x] access token 只含 subject、tenant、session/version、aud/iss/exp/jti。
+- [x] refresh token 只存 hash；每次刷新轮换，同 family 重用触发全族撤销。
+- [x] 用户禁用、密码修改和显式退出递增 session_version/撤销 session。
 **测试：** 过期、错误 issuer/audience、旧版本、refresh replay、并发 refresh 仅一方成功。
 
 ### IAM-004：MFA、服务账号与 API key
 **前置：** IAM-003。
-- [ ] MFA 只存 secret ref，恢复码哈希保存；定义 assurance level。
-- [ ] 服务账号/API key 有 scope、来源限制、过期和撤销；key 仅创建时返回一次。
-- [ ] 高风险 action 接收最小 assurance 要求。
+- [x] MFA 只存 secret ref，恢复码哈希保存；定义 assurance level。
+- [x] 服务账号/API key 有 scope、来源限制、过期和撤销；key 仅创建时返回一次。
+- [x] 高风险 action 接收最小 assurance 要求。
 **测试：** MFA replay、过期 key、scope 越界、密钥不进入审计 details。
 
 ## 完成条件
