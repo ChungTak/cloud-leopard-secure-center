@@ -3,7 +3,25 @@
 pub mod tenant_repository;
 
 use foundation::{PlatformError, RequestContext};
+use sqlx::postgres::PgPoolOptions;
 use sqlx::{PgPool, Postgres, Transaction};
+
+/// Run all SQLx migrations in `migrations/` against `database_url`.
+pub async fn run_migrations(database_url: &str) -> Result<(), PlatformError> {
+    let pool = PgPoolOptions::new()
+        .max_connections(1)
+        .connect(database_url)
+        .await
+        .map_err(|e| PlatformError::invalid("database_url", e.to_string()))?;
+
+    sqlx::migrate!("../../migrations")
+        .run(&pool)
+        .await
+        .map_err(|e| PlatformError::invalid("migration", e.to_string()))?;
+
+    pool.close().await;
+    Ok(())
+}
 
 /// Begin a PostgreSQL transaction and bind it to the tenant in `RequestContext`.
 ///

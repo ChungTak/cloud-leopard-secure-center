@@ -41,7 +41,10 @@ async fn create_and_read_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let tenant_id = parse_uuid("018e1234-5678-7abc-8def-0123456789ab");
     let tenant = new_tenant(tenant_id, "acme", None);
 
-    ok_or_panic(repo.create(&tenant, &ctx_for("018e1234-5678-7abc-8def-0123456789ab")).await);
+    ok_or_panic(
+        repo.create(&tenant, &ctx_for("018e1234-5678-7abc-8def-0123456789ab"))
+            .await,
+    );
 
     let loaded = ok_or_panic(
         repo.by_id(tenant.id, &ctx_for("018e1234-5678-7abc-8def-0123456789ab"))

@@ -79,7 +79,7 @@ async fn event_trigger_enables_rls_on_new_tenant_tables(pool: sqlx::PgPool) -> s
             id UUID PRIMARY KEY,
             tenant_id UUID NOT NULL,
             name TEXT NOT NULL
-        )"
+        )",
     )
     .execute(&pool)
     .await?;

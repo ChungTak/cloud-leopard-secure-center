@@ -812,9 +812,7 @@ dependencies = [
 name = "migration-cli"
 version = "0.1.0"
 dependencies = [
- "application",
  "foundation",
- "message-local",
  "sqlx",
  "storage-postgres",
  "tokio",
