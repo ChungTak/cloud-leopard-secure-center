@@ -2,9 +2,9 @@
 
 ### IAM-001：User 聚合与仓储
 **前置：** DB-003。  
-- [ ] 实现 User 的 Pending/Active/Locked/Disabled 状态、username 规范化、session_version 和 revision。
-- [ ] 建立 `iam.users/user_identities` DDL、tenant 唯一索引和 repository。
-- [ ] 状态变化生成领域事件，不直接发布。
+- [x] 实现 User 的 Pending/Active/Locked/Disabled 状态、username 规范化、session_version 和 revision。
+- [x] 建立 `iam.users/user_identities` DDL、tenant 唯一索引和 repository。
+- [x] 状态变化生成领域事件，不直接发布。
 **测试：** 重名、非法迁移、并发更新、跨租户、soft delete 后重建。
 
 ### IAM-002：密码与登录

@@ -1,6 +1,7 @@
 //! PostgreSQL storage adapter.
 
 pub mod tenant_repository;
+pub mod user_repository;
 
 use foundation::{PlatformError, RequestContext};
 use sqlx::postgres::PgPoolOptions;
