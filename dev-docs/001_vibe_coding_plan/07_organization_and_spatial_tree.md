@@ -8,9 +8,9 @@
 
 ### ORG-002：组织树与 closure
 **前置：** ORG-001。
-- [ ] 建立 organization_units/closure，创建节点同时写 self row。
-- [ ] move 在一个事务内验证非自身/非后代，更新 closure 并递增 revision。
-- [ ] 删除前检查子节点和强依赖；列表稳定排序、分页有界。
+- [x] 建立 organization_units/closure，创建节点同时写 self row。
+- [x] move 在一个事务内验证非自身/非后代，更新 closure 并递增 revision。
+- [x] 删除前检查子节点和强依赖；列表稳定排序、分页有界。
 **测试：** 根/深树、移动子树、循环、并发 move、事务中断和跨租户 parent。
 
 ### ORG-003：场所与空间树
