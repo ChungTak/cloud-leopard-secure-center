@@ -22,10 +22,10 @@
 **前置：** BAS-001。  
 **允许路径：** `web/`、根 Node 配置。
 
-- [ ] 固定 Node 22.22.2、pnpm 11.12.0、React 19.2.8、TS 7.0.2、Vite 8.1.4、Semi 2.101.1。
-- [ ] 创建 `web/apps/console`、`web/packages/api-client`、`web/packages/ui`、`web/packages/player`。
-- [ ] 配置 strict TS、ESLint、Prettier、Vitest、Testing Library、Playwright 和 lockfile。
-- [ ] 产物使用相对 asset manifest；禁止运行期从未配置第三方域加载代码。
+- [x] 固定 Node 22.22.2、pnpm 11.12.0、React 19.2.8、TS 7.0.2、Vite 8.1.4、Semi 2.101.1。
+- [x] 创建 `web/apps/console`、`web/packages/api-client`、`web/packages/ui`、`web/packages/player`。
+- [x] 配置 strict TS、ESLint、Prettier、Vitest、Testing Library、Playwright 和 lockfile。
+- [x] 产物使用相对 asset manifest；禁止运行期从未配置第三方域加载代码。
 
 **测试：** `pnpm typecheck && pnpm test && pnpm build`；连续构建产物清单稳定。
 
