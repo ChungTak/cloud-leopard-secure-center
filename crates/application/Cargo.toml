@@ -1,0 +1,22 @@
+[package]
+name = "application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+
+[lints]
+workspace = true
+
+[dependencies]
+domain-identity = { path = "../domain-identity" }
+domain-organization = { path = "../domain-organization" }
+domain-authorization = { path = "../domain-authorization" }
+domain-resource = { path = "../domain-resource" }
+domain-audit = { path = "../domain-audit" }
+domain-configuration = { path = "../domain-configuration" }
+storage-api = { path = "../storage-api" }
+message-api = { path = "../message-api" }
+foundation = { path = "../foundation" }

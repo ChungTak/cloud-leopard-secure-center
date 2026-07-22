@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = [
+    "apps/security-platform",
+    "apps/migration-cli",
+    "crates/foundation",
+    "crates/domain-identity",
+    "crates/domain-organization",
+    "crates/domain-authorization",
+    "crates/domain-resource",
+    "crates/domain-audit",
+    "crates/domain-configuration",
+    "crates/application",
+    "crates/storage-api",
+    "crates/storage-postgres",
+    "crates/message-api",
+    "crates/message-local",
+    "crates/http-api",
+    "crates/observability",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96.1"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ChungTak/cloud-leopard-secure-center"
+authors = ["ChungTak"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+await_holding_lock = "deny"
+
+[profile.release]
+lto = "thin"

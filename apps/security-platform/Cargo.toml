@@ -1,0 +1,18 @@
+[package]
+name = "security-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+application = { path = "../../crates/application" }
+http-api = { path = "../../crates/http-api" }
+observability = { path = "../../crates/observability" }
+foundation = { path = "../../crates/foundation" }

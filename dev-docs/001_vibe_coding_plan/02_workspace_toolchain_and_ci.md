@@ -9,11 +9,11 @@
 **前置：** BAS-001。  
 **允许路径：** 根 Cargo/工具链配置、`apps/`、`crates/` 的 Phase 0 skeleton。
 
-- [ ] 固定 Rust 1.96.1、Edition 2024、resolver 3，提交 `Cargo.lock`。
-- [ ] 创建 `apps/security-platform`、`apps/migration-cli` 和 Phase 0 crates；每个 crate README 写职责、允许/禁止依赖。
-- [ ] 根 workspace 统一依赖，启用 `unsafe_code=forbid`、`unwrap_used/expect_used/await_holding_lock=deny`。
-- [ ] 二进制只完成配置加载、生命周期、健康服务和退出，不承载领域逻辑。
-- [ ] 加入 license、repository、MSRV 和 aarch64 check。
+- [x] 固定 Rust 1.96.1、Edition 2024、resolver 3，提交 `Cargo.lock`。
+- [x] 创建 `apps/security-platform`、`apps/migration-cli` 和 Phase 0 crates；每个 crate README 写职责、允许/禁止依赖。
+- [x] 根 workspace 统一依赖，启用 `unsafe_code=forbid`、`unwrap_used/expect_used/await_holding_lock=deny`。
+- [x] 二进制只完成配置加载、生命周期、健康服务和退出，不承载领域逻辑。
+- [x] 加入 license、repository、MSRV 和 aarch64 check。
 
 **测试：** 空 workspace fmt/clippy/nextest；故意引入违规 lint 的 CI fixture 能失败。
 
