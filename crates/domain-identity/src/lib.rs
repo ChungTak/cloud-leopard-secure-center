@@ -1,9 +1,11 @@
-//! Identity aggregate (users, sessions, credentials).
+//! Identity aggregate (users, sessions, credentials, tokens).
 
 pub mod auth;
 pub mod credential;
 pub mod password;
+pub mod session;
 pub mod tenant;
+pub mod token;
 pub mod user;
 
 pub fn version() -> &'static str {
