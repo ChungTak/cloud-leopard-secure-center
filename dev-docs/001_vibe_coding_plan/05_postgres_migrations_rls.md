@@ -8,11 +8,11 @@
 
 **前置：** FND-001、FND-003。
 
-- [ ] 建立 append-only SQLx migrations 和 `migration-cli`。
-- [ ] 创建 schema、数据库角色、`infra.schema_metadata` 和必要扩展；不依赖非标准扩展实现核心树。
-- [ ] 通用权威表使用 UUID、tenant、revision、UTC 时间、actor 和 soft delete 列。
-- [ ] 状态使用稳定 text + CHECK；JSONB 必须有 schema version 和应用大小限制。
-- [ ] migration 名称标明 expand/backfill/switch/contract；启动只执行短时兼容阶段。
+- [x] 建立 append-only SQLx migrations 和 `migration-cli`。
+- [x] 创建 schema、数据库角色、`infra.schema_metadata` 和必要扩展；不依赖非标准扩展实现核心树。
+- [x] 通用权威表使用 UUID、tenant、revision、UTC 时间、actor 和 soft delete 列。
+- [x] 状态使用稳定 text + CHECK；JSONB 必须有 schema version 和应用大小限制。
+- [x] migration 名称标明 expand/backfill/switch/contract；启动只执行短时兼容阶段。
 
 **测试：** 空库建库、重复执行、上一版本升级、失败回滚；已发布 migration checksum 不变。
 
