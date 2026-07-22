@@ -15,4 +15,6 @@ CREATE TABLE IF NOT EXISTS iam.tenants (
     CONSTRAINT metadata_size_limit CHECK (metadata IS NULL OR length(metadata::text) < 65536)
 );
 
+GRANT SELECT, INSERT, UPDATE, DELETE ON iam.tenants TO clsc_app;
+
 COMMENT ON TABLE iam.tenants IS 'Authoritative table pattern: UUID PK, status CHECK, revision, UTC timestamps, actor, soft delete, JSONB metadata.';

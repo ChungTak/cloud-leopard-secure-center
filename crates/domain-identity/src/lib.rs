@@ -1,5 +1,7 @@
 //! Identity aggregate (users, sessions, credentials).
 
+pub mod tenant;
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
