@@ -1,0 +1,25 @@
+# Cloud Leopard Secure Center example configuration.
+# All values are placeholders and must be replaced before use.
+
+[system]
+log_level = "info"
+
+[http]
+host = "127.0.0.1"
+port = 8080
+
+[storage]
+url = "${secret:db.connection_string}"
+max_connections = 10
+
+[security]
+token_expiry_seconds = 3600
+issuer = "clsc"
+
+[observability]
+trace_collector = "http://localhost:4317"
+metrics_prefix = "clsc"
+
+[runtime]
+worker_threads = 4
+max_blocking_threads = 16
