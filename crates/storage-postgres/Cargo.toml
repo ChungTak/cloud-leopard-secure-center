@@ -13,4 +13,10 @@ workspace = true
 
 [dependencies]
 storage-api = { path = "../storage-api" }
+domain-identity = { path = "../domain-identity" }
 foundation = { path = "../foundation" }
+async-trait = "=0.1.89"
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-none", "postgres", "migrate", "macros", "chrono", "uuid"] }
+
+[dev-dependencies]
+tokio = { version = "=1.52.3", features = ["full"] }

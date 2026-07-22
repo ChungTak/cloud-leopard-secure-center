@@ -104,6 +104,11 @@ impl fmt::Display for ResourceRef {
 pub struct Revision(pub u64);
 
 impl Revision {
+    /// Create the initial revision for a new aggregate.
+    pub const fn initial() -> Self {
+        Self(1)
+    }
+
     /// Create a new revision.
     pub const fn new(value: u64) -> Self {
         Self(value)
@@ -125,6 +130,11 @@ impl Revision {
 pub struct UtcTimestamp(DateTime<Utc>);
 
 impl UtcTimestamp {
+    /// Current UTC timestamp.
+    pub fn now() -> Self {
+        Self(Utc::now())
+    }
+
     /// Parse an RFC 3339 timestamp.
     pub fn parse_rfc3339(input: &str) -> Result<Self, PlatformError> {
         DateTime::parse_from_rfc3339(input)
@@ -413,6 +423,29 @@ pub enum PlatformError {
 }
 
 impl PlatformError {
+    /// Create an error from a stable code and a public-safe message.
+    pub fn new(code: ErrorCode, message: impl Into<String>) -> Self {
+        match code {
+            ErrorCode::Invalid => Self::Invalid {
+                field: "unknown".to_string(),
+                message: message.into(),
+            },
+            ErrorCode::Unauthenticated => Self::Unauthenticated,
+            ErrorCode::Denied => Self::Denied,
+            ErrorCode::NotFound => Self::NotFound,
+            ErrorCode::Exists => Self::Exists,
+            ErrorCode::Conflict => Self::Conflict,
+            ErrorCode::RateLimit => Self::RateLimit,
+            ErrorCode::Timeout => Self::Timeout,
+            ErrorCode::Cancelled => Self::Cancelled,
+            ErrorCode::Unavailable => Self::Unavailable,
+            ErrorCode::Unsupported => Self::Unsupported,
+            ErrorCode::VersionMismatch => Self::VersionMismatch,
+            ErrorCode::UnknownOutcome => Self::UnknownOutcome,
+            ErrorCode::Internal => Self::Internal,
+        }
+    }
+
     /// Create an invalid-field error.
     pub fn invalid(field: &str, message: impl Into<String>) -> Self {
         Self::Invalid {

@@ -13,3 +13,4 @@ workspace = true
 
 [dependencies]
 foundation = { path = "../foundation" }
+thiserror = "=2.0.18"

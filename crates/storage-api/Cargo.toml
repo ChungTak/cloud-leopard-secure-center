@@ -13,3 +13,5 @@ workspace = true
 
 [dependencies]
 foundation = { path = "../foundation" }
+domain-identity = { path = "../domain-identity" }
+async-trait = "=0.1.89"
