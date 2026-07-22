@@ -12,10 +12,10 @@ domain 禁止依赖 Tokio、Axum、Tonic、SQLx、NATS、HTTP/Proto DTO。applic
 
 **前置：** BAS-003。
 
-- [ ] 创建 foundation、六个首期 domain、application、storage-api/postgres、message-api/local、http-api、observability。
-- [ ] signaling、message-nats、plugin crates 到对应阶段再加入 members，避免空 skeleton 冒充能力。
-- [ ] 所有依赖通过构造器注入；禁止 service locator、全局 mutable singleton。
-- [ ] 公共类型只从其权威 crate 导出，禁止循环 re-export。
+- [x] 创建 foundation、六个首期 domain、application、storage-api/postgres、message-api/local、http-api、observability。
+- [x] signaling、message-nats、plugin crates 到对应阶段再加入 members，避免空 skeleton 冒充能力。
+- [x] 所有依赖通过构造器注入；禁止 service locator、全局 mutable singleton。
+- [x] 公共类型只从其权威 crate 导出，禁止循环 re-export。
 
 **验收：** `cargo metadata` 生成图与本文件一致；domain feature 组合不能引入 adapter。
 
@@ -23,10 +23,10 @@ domain 禁止依赖 Tokio、Axum、Tonic、SQLx、NATS、HTTP/Proto DTO。applic
 
 **前置：** ARC-001。
 
-- [ ] 建立 architecture-test，读取 metadata 并验证层级、禁用依赖和 crate 前缀。
-- [ ] 检查 app 源码不出现 SQL query、业务 aggregate 或协议解析器。
-- [ ] 检查 domain 不出现 framework crate 和生成 DTO。
-- [ ] 用故意违规 fixture 证明检查有效。
+- [x] 建立 architecture-test，读取 metadata 并验证层级、禁用依赖和 crate 前缀。
+- [x] 检查 app 源码不出现 SQL query、业务 aggregate 或协议解析器。
+- [x] 检查 domain 不出现 framework crate 和生成 DTO。
+- [x] 用故意违规 fixture 证明检查有效。
 
 ### ARC-003：角色化装配
 
