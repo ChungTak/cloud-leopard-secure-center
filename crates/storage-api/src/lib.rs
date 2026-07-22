@@ -2,9 +2,10 @@
 
 use async_trait::async_trait;
 use domain_identity::credential::Credential;
+use domain_identity::session::RefreshToken;
 use domain_identity::tenant::Tenant;
 use domain_identity::user::User;
-use foundation::{PlatformError, RequestContext, Revision, TenantId, UserId};
+use foundation::{PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid};
 
 /// Page of results returned by a repository list query.
 #[derive(Debug, Clone)]
@@ -160,6 +161,45 @@ pub trait LoginAttemptRepository: Send + Sync {
         window_seconds: i64,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError>;
+}
+
+/// Repository contract for sessions and refresh token families.
+#[async_trait]
+pub trait SessionRepository: Send + Sync {
+    /// Persist a new refresh token.
+    async fn save_refresh_token(
+        &self,
+        token: &RefreshToken,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Find a refresh token by its hash.
+    async fn find_refresh_token_by_hash(
+        &self,
+        token_hash: &str,
+        ctx: &RequestContext,
+    ) -> Result<Option<RefreshToken>, PlatformError>;
+
+    /// Mark a refresh token as used. Returns `Conflict` if already used.
+    async fn mark_refresh_token_used(
+        &self,
+        token: &RefreshToken,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Revoke every token in the given family.
+    async fn revoke_family(
+        &self,
+        family_id: Uuid,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Revoke all sessions for a user.
+    async fn revoke_user_sessions(
+        &self,
+        user_id: UserId,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
 }
 
 pub fn version() -> &'static str {
