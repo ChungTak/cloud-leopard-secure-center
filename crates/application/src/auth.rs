@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_identity::user::{User, UserStatus};
 use foundation::{Clock, ErrorCode, PlatformError, RequestContext, TenantId, UserId};
 use std::sync::Arc;
-use storage_api::UserRepository;
+use storage_api::{TenantRepository, UserRepository};
 
 use crate::token_service::TokenService;
 
@@ -29,11 +29,12 @@ pub trait Authenticator: Send + Sync {
 }
 
 /// Token-backed authenticator that validates algorithm, claims, signature,
-/// current session version, and user status.
+/// current session version, user status, and tenant lifecycle.
 #[derive(Clone)]
 pub struct TokenAuthenticator {
     token_service: TokenService,
     users: Arc<dyn UserRepository>,
+    tenants: Arc<dyn TenantRepository>,
     clock: Arc<dyn Clock>,
 }
 
@@ -48,18 +49,20 @@ impl TokenAuthenticator {
     pub fn new(
         token_service: TokenService,
         users: Arc<dyn UserRepository>,
+        tenants: Arc<dyn TenantRepository>,
         clock: Arc<dyn Clock>,
     ) -> Self {
         Self {
             token_service,
             users,
+            tenants,
             clock,
         }
     }
 
     /// Determine whether the user referenced by the token is allowed to authenticate.
     fn user_is_valid(&self, user: &User) -> Result<(), PlatformError> {
-        if user.status != UserStatus::Active {
+        if user.deleted_at.is_some() || user.status != UserStatus::Active {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -97,6 +100,18 @@ impl Authenticator for TokenAuthenticator {
             ));
         }
         if claims.tenant_id != user.tenant_id {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+
+        let tenant = self
+            .tenants
+            .by_id(user.tenant_id, &ctx)
+            .await
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        if !tenant.allows_new_sessions() {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
