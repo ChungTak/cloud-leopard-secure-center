@@ -4,6 +4,7 @@
 //! rolling upgrades, and disaster recovery orchestration are deferred.
 
 pub mod release;
+pub mod upgrade;
 
 /// Return the crate version.
 pub fn version() -> &'static str {

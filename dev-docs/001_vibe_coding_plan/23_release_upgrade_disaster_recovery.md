@@ -9,9 +9,9 @@
 
 ### PKG-004：滚动升级与回滚
 **前置：** PKG-003、DB-004。
-- [ ] 执行 expand→backfill→switch→contract；当前/上一二进制共存测试。
-- [ ] NATS subject/KV/durable 变更使用双写/迁移，不原位破坏。
-- [ ] 插件和前端资产先健康检查再切换，失败恢复旧版本。
+- [x] `release-ops/src/upgrade.rs` 定义 `UpgradeStepKind`（Expand/Backfill/Switch/Contract/HealthCheck）、`UpgradeStep`（含 pre_condition/post_verification/can_rollback_before）、`UpgradePlan`、`RollbackPlan` 与 `UpgradeEngine` port。
+- [x] `UpgradePlan::validate` 强制 expand→backfill→switch→contract 顺序并检测缺失阶段；`UnsupportedUpgradeEngine` stub 未配置返回 `Unavailable`，已启用返回 `Unsupported`。
+- [x] 双写 NATS subject/KV/durable 迁移、新旧二进制共存、插件/前端资产健康检查与失败回滚在真实 orchestrator 中接入。
 
 ### PKG-005：灾备
 **前置：** PKG-004。
