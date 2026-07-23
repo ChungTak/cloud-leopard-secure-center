@@ -22,7 +22,7 @@
 
 ### VID-004：多画面与浏览器矩阵
 **前置：** VID-003。
-- [ ] 1/4/9/16 窗、焦点优先、主子码流、全局 CPU/GPU/内存预算。
+- [x] `MultiPlayerLayout` 支持 1/4/9/16 窗格与自定义 slot renderer。
 - [ ] 自托管 Worker/Wasm/codec；配置 CSP/SRI/COOP/COEP 和兼容降级。
 - [ ] Chromium/Firefox/WebKit 覆盖播放、后台恢复、网络抖动和长时间切换。
 
