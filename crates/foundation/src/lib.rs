@@ -76,6 +76,7 @@ id_newtype!(MessageId);
 id_newtype!(AlarmId);
 id_newtype!(NodeId);
 id_newtype!(TagId);
+id_newtype!(PluginId);
 id_newtype!(ExternalBindingId);
 id_newtype!(OperationId);
 id_newtype!(MediaSessionId);

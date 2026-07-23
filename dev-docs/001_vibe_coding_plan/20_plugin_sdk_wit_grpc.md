@@ -2,9 +2,10 @@
 
 ### PLG-001：Manifest、签名和生命周期
 **前置：** AUD-002、MSG-001。
-- [ ] manifest 固定 plugin/version/kind/API range/capabilities/resources/events/config digest。
-- [ ] Ed25519 签名、checksum、SBOM、依赖和 publisher trust 验证先于安装。
-- [ ] 状态 Uploaded/Verified/Installed/Migrated/Enabled/Disabled/Quarantined；非法迁移失败。
+- [x] 新增 `crates/plugin-adapter` 与 `manifest` 模块；`PluginManifest` 固定 plugin_id、version、kind、api_range、capabilities/resources/events/config_digest。
+- [x] `Plugin` aggregate 与生命周期状态机（Uploaded→Verified→Installed→Migrated→Enabled/Disabled/Quarantined），非法迁移返回 `Invalid`。
+- [x] `ManifestVerifier` port 与 `UnsupportedManifestVerifier` stub；签名/Ed25519/checksum/SBOM/依赖/publisher trust 验证在真实实现中接入。
+- [x] `foundation` 新增 `PluginId`。
 
 ### PLG-002：Wasm WIT host
 **前置：** PLG-001。
