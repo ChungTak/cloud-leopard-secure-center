@@ -190,6 +190,70 @@ pub(crate) struct ListQuery {
     pub node_type: Option<String>,
 }
 
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct DeviceListQuery {
+    #[serde(default)]
+    pub search: Option<String>,
+    #[serde(default)]
+    pub organization_id: Option<String>,
+    #[serde(default)]
+    pub area_id: Option<String>,
+    #[serde(default)]
+    pub lifecycle: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct CameraListQuery {
+    #[serde(default)]
+    pub search: Option<String>,
+    #[serde(default)]
+    pub device_id: Option<String>,
+    #[serde(default)]
+    pub area_id: Option<String>,
+    #[serde(default)]
+    pub sensitivity: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct TagListQuery {
+    #[serde(default)]
+    pub resource_type: Option<String>,
+    #[serde(default)]
+    pub resource_id: Option<String>,
+    #[serde(default)]
+    pub search: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct ExternalBindingListQuery {
+    #[serde(default)]
+    pub resource_type: Option<String>,
+    #[serde(default)]
+    pub resource_id: Option<String>,
+    #[serde(default)]
+    pub search: Option<String>,
+    #[serde(default)]
+    pub state: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct ProjectionListQuery {
+    #[serde(default)]
+    pub device_id: Option<String>,
+    #[serde(default)]
+    pub is_stale: Option<bool>,
+}
+
 /// List organization units.
 #[utoipa::path(
     get,
@@ -670,7 +734,7 @@ pub(crate) async fn explain_auth(
     )
 )]
 pub(crate) async fn list_devices(
-    Query(_q): Query<ListQuery>,
+    Query(_q): Query<DeviceListQuery>,
 ) -> Result<Json<Vec<DeviceDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
@@ -757,7 +821,7 @@ pub(crate) async fn delete_device(Path(_id): Path<String>) -> Result<(), AppErro
     )
 )]
 pub(crate) async fn list_cameras(
-    Query(_q): Query<ListQuery>,
+    Query(_q): Query<CameraListQuery>,
 ) -> Result<Json<Vec<CameraDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
@@ -824,7 +888,9 @@ pub(crate) async fn delete_camera(Path(_id): Path<String>) -> Result<(), AppErro
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn list_tags(Query(_q): Query<ListQuery>) -> Result<Json<Vec<TagDto>>, AppError> {
+pub(crate) async fn list_tags(
+    Query(_q): Query<TagListQuery>,
+) -> Result<Json<Vec<TagDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -891,7 +957,7 @@ pub(crate) async fn delete_tag(Path(_id): Path<String>) -> Result<(), AppError> 
     )
 )]
 pub(crate) async fn list_external_bindings(
-    Query(_q): Query<ListQuery>,
+    Query(_q): Query<ExternalBindingListQuery>,
 ) -> Result<Json<Vec<ExternalBindingDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
@@ -959,7 +1025,7 @@ pub(crate) async fn delete_external_binding(Path(_id): Path<String>) -> Result<(
     )
 )]
 pub(crate) async fn list_projections(
-    Query(_q): Query<ListQuery>,
+    Query(_q): Query<ProjectionListQuery>,
 ) -> Result<Json<Vec<ProjectionStateDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
