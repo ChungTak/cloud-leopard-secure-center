@@ -73,6 +73,7 @@ id_newtype!(CameraId);
 id_newtype!(BindingId);
 id_newtype!(AuditId);
 id_newtype!(MessageId);
+id_newtype!(AlarmId);
 id_newtype!(NodeId);
 id_newtype!(TagId);
 id_newtype!(ExternalBindingId);

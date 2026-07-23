@@ -2,10 +2,10 @@
 
 ### ALM-001：告警聚合与存储
 **前置：** MSG-002、AUTH-003。
-- [ ] 状态 NEW→ACKNOWLEDGED→PROCESSING→RESOLVED→CLOSED，显式 SUPPRESSED/MERGED/REOPENED。
-- [ ] 建立 alarm/alarm_events/assignments/actions/evidence；证据存对象引用和 checksum。
-- [ ] dedup key、aggregation window、severity 和 tenant policy 均有上限。
-**测试：** 全迁移表、重复事件、并发处置、越权、证据损坏。
+- [x] 新增 `crates/domain-alarm`：定义 `AlarmState`（NEW→ACKNOWLEDGED→PROCESSING→RESOLVED→CLOSED，外加 SUPPRESSED/MERGED/REOPENED）、`Severity`、`AlarmAction`、`EvidenceRef`、`DedupKey`、`AlarmEvent`、`Alarm` aggregate。
+- [x] `Alarm` 支持新建、ack/assign/resolve/close/reopen/suppress/merge 状态机，以及 `UnsupportedAlarmRepository` port stub。
+- [x] `foundation` 新增 `AlarmId`。持久化/租户上限/并发越权/证据损坏在后续 `domain-alarm` Postgres 实现中继续。
+**测试：** alarm 起始状态、ack 状态迁移、非法 close、`UnsupportedAlarmRepository` 返回 unsupported。
 
 ### ALM-002：通知
 **前置：** ALM-001、APP-003。

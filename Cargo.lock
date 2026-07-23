@@ -400,6 +400,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "domain-alarm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "foundation",
+ "futures",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "domain-audit"
 version = "0.1.0"
 dependencies = [

@@ -9,6 +9,7 @@ members = [
     "crates/domain-authorization",
     "crates/domain-resource",
     "crates/domain-audit",
+    "crates/domain-alarm",
     "crates/domain-configuration",
     "crates/domain-signaling",
     "crates/domain-media",
