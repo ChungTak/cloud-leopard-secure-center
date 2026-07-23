@@ -505,6 +505,140 @@ impl From<&domain_resource::camera::Camera> for CameraDto {
     }
 }
 
+/// Request to create a managed device.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateDeviceRequest {
+    pub organization_id: Option<String>,
+    pub area_id: Option<String>,
+    pub code: String,
+    pub name: String,
+    pub serial: Option<String>,
+}
+
+/// Request to update a managed device.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateDeviceRequest {
+    pub organization_id: Option<String>,
+    pub area_id: Option<String>,
+    pub name: String,
+    pub serial: Option<String>,
+    pub expected_revision: u64,
+}
+
+/// Request to change a device lifecycle.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeDeviceLifecycleRequest {
+    pub lifecycle: String,
+    pub expected_revision: u64,
+}
+
+/// Request to create a camera.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateCameraRequest {
+    pub device_id: String,
+    pub area_id: Option<String>,
+    pub code: String,
+    pub name: String,
+    pub sensitivity: String,
+}
+
+/// Request to update a camera.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateCameraRequest {
+    pub area_id: Option<String>,
+    pub name: String,
+    pub sensitivity: String,
+    pub is_enabled: bool,
+    pub expected_revision: u64,
+}
+
+/// Stable API representation of a tag.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TagDto {
+    pub id: String,
+    pub tenant_id: String,
+    pub resource_type: String,
+    pub resource_id: String,
+    pub key: String,
+    pub value: String,
+    pub revision: u64,
+    pub created_at: String,
+    pub updated_at: String,
+    pub actor: Option<String>,
+}
+
+/// Request to create a tag.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTagRequest {
+    pub resource_type: String,
+    pub resource_id: String,
+    pub key: String,
+    pub value: String,
+}
+
+/// Request to update a tag.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTagRequest {
+    pub value: String,
+    pub expected_revision: u64,
+}
+
+/// Stable API representation of an external binding.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalBindingDto {
+    pub id: String,
+    pub tenant_id: String,
+    pub resource_type: String,
+    pub resource_id: String,
+    pub external_ref: String,
+    pub external_kind: String,
+    pub state: String,
+    pub activated_at: Option<String>,
+    pub revision: u64,
+    pub created_at: String,
+    pub updated_at: String,
+    pub actor: Option<String>,
+}
+
+/// Request to create an external binding.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateExternalBindingRequest {
+    pub resource_type: String,
+    pub resource_id: String,
+    pub external_ref: String,
+    pub external_kind: String,
+}
+
+/// Request to resolve an external binding conflict.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResolveExternalBindingConflictRequest {
+    pub action: String,
+    pub expected_revision: u64,
+}
+
+/// Stable API representation of a projection node.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectionStateDto {
+    pub channel_id: String,
+    pub device_id: String,
+    pub tenant_id: String,
+    pub is_online: bool,
+    pub observed_at: String,
+    pub is_stale: bool,
+}
+
 /// Stable API representation of an audit record.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
