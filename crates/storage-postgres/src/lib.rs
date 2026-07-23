@@ -1,7 +1,9 @@
 //! PostgreSQL storage adapter.
 
 pub mod api_key_repository;
+pub mod camera_repository;
 pub mod credential_repository;
+pub mod device_repository;
 pub mod login_attempt_repository;
 pub mod mfa_repository;
 pub mod organization_unit_repository;

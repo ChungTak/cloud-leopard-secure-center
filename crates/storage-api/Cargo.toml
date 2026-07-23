@@ -16,4 +16,5 @@ foundation = { path = "../foundation" }
 domain-authorization = { path = "../domain-authorization" }
 domain-identity = { path = "../domain-identity" }
 domain-organization = { path = "../domain-organization" }
+domain-resource = { path = "../domain-resource" }
 async-trait = "=0.1.89"
