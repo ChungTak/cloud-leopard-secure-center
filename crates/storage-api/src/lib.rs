@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use domain_authorization::role::Role;
+use domain_authorization::role_binding::RoleBinding;
 use domain_identity::api_key::ApiKey;
 use domain_identity::credential::Credential;
 use domain_identity::mfa::MfaFactor;
@@ -11,8 +12,8 @@ use domain_organization::organization_unit::OrganizationUnit;
 use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
 use foundation::{
-    AreaId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext, Revision, RoleId,
-    SiteId, TenantId, UserId, uuid::Uuid,
+    AreaId, BindingId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext,
+    Revision, RoleId, SiteId, TenantId, UserId, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -419,6 +420,47 @@ pub trait RoleRepository: Send + Sync {
 
     /// List roles in the current tenant context.
     async fn list(&self, ctx: &RequestContext) -> Result<Page<Role>, PlatformError>;
+}
+
+/// Repository contract for the `RoleBinding` aggregate.
+#[async_trait]
+pub trait RoleBindingRepository: Send + Sync {
+    /// Find a role binding by id, including its resource set members.
+    async fn by_id(
+        &self,
+        id: BindingId,
+        ctx: &RequestContext,
+    ) -> Result<RoleBinding, PlatformError>;
+
+    /// Persist a new role binding.
+    async fn create(
+        &self,
+        binding: &RoleBinding,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Update an existing role binding and its resource set.
+    async fn update(
+        &self,
+        binding: &RoleBinding,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Soft-delete a role binding.
+    async fn delete(
+        &self,
+        id: BindingId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// List active bindings for a principal in the current tenant context.
+    async fn list_by_principal(
+        &self,
+        principal_id: UserId,
+        ctx: &RequestContext,
+    ) -> Result<Page<RoleBinding>, PlatformError>;
 }
 
 pub fn version() -> &'static str {

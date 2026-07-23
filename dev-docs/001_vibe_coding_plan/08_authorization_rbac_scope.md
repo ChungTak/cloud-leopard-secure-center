@@ -9,9 +9,9 @@
 
 ### AUTH-002：RoleBinding 与 scope
 **前置：** AUTH-001、ORG-002、ORG-003。
-- [ ] 支持 Tenant/OrganizationSubtree/AreaSubtree/ResourceSet，scope_ref 与类型匹配。
-- [ ] principal、role、scope 必须同租户；valid_from/until 使用 UTC。
-- [ ] ResourceSet 成员用 typed ResourceRef，数量和批量导入有上限。
+- [x] 支持 Tenant/OrganizationSubtree/AreaSubtree/ResourceSet，scope_ref 与类型匹配。
+- [x] principal、role、scope 必须同租户；valid_from/until 使用 UTC。
+- [x] ResourceSet 成员用 typed ResourceRef，数量和批量导入有上限。
 **测试：** 过期绑定、组织/区域后代、资源集、移动树后权限变化。
 
 ### AUTH-003：AuthorizationPort
