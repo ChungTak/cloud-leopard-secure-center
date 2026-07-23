@@ -15,7 +15,7 @@
 
 ### VID-003：SecurityPlayer 包装
 **前置：** VID-002、UPR-MED-001。
-- [ ] 锁定 `@cheetah-media/web/components` 产物和资源 checksum。
+- [x] `SecurityPlayer` wrapper with `StreamSource`, `token` redaction, load/stop lifecycle, main/sub stream switch, and `unsupported` fallback.
 - [ ] 包装 load/stop/destroy、事件、token refresh、主子码流、诊断脱敏。
 - [ ] 路由卸载、登出、租户切换和 error boundary 均释放 Worker/Wasm/media element。
 **测试：** firstframe、fallback、过期刷新 single-flight、销毁幂等、资源泄漏。
