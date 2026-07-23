@@ -6,8 +6,11 @@ use domain_identity::credential::Credential;
 use domain_identity::mfa::MfaFactor;
 use domain_identity::session::RefreshToken;
 use domain_identity::user::User;
+use domain_organization::organization_unit::OrganizationUnit;
 use domain_organization::tenant::Tenant;
-use foundation::{PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid};
+use foundation::{
+    OrganizationId, PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid,
+};
 
 /// Page of results returned by a repository list query.
 #[derive(Debug, Clone)]
@@ -57,6 +60,46 @@ pub trait TenantRepository: Send + Sync {
 
     /// List tenants visible in the current tenant context.
     async fn list(&self, ctx: &RequestContext) -> Result<Page<Tenant>, PlatformError>;
+}
+
+/// Repository contract for the `OrganizationUnit` aggregate.
+///
+/// All mutating methods take an `expected` revision and return
+/// `REVISION_CONFLICT` or `NOT_FOUND` when the row is missing or stale.
+#[async_trait]
+pub trait OrganizationUnitRepository: Send + Sync {
+    /// Find an organization unit by id.
+    async fn by_id(
+        &self,
+        id: OrganizationId,
+        ctx: &RequestContext,
+    ) -> Result<OrganizationUnit, PlatformError>;
+
+    /// Persist a new organization unit and its closure entries.
+    async fn create(
+        &self,
+        unit: &OrganizationUnit,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Update an organization unit, including closure changes when the parent moves.
+    async fn update(
+        &self,
+        unit: &OrganizationUnit,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Soft-delete an organization unit when it has no children.
+    async fn delete(
+        &self,
+        id: OrganizationId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// List organization units in the current tenant context, ordered by code.
+    async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError>;
 }
 
 /// Repository contract for the `User` aggregate.

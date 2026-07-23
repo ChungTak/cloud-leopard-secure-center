@@ -1,5 +1,6 @@
 //! Organization aggregate (tenants, org units, spatial tree).
 
+pub mod organization_unit;
 pub mod tenant;
 
 pub fn version() -> &'static str {
