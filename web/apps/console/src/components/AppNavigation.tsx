@@ -7,7 +7,13 @@ import Can from './Can.tsx';
 
 interface NavItem {
   to: string;
-  labelKey: 'dashboard' | 'tenants' | 'users' | 'settings';
+  labelKey:
+    | 'dashboard'
+    | 'tenants'
+    | 'users'
+    | 'settings'
+    | 'organizations'
+    | 'spatial';
   permission?: string;
 }
 
@@ -19,6 +25,12 @@ const items: NavItem[] = [
     permission: 'platform:tenant:read',
   },
   { to: '/admin/users', labelKey: 'users', permission: 'tenant:user:read' },
+  {
+    to: '/admin/organizations',
+    labelKey: 'organizations',
+    permission: 'tenant:organization:read',
+  },
+  { to: '/admin/spatial', labelKey: 'spatial', permission: 'tenant:site:read' },
   {
     to: '/admin/settings',
     labelKey: 'settings',
