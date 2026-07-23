@@ -20,7 +20,11 @@ use crate::{
 /// In-memory idempotency store keyed by request signature.
 #[derive(Clone)]
 pub struct IdempotencyState {
-    inner: Arc<Mutex<HashMap<IdempotencyKey, CachedResponse>>>,
+    /// Completed responses indexed by idempotency key.
+    cache: Arc<Mutex<HashMap<IdempotencyKey, CachedResponse>>>,
+    /// Per-key claims used to serialize concurrent requests sharing the same
+    /// idempotency key without blocking unrelated requests.
+    claims: Arc<Mutex<HashMap<IdempotencyKey, Arc<Mutex<()>>>>>,
     ttl: Duration,
 }
 
@@ -46,7 +50,8 @@ impl IdempotencyState {
     /// Create an in-memory idempotency store with the given TTL.
     pub fn new(ttl: Duration) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(HashMap::new())),
+            cache: Arc::new(Mutex::new(HashMap::new())),
+            claims: Arc::new(Mutex::new(HashMap::new())),
             ttl,
         }
     }
@@ -80,23 +85,46 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     // Preserve the original request parts and re-inject the collected body.
     let req = Request::from_parts(parts, Body::from(body_bytes));
 
-    // Hold the lock across the handler so concurrent requests with the same
-    // idempotency key see a single execution result.
-    let mut store = state.inner.lock().await;
+    // Acquire a per-key claim so concurrent requests with the same idempotency
+    // key wait for a single execution, while unrelated requests are not blocked.
+    let claim = {
+        let mut claims = state.claims.lock().await;
+        Arc::clone(
+            claims
+                .entry(key.clone())
+                .or_insert_with(|| Arc::new(Mutex::new(()))),
+        )
+    };
+    let _guard = claim.lock().await;
 
-    if let Some(cached) = store.get(&key) {
-        if cached.digest == digest {
-            return Ok(build_response(cached));
+    // Check the cache now that we own the claim; remove the claim entry so it
+    // does not leak for keys that are already resolved.
+    {
+        let mut cache = state.cache.lock().await;
+        let now = Instant::now();
+        cache.retain(|_, cached| cached.expires_at > now);
+        if let Some(cached) = cache.get(&key).cloned() {
+            drop(cache);
+            state.claims.lock().await.remove(&key);
+            if cached.digest == digest {
+                return Ok(build_response(&cached));
+            }
+            return Err(AppError::Conflict);
         }
-        return Err(AppError::Conflict);
     }
 
     let response = next.run(req).await;
     let cached = cache_response(response, digest, state.ttl).await?;
 
-    let now = Instant::now();
-    store.retain(|_, cached| cached.expires_at > now);
-    store.insert(key, cached.clone());
+    // Cache the computed response and drop the per-key claim.
+    {
+        let mut cache = state.cache.lock().await;
+        let now = Instant::now();
+        cache.retain(|_, cached| cached.expires_at > now);
+        cache.insert(key.clone(), cached.clone());
+        drop(cache);
+        state.claims.lock().await.remove(&key);
+    }
 
     Ok(build_response(&cached))
 }
