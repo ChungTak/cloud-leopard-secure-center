@@ -2,9 +2,9 @@
 
 ### AUTH-001：Permission 与 Role
 **前置：** IAM-001、ORG-001。
-- [ ] 固定 permission key registry；未知 key 不能写入角色。
-- [ ] 实现 Role、role_permissions 和内置角色保护；租户角色不能授予平台权限。
-- [ ] 权限变更递增 role revision 并使缓存失效。
+- [x] 固定 permission key registry；未知 key 不能写入角色。
+- [x] 实现 Role、role_permissions 和内置角色保护；租户角色不能授予平台权限。
+- [x] 权限变更递增 role revision 并使缓存失效。
 **测试：** 重名、未知权限、内置角色保护、跨租户 permission assignment。
 
 ### AUTH-002：RoleBinding 与 scope

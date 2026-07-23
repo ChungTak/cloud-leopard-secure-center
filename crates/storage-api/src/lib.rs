@@ -1,6 +1,7 @@
 //! Storage port traits (repository contract, unit of work).
 
 use async_trait::async_trait;
+use domain_authorization::role::Role;
 use domain_identity::api_key::ApiKey;
 use domain_identity::credential::Credential;
 use domain_identity::mfa::MfaFactor;
@@ -10,8 +11,8 @@ use domain_organization::organization_unit::OrganizationUnit;
 use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
 use foundation::{
-    AreaId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext, Revision, SiteId,
-    TenantId, UserId, uuid::Uuid,
+    AreaId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext, Revision, RoleId,
+    SiteId, TenantId, UserId, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -389,6 +390,35 @@ pub trait MfaRepository: Send + Sync {
         user_id: UserId,
         ctx: &RequestContext,
     ) -> Result<Option<MfaFactor>, PlatformError>;
+}
+
+/// Repository contract for the `Role` aggregate.
+#[async_trait]
+pub trait RoleRepository: Send + Sync {
+    /// Find a role by id, including its permissions.
+    async fn by_id(&self, id: RoleId, ctx: &RequestContext) -> Result<Role, PlatformError>;
+
+    /// Persist a new role and its permissions.
+    async fn create(&self, role: &Role, ctx: &RequestContext) -> Result<(), PlatformError>;
+
+    /// Update an existing role and its permissions, failing if `expected` does not match.
+    async fn update(
+        &self,
+        role: &Role,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Soft-delete a role by id.
+    async fn delete(
+        &self,
+        id: RoleId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// List roles in the current tenant context.
+    async fn list(&self, ctx: &RequestContext) -> Result<Page<Role>, PlatformError>;
 }
 
 pub fn version() -> &'static str {

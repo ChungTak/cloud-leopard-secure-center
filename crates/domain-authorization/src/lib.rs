@@ -1,5 +1,8 @@
 //! Authorization aggregate (roles, role bindings, scopes).
 
+pub mod permission;
+pub mod role;
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

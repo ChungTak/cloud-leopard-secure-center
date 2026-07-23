@@ -13,6 +13,7 @@ workspace = true
 
 [dependencies]
 storage-api = { path = "../storage-api" }
+domain-authorization = { path = "../domain-authorization" }
 domain-identity = { path = "../domain-identity" }
 domain-organization = { path = "../domain-organization" }
 foundation = { path = "../foundation" }
