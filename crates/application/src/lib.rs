@@ -2,6 +2,7 @@
 
 pub mod api_key;
 pub mod authenticate;
+pub mod authorization;
 pub mod mfa;
 pub mod session;
 pub mod token_service;

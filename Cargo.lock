@@ -21,6 +21,7 @@ dependencies = [
 name = "application"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "base64ct",
  "domain-audit",
  "domain-authorization",
@@ -1051,7 +1052,9 @@ name = "security-platform"
 version = "0.1.0"
 dependencies = [
  "application",
+ "domain-authorization",
  "domain-identity",
+ "domain-organization",
  "foundation",
  "http-api",
  "observability",

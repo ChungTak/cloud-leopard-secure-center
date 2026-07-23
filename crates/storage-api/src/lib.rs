@@ -104,6 +104,14 @@ pub trait OrganizationUnitRepository: Send + Sync {
 
     /// List organization units in the current tenant context, ordered by code.
     async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError>;
+
+    /// Returns `true` if `descendant` is `ancestor` itself or a descendant in the closure table.
+    async fn is_descendant_of(
+        &self,
+        ancestor: OrganizationId,
+        descendant: OrganizationId,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError>;
 }
 
 /// Repository contract for the `Site`, `Building`, `Floor`, and `Area` aggregates.
@@ -194,6 +202,14 @@ pub trait SpatialRepository: Send + Sync {
         radius_meters: f64,
         ctx: &RequestContext,
     ) -> Result<Page<Area>, PlatformError>;
+
+    /// Returns `true` if `descendant` is `ancestor` itself or a descendant in the area closure table.
+    async fn is_area_descendant_of(
+        &self,
+        ancestor: AreaId,
+        descendant: AreaId,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError>;
 }
 
 /// Repository contract for the `User` aggregate.
