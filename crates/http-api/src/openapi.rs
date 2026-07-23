@@ -2,19 +2,59 @@
 
 use utoipa::OpenApi;
 
-use crate::{dto::HealthDto, routes};
+use crate::{
+    dto::{
+        AuditDetailsDto, AuditRecordDto, CameraDto, ConfigDefinitionDto, ConfigScopeDto,
+        ConfigValueDto, DeviceDto, HealthDto, OrganizationUnitDto, ProblemDetailsDto,
+        ResourceRefDto, RoleBindingDto, RoleBindingScopeDto, RoleDto, TenantDto, UserDto,
+    },
+    routes,
+};
 
 /// Cloud Leopard Secure Center HTTP API.
 #[derive(OpenApi)]
 #[openapi(
-    info(title = "Cloud Leopard Secure Center", version = "0.1.0"),
-    paths(routes::health),
-    components(schemas(HealthDto))
+    info(
+        title = "Cloud Leopard Secure Center",
+        description = "OpenAPI 3.1 surface for tenants, organization units, users, roles, role bindings, devices, cameras, audit records, and configuration.",
+        version = "0.1.0"
+    ),
+    paths(
+        routes::health,
+        routes::get_tenant,
+        routes::get_organization_unit,
+        routes::get_user,
+        routes::get_role,
+        routes::get_role_binding,
+        routes::get_device,
+        routes::get_camera,
+        routes::get_audit_record,
+        routes::get_config_value,
+        routes::get_config_definition
+    ),
+    components(schemas(
+        HealthDto,
+        ProblemDetailsDto,
+        TenantDto,
+        OrganizationUnitDto,
+        UserDto,
+        RoleDto,
+        RoleBindingDto,
+        RoleBindingScopeDto,
+        ResourceRefDto,
+        DeviceDto,
+        CameraDto,
+        AuditRecordDto,
+        AuditDetailsDto,
+        ConfigValueDto,
+        ConfigScopeDto,
+        ConfigDefinitionDto
+    ))
 )]
 pub struct ApiDoc;
 
 impl ApiDoc {
-    /// Return the OpenAPI document as a JSON string.
+    /// Return the OpenAPI document as a pretty-printed JSON string.
     pub fn json() -> String {
         ApiDoc::openapi().to_pretty_json().unwrap_or_default()
     }

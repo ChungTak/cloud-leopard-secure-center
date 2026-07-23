@@ -1,9 +1,9 @@
 //! HTTP error handling and RFC 9457 Problem Details.
 
 use axum::{
-    Json,
+    body::Body,
     extract::rejection::JsonRejection,
-    http::StatusCode,
+    http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use foundation::PlatformError;
@@ -105,7 +105,19 @@ impl IntoResponse for AppError {
         let status = self.status_code();
         let detail = self.detail();
         let problem = ProblemDetails::new(status, detail, None);
-        (status, Json(problem)).into_response()
+
+        let body = match serde_json::to_string(&problem) {
+            Ok(body) => body,
+            Err(_) => return (status, Body::empty()).into_response(),
+        };
+
+        let mut response = Response::new(Body::from(body));
+        *response.status_mut() = status;
+        response.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/problem+json"),
+        );
+        response
     }
 }
 

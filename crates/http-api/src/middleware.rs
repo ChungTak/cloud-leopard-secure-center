@@ -4,7 +4,7 @@ use axum::{
     Router,
     body::Body,
     http::{
-        Request,
+        Request, StatusCode,
         header::{self, HeaderName, HeaderValue},
     },
     middleware::Next,
@@ -22,7 +22,7 @@ use tower_http::{
     trace::TraceLayer,
 };
 
-use crate::error::from_middleware_error;
+use crate::error::{ProblemDetails, from_middleware_error};
 
 /// Default request body size limit in bytes (1 MiB).
 const BODY_LIMIT: usize = 1024 * 1024;
@@ -34,7 +34,7 @@ pub fn with_middleware(router: Router) -> Router {
     let request_id_header = HeaderName::from_static("x-request-id");
     let trace_id_header = HeaderName::from_static("x-trace-id");
 
-    router.layer(
+    let router = router.layer(
         ServiceBuilder::new()
             // Security headers; outermost on response.
             .layer(SetResponseHeaderLayer::if_not_present(
@@ -59,12 +59,15 @@ pub fn with_middleware(router: Router) -> Router {
             ))
             .layer(TraceLayer::new_for_http())
             .layer(CorsLayer::permissive())
-            // Propagate request ids back to the client.
+            // Generate and propagate request ids back to the client.
+            .layer(SetRequestIdLayer::new(
+                request_id_header.clone(),
+                MakeUuidRequestId,
+            ))
             .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
             .layer(PropagateRequestIdLayer::new(trace_id_header))
             // Build request-scoped context after the request id is generated.
             .layer(axum::middleware::from_fn(set_request_context))
-            .layer(SetRequestIdLayer::new(request_id_header, MakeUuidRequestId))
             // Convert middleware failures (timeouts) into RFC 9457 responses.
             .layer(axum::error_handling::HandleErrorLayer::new(
                 |err: axum::BoxError| async move {
@@ -75,7 +78,11 @@ pub fn with_middleware(router: Router) -> Router {
             .layer(RequestBodyLimitLayer::new(BODY_LIMIT))
             // Normalize paths before routing.
             .layer(NormalizePathLayer::trim_trailing_slash()),
-    )
+    );
+
+    // Convert raw status-only error responses (e.g. payload too large) to RFC 9457.
+    // Applied outside the main ServiceBuilder to avoid type-inference issues with from_fn.
+    router.layer(axum::middleware::map_response(map_problem_details))
 }
 
 /// Request ID generator backed by `Uuid::new_v7`.
@@ -112,4 +119,40 @@ pub fn response_with_context(response: &mut Response, ctx: &RequestContext) {
     {
         response.headers_mut().insert("x-request-id", value);
     }
+}
+
+/// Convert status-only error responses from tower-http middleware into RFC 9457 documents.
+async fn map_problem_details(response: Response) -> Response {
+    let status = response.status();
+    if !status.is_client_error() && !status.is_server_error() {
+        return response;
+    }
+    if is_problem_json(response.headers()) {
+        return response;
+    }
+
+    let detail = match status {
+        StatusCode::PAYLOAD_TOO_LARGE => "request payload too large",
+        StatusCode::REQUEST_TIMEOUT => "request timeout",
+        _ => status.canonical_reason().unwrap_or("error"),
+    };
+
+    let body = match serde_json::to_string(&ProblemDetails::new(status, detail, None)) {
+        Ok(body) => body,
+        Err(_) => return response,
+    };
+
+    let (mut parts, _body) = response.into_parts();
+    parts.headers.insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_static("application/problem+json"),
+    );
+    Response::from_parts(parts, Body::from(body))
+}
+
+fn is_problem_json(headers: &axum::http::HeaderMap) -> bool {
+    headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("application/problem+json"))
 }
