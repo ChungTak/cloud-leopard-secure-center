@@ -76,13 +76,19 @@ impl Tenant {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
+        let locale = locale.map_or_else(|| "en-US".to_string(), Into::into);
+        validate_locale(&locale)?;
+        let timezone = timezone.map_or_else(|| "UTC".to_string(), Into::into);
+        validate_timezone(&timezone)?;
         let now = clock.now();
         Ok(Self {
             id,
             code,
-            name: name.into(),
-            locale: locale.map_or_else(|| "en-US".to_string(), Into::into),
-            timezone: timezone.map_or_else(|| "UTC".to_string(), Into::into),
+            name,
+            locale,
+            timezone,
             status: TenantStatus::Active,
             revision: Revision::initial(),
             created_at: now,
@@ -107,12 +113,18 @@ impl Tenant {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
+        let locale = locale.into();
+        validate_locale(&locale)?;
+        let timezone = timezone.into();
+        validate_timezone(&timezone)?;
         Ok(Self {
             id,
             code,
-            name: name.into(),
-            locale: locale.into(),
-            timezone: timezone.into(),
+            name,
+            locale,
+            timezone,
             status,
             revision,
             created_at,
@@ -129,7 +141,12 @@ impl Tenant {
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("rename")?;
-        self.name = name.into();
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
@@ -144,7 +161,12 @@ impl Tenant {
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("set_locale")?;
-        self.locale = locale.into();
+        let locale = locale.into();
+        validate_locale(&locale)?;
+        if locale == self.locale {
+            return Ok(());
+        }
+        self.locale = locale;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
@@ -159,7 +181,12 @@ impl Tenant {
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("set_timezone")?;
-        self.timezone = timezone.into();
+        let timezone = timezone.into();
+        validate_timezone(&timezone)?;
+        if timezone == self.timezone {
+            return Ok(());
+        }
+        self.timezone = timezone;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
@@ -226,6 +253,54 @@ fn validate_code(code: &str) -> Result<(), PlatformError> {
         return Err(PlatformError::invalid(
             "tenant_code",
             "tenant code must not contain leading, trailing, or internal whitespace",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "tenant_name",
+            "tenant name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "tenant_name",
+            "tenant name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_locale(locale: &str) -> Result<(), PlatformError> {
+    if locale.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "tenant_locale",
+            "tenant locale must not be empty",
+        ));
+    }
+    if locale.len() > 32 {
+        return Err(PlatformError::invalid(
+            "tenant_locale",
+            "tenant locale must be at most 32 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_timezone(timezone: &str) -> Result<(), PlatformError> {
+    if timezone.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "tenant_timezone",
+            "tenant timezone must not be empty",
+        ));
+    }
+    if timezone.len() > 64 {
+        return Err(PlatformError::invalid(
+            "tenant_timezone",
+            "tenant timezone must be at most 64 characters",
         ));
     }
     Ok(())
