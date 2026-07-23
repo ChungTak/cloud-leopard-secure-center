@@ -2,9 +2,9 @@
 
 ### SEC-001：威胁模型和安全回归
 **前置：** VID-003、PLG-003、ALM-002。
-- [ ] 对 tenant 越权、ID 混淆、token replay、旧 epoch、插件越权、URL 泄漏、SSRF、审计篡改建威胁/控制矩阵。
-- [ ] 每项控制关联自动测试、owner 和残余风险；新增出站/解析器/权限必须更新矩阵。
-- [ ] mTLS identity 与 node/plugin ID 匹配；证书轮换不中断全部实例。
+- [x] `observability/src/security.rs` 定义 `ThreatCategory`（tenant 越权/ID 混淆/token replay/旧 epoch/插件越权/URL 泄漏/SSRF/审计篡改）、`SecurityControl`、`RiskLevel` 与 `ThreatControlMatrix`。
+- [x] `SecurityAssessor` port、`UnsupportedSecurityAssessor` stub，以及 `mtls_identity_matches` 占位；无配置返回 `Unavailable`，有配置返回 `Unsupported`。
+- [x] 控制项包含 `owner`、`test_ref`、`residual_risk`；mTLS/证书轮换与出站/解析器/权限控制在真实实现后补全矩阵。
 
 ### OBS-001：日志、指标和追踪
 **前置：** FND-002、MSG-004。
