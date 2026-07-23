@@ -1,6 +1,7 @@
 //! Telemetry, metrics, tracing, security controls, and operational health primitives.
 
 pub mod security;
+pub mod telemetry;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
