@@ -3,6 +3,7 @@
 pub mod camera;
 pub mod device;
 pub mod external_binding;
+pub mod projection;
 pub mod tag;
 
 pub use tag::ResourceType;

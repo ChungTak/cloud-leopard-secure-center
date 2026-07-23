@@ -8,6 +8,7 @@ pub mod external_binding_repository;
 pub mod login_attempt_repository;
 pub mod mfa_repository;
 pub mod organization_unit_repository;
+pub mod projection_repository;
 pub mod role_binding_repository;
 pub mod role_repository;
 pub mod session_repository;
