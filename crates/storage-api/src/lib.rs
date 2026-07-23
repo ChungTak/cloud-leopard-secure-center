@@ -907,6 +907,127 @@ pub trait OutboxRepository: Send + Sync {
     ) -> Result<(), PlatformError>;
 }
 
+/// Status of an inbox message.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InboxStatus {
+    /// Message has been received but not yet processed.
+    Pending,
+    /// Message was successfully processed.
+    Completed,
+    /// Processing failed and will not be retried.
+    Failed,
+}
+
+/// An inbox record used to deduplicate consumed messages and remember the
+/// digest of the first successful result.
+#[derive(Debug, Clone)]
+pub struct InboxMessage {
+    pub message_id: Uuid,
+    pub tenant_id: Option<TenantId>,
+    pub consumer_id: String,
+    pub status: InboxStatus,
+    pub result_digest: Option<String>,
+    pub attempts: i32,
+    pub expires_at: UtcTimestamp,
+}
+
+/// Repository for inbox deduplication and result caching.
+#[async_trait]
+pub trait InboxRepository: Send + Sync {
+    /// Receive a message. If the consumer/message pair already exists, the
+    /// existing record is returned unchanged.
+    async fn receive(
+        &self,
+        message: &InboxMessage,
+        ctx: &RequestContext,
+    ) -> Result<InboxMessage, PlatformError>;
+
+    /// Mark a message as completed and record the digest of the first result.
+    /// If the message was already completed, the stored record (and original
+    /// digest) is returned unchanged.
+    async fn complete(
+        &self,
+        consumer_id: &str,
+        message_id: Uuid,
+        result_digest: &str,
+        ctx: &RequestContext,
+    ) -> Result<InboxMessage, PlatformError>;
+}
+
+/// Status of a background job.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JobStatus {
+    /// Waiting to be claimed.
+    Pending,
+    /// Claimed by a worker and running.
+    Running,
+    /// Completed successfully.
+    Completed,
+    /// Failed and not rescheduled.
+    Failed,
+    /// Explicitly cancelled.
+    Cancelled,
+}
+
+/// A background job with lease-based execution and retry scheduling.
+#[derive(Debug, Clone)]
+pub struct Job {
+    pub job_id: Option<Uuid>,
+    pub tenant_id: Option<TenantId>,
+    pub queue: String,
+    pub payload: String,
+    pub status: JobStatus,
+    pub revision: i64,
+    pub lease_owner: Option<String>,
+    pub lease_until: Option<UtcTimestamp>,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub next_run: UtcTimestamp,
+    pub deadline: Option<UtcTimestamp>,
+}
+
+/// Repository for scheduled background jobs.
+#[async_trait]
+pub trait JobRepository: Send + Sync {
+    /// Schedule a new job.
+    async fn schedule(&self, job: &Job, ctx: &RequestContext) -> Result<Job, PlatformError>;
+
+    /// Claim the next runnable job in `queue` for `worker_id`. The returned
+    /// job has `status = Running`, `attempts` incremented and a fresh lease.
+    async fn claim(
+        &self,
+        queue: &str,
+        worker_id: &str,
+        lease: std::time::Duration,
+        ctx: &RequestContext,
+    ) -> Result<Option<Job>, PlatformError>;
+
+    /// Mark a job as completed. The caller must supply the `worker_id` and
+    /// `revision` returned by `claim`; an expired lease or stale revision is
+    /// rejected.
+    async fn complete(
+        &self,
+        job_id: Uuid,
+        worker_id: &str,
+        revision: i64,
+        ctx: &RequestContext,
+    ) -> Result<Job, PlatformError>;
+
+    /// Mark a failed run and, for a transient error, schedule `next_run`.
+    /// The caller must supply the `worker_id` and `revision` returned by `claim`.
+    async fn fail(
+        &self,
+        job_id: Uuid,
+        worker_id: &str,
+        revision: i64,
+        next_run: Option<UtcTimestamp>,
+        ctx: &RequestContext,
+    ) -> Result<Job, PlatformError>;
+
+    /// Cancel a pending or running job.
+    async fn cancel(&self, job_id: Uuid, ctx: &RequestContext) -> Result<Job, PlatformError>;
+}
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

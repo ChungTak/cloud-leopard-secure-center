@@ -13,6 +13,8 @@ pub mod credential_repository;
 pub mod device_repository;
 pub mod external_binding_repository;
 pub mod idempotency_repository;
+pub mod inbox_repository;
+pub mod job_repository;
 pub mod login_attempt_repository;
 pub mod mfa_repository;
 pub mod organization_unit_repository;

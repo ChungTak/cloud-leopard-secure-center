@@ -118,7 +118,10 @@ async fn idempotency_conflict_stores_latest_digest(pool: sqlx::PgPool) -> sqlx::
         )
         .await,
     );
-    assert_eq!(some_or_panic(found, "idempotency record not found").request_digest, "digest-2");
+    assert_eq!(
+        some_or_panic(found, "idempotency record not found").request_digest,
+        "digest-2"
+    );
     Ok(())
 }
 
@@ -311,7 +314,10 @@ async fn idempotency_record_survives_one_hundred_repeats(pool: sqlx::PgPool) -> 
         )
         .await,
     );
-    assert_eq!(some_or_panic(found, "idempotency record not found").request_digest, "digest-100");
+    assert_eq!(
+        some_or_panic(found, "idempotency record not found").request_digest,
+        "digest-100"
+    );
     Ok(())
 }
 
