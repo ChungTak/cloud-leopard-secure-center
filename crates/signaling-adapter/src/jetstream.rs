@@ -60,9 +60,8 @@ mod tests {
 
     #[test]
     fn start_returns_unsupported() {
-        let consumer = JetStreamSignalingConsumer::new(
-            JetStreamSignalingConsumerConfig::signaling_defaults(),
-        );
+        let consumer =
+            JetStreamSignalingConsumer::new(JetStreamSignalingConsumerConfig::signaling_defaults());
         match futures::executor::block_on(consumer.start()) {
             Ok(_) => panic!("expected unsupported"),
             Err(e) => assert_eq!(e.kind, SignalingErrorKind::Unsupported),
