@@ -2,9 +2,9 @@
 
 ### API-001：OpenAPI 与错误中间件
 **前置：** FND-002、APP-001。
-- [ ] OpenAPI 3.1 先定义 tenants/org/users/roles/bindings/devices/cameras/audit/settings。
-- [ ] 实现 RFC 9457、request/trace ID、body limit、timeout、CORS 和安全 header。
-- [ ] DTO/domain 显式 mapper；snapshot 和 breaking check 进入 CI。
+- [x] OpenAPI 3.1 先定义 tenants/org/users/roles/bindings/devices/cameras/audit/settings。
+- [x] 实现 RFC 9457、request/trace ID、body limit、timeout、CORS 和安全 header。
+- [x] DTO/domain 显式 mapper；snapshot 和 breaking check 进入 CI。
 **测试：** 400/401/403/404/409/412/422/429/503，不泄漏内部 source。
 
 ### API-002：认证与 tenant 边界
