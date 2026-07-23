@@ -23,6 +23,7 @@ members = [
     "crates/http-api",
     "crates/observability",
     "crates/cluster-adapter",
+    "crates/plugin-adapter",
 ]
 
 [workspace.package]
