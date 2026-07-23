@@ -15,9 +15,9 @@
 
 ### ORG-003：场所与空间树
 **前置：** ORG-001。
-- [ ] 建立 sites/buildings/floors/areas/area_closure 及同租户 FK。
-- [ ] 组织表达管理关系，Area 表达物理位置；API/DTO 不复用一种 ID。
-- [ ] geo 使用明确坐标系和合法范围；地址字段有长度限制。
+- [x] 建立 sites/buildings/floors/areas/area_closure 及同租户 FK。
+- [x] 组织表达管理关系，Area 表达物理位置；API/DTO 不复用一种 ID。
+- [x] geo 使用明确坐标系和合法范围；地址字段有长度限制。
 **测试：** 唯一 code、层级约束、区域移动、删除引用和范围查询。
 
 ## 完成条件

@@ -7,9 +7,11 @@ use domain_identity::mfa::MfaFactor;
 use domain_identity::session::RefreshToken;
 use domain_identity::user::User;
 use domain_organization::organization_unit::OrganizationUnit;
+use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
 use foundation::{
-    OrganizationId, PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid,
+    AreaId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext, Revision, SiteId,
+    TenantId, UserId, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -100,6 +102,96 @@ pub trait OrganizationUnitRepository: Send + Sync {
 
     /// List organization units in the current tenant context, ordered by code.
     async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError>;
+}
+
+/// Repository contract for the `Site`, `Building`, `Floor`, and `Area` aggregates.
+///
+/// All mutating methods take an `expected` revision and return
+/// `REVISION_CONFLICT` or `NOT_FOUND` when the row is missing or stale.
+#[async_trait]
+pub trait SpatialRepository: Send + Sync {
+    // Site
+    async fn site_by_id(&self, id: SiteId, ctx: &RequestContext) -> Result<Site, PlatformError>;
+    async fn create_site(&self, site: &Site, ctx: &RequestContext) -> Result<(), PlatformError>;
+    async fn update_site(
+        &self,
+        site: &Site,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn delete_site(
+        &self,
+        id: SiteId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn list_sites(&self, ctx: &RequestContext) -> Result<Page<Site>, PlatformError>;
+
+    // Building
+    async fn building_by_id(
+        &self,
+        id: BuildingId,
+        ctx: &RequestContext,
+    ) -> Result<Building, PlatformError>;
+    async fn create_building(
+        &self,
+        building: &Building,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn update_building(
+        &self,
+        building: &Building,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn delete_building(
+        &self,
+        id: BuildingId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn list_buildings(&self, ctx: &RequestContext) -> Result<Page<Building>, PlatformError>;
+
+    // Floor
+    async fn floor_by_id(&self, id: FloorId, ctx: &RequestContext) -> Result<Floor, PlatformError>;
+    async fn create_floor(&self, floor: &Floor, ctx: &RequestContext) -> Result<(), PlatformError>;
+    async fn update_floor(
+        &self,
+        floor: &Floor,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn delete_floor(
+        &self,
+        id: FloorId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn list_floors(&self, ctx: &RequestContext) -> Result<Page<Floor>, PlatformError>;
+
+    // Area
+    async fn area_by_id(&self, id: AreaId, ctx: &RequestContext) -> Result<Area, PlatformError>;
+    async fn create_area(&self, area: &Area, ctx: &RequestContext) -> Result<(), PlatformError>;
+    async fn update_area(
+        &self,
+        area: &Area,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn delete_area(
+        &self,
+        id: AreaId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+    async fn list_areas(&self, ctx: &RequestContext) -> Result<Page<Area>, PlatformError>;
+    async fn areas_within_radius(
+        &self,
+        latitude: f64,
+        longitude: f64,
+        radius_meters: f64,
+        ctx: &RequestContext,
+    ) -> Result<Page<Area>, PlatformError>;
 }
 
 /// Repository contract for the `User` aggregate.
