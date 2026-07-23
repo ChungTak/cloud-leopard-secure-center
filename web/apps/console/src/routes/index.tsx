@@ -14,6 +14,9 @@ import {
   ErrorPage,
   OrganizationPage,
   SpatialPage,
+  UsersPage,
+  RolesPage,
+  RoleBindingsPage,
 } from '../pages/index.ts';
 
 export const routes: RouteObject[] = [
@@ -81,6 +84,30 @@ export const routes: RouteObject[] = [
             handle: {
               breadcrumb: 'spatial' as const,
               permission: 'tenant:site:read' as const,
+            },
+          },
+          {
+            path: 'users',
+            element: <UsersPage />,
+            handle: {
+              breadcrumb: 'users' as const,
+              permission: 'tenant:user:read' as const,
+            },
+          },
+          {
+            path: 'roles',
+            element: <RolesPage />,
+            handle: {
+              breadcrumb: 'roles' as const,
+              permission: 'tenant:role:read' as const,
+            },
+          },
+          {
+            path: 'role-bindings',
+            element: <RoleBindingsPage />,
+            handle: {
+              breadcrumb: 'roleBindings' as const,
+              permission: 'tenant:role:read' as const,
             },
           },
           { path: 'forbidden', element: <ForbiddenPage /> },

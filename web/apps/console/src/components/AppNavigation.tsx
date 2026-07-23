@@ -13,7 +13,9 @@ interface NavItem {
     | 'users'
     | 'settings'
     | 'organizations'
-    | 'spatial';
+    | 'spatial'
+    | 'roles'
+    | 'roleBindings';
   permission?: string;
 }
 
@@ -31,6 +33,12 @@ const items: NavItem[] = [
     permission: 'tenant:organization:read',
   },
   { to: '/admin/spatial', labelKey: 'spatial', permission: 'tenant:site:read' },
+  { to: '/admin/roles', labelKey: 'roles', permission: 'tenant:role:read' },
+  {
+    to: '/admin/role-bindings',
+    labelKey: 'roleBindings',
+    permission: 'tenant:role:read',
+  },
   {
     to: '/admin/settings',
     labelKey: 'settings',
