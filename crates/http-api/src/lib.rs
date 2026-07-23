@@ -1,4 +1,10 @@
-//! Axum HTTP transport adapter.
+//! Axum HTTP transport adapter, OpenAPI definitions, and middleware.
+
+pub mod dto;
+pub mod error;
+pub mod middleware;
+pub mod openapi;
+pub mod routes;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
