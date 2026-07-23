@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/audit-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List audit records. */
+        get: operations["list_audit_records"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/audit-records/{id}": {
         parameters: {
             query?: never;
@@ -75,6 +92,23 @@ export interface paths {
         patch: operations["update_camera"];
         trace?: never;
     };
+    "/config-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configuration definitions. */
+        get: operations["list_config_definitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/config-definitions/{key}": {
         parameters: {
             query?: never;
@@ -84,6 +118,23 @@ export interface paths {
         };
         /** Get a configuration definition by key. */
         get: operations["get_config_definition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/config-values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List configuration values. */
+        get: operations["list_config_values"];
         put?: never;
         post?: never;
         delete?: never;
@@ -106,7 +157,8 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update a configuration value. */
+        patch: operations["update_config_value"];
         trace?: never;
     };
     "/devices": {
@@ -968,6 +1020,13 @@ export interface components {
             name: string;
             sensitivity: string;
         };
+        /** @description Request to update a configuration value. */
+        UpdateConfigValueRequest: {
+            clearSecret: boolean;
+            /** Format: int64 */
+            expectedRevision: number;
+            value?: string | null;
+        };
         /** @description Request to update a managed device. */
         UpdateDeviceRequest: {
             areaId?: string | null;
@@ -1042,6 +1101,48 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_audit_records: {
+        parameters: {
+            query?: {
+                /** @description Target type */
+                targetType?: string;
+                /** @description Target ID */
+                targetId?: string;
+                /** @description Action filter */
+                action?: string;
+                /** @description Start time (RFC 3339) */
+                from?: string;
+                /** @description End time (RFC 3339) */
+                to?: string;
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditRecordDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_audit_record: {
         parameters: {
             query?: never;
@@ -1290,6 +1391,40 @@ export interface operations {
             };
         };
     };
+    list_config_definitions: {
+        parameters: {
+            query?: {
+                /** @description Module filter */
+                module?: string;
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigDefinitionDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_config_definition: {
         parameters: {
             query?: never;
@@ -1321,6 +1456,40 @@ export interface operations {
             };
         };
     };
+    list_config_values: {
+        parameters: {
+            query?: {
+                /** @description Module filter */
+                module?: string;
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigValueDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_config_value: {
         parameters: {
             query?: never;
@@ -1339,6 +1508,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConfigValueDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_config_value: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateConfigValueRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigValueDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Not implemented */

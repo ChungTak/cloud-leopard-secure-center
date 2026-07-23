@@ -754,6 +754,15 @@ impl From<&domain_configuration::ConfigValue> for ConfigValueDto {
     }
 }
 
+/// Request to update a configuration value.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateConfigValueRequest {
+    pub value: Option<String>,
+    pub clear_secret: bool,
+    pub expected_revision: u64,
+}
+
 /// Stable API representation of a configuration definition.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

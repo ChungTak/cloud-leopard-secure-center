@@ -20,7 +20,7 @@
 
 ### WEB-007：审计与配置
 **前置：** AUD-002、WEB-003。
-- [ ] 审计只读检索、详情和安全 diff；不渲染未清理 HTML。
-- [ ] 配置按 definition 生成表单；secret 只允许替换/清除，不回显。
+- [x] 审计只读检索、详情和安全 diff；不渲染未清理 HTML。
+- [x] 配置按 definition 生成表单；secret 只允许替换/清除，不回显。
 **测试：** XSS、长内容、动态配置失败、敏感值不进 DOM snapshot。
 

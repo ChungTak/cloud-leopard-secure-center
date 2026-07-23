@@ -19,7 +19,18 @@ export interface CreateApiClientOptions {
   store: TokenStore;
 }
 
+function resolveBaseUrl(baseUrl: string): string {
+  if (baseUrl.startsWith('http://') || baseUrl.startsWith('https://')) {
+    return baseUrl;
+  }
+  if (typeof window !== 'undefined' && window.location?.href) {
+    return new URL(baseUrl, window.location.href).toString();
+  }
+  return baseUrl;
+}
+
 export function createApiClient({ baseUrl, store }: CreateApiClientOptions) {
+  const resolvedBaseUrl = resolveBaseUrl(baseUrl);
   let refreshTask: Promise<string | undefined> | null = null;
 
   async function refreshAccessToken(): Promise<string | undefined> {
@@ -84,5 +95,5 @@ export function createApiClient({ baseUrl, store }: CreateApiClientOptions) {
     }
   }
 
-  return createClient<paths>({ baseUrl, fetch: clscFetch });
+  return createClient<paths>({ baseUrl: resolvedBaseUrl, fetch: clscFetch });
 }

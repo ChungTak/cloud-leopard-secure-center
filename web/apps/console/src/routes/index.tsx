@@ -22,6 +22,8 @@ import {
   TagsPage,
   ExternalBindingsPage,
   ProjectionsPage,
+  AuditPage,
+  ConfigPage,
 } from '../pages/index.ts';
 
 export const routes: RouteObject[] = [
@@ -153,6 +155,22 @@ export const routes: RouteObject[] = [
             handle: {
               breadcrumb: 'projections' as const,
               permission: 'tenant:device:read' as const,
+            },
+          },
+          {
+            path: 'audit',
+            element: <AuditPage />,
+            handle: {
+              breadcrumb: 'audit' as const,
+              permission: 'tenant:audit:read' as const,
+            },
+          },
+          {
+            path: 'config',
+            element: <ConfigPage />,
+            handle: {
+              breadcrumb: 'config' as const,
+              permission: 'tenant:config:read' as const,
             },
           },
           { path: 'forbidden', element: <ForbiddenPage /> },

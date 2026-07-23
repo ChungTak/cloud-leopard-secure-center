@@ -10,6 +10,96 @@
     "version": "0.1.0"
   },
   "paths": {
+    "/audit-records": {
+      "get": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "List audit records.",
+        "operationId": "list_audit_records",
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "description": "Target type",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "description": "Target ID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "description": "Action filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Start time (RFC 3339)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "End time (RFC 3339)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditRecordDto"
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/audit-records/{id}": {
       "get": {
         "tags": [
@@ -345,6 +435,60 @@
         }
       }
     },
+    "/config-definitions": {
+      "get": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "List configuration definitions.",
+        "operationId": "list_config_definitions",
+        "parameters": [
+          {
+            "name": "module",
+            "in": "query",
+            "description": "Module filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigDefinitionDto"
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config-definitions/{key}": {
       "get": {
         "tags": [
@@ -386,6 +530,60 @@
         }
       }
     },
+    "/config-values": {
+      "get": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "List configuration values.",
+        "operationId": "list_config_values",
+        "parameters": [
+          {
+            "name": "module",
+            "in": "query",
+            "description": "Module filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ConfigValueDto"
+                  }
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/config-values/{id}": {
       "get": {
         "tags": [
@@ -410,6 +608,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ConfigValueDto"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "routes"
+        ],
+        "summary": "Update a configuration value.",
+        "operationId": "update_config_value",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateConfigValueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigValueDto"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetailsDto"
                 }
               }
             }
@@ -4209,6 +4466,30 @@
           },
           "sensitivity": {
             "type": "string"
+          }
+        }
+      },
+      "UpdateConfigValueRequest": {
+        "type": "object",
+        "description": "Request to update a configuration value.",
+        "required": [
+          "clearSecret",
+          "expectedRevision"
+        ],
+        "properties": {
+          "clearSecret": {
+            "type": "boolean"
+          },
+          "expectedRevision": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

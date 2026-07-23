@@ -20,7 +20,9 @@ interface NavItem {
     | 'cameras'
     | 'tags'
     | 'externalBindings'
-    | 'projections';
+    | 'projections'
+    | 'audit'
+    | 'config';
   permission?: string;
 }
 
@@ -65,6 +67,8 @@ const items: NavItem[] = [
     labelKey: 'projections',
     permission: 'tenant:device:read',
   },
+  { to: '/admin/audit', labelKey: 'audit', permission: 'tenant:audit:read' },
+  { to: '/admin/config', labelKey: 'config', permission: 'tenant:config:read' },
   {
     to: '/admin/settings',
     labelKey: 'settings',

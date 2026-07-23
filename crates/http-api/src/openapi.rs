@@ -14,8 +14,9 @@ use crate::{
         ProblemDetailsDto, ProjectionStateDto, ResolveExternalBindingConflictRequest,
         ResourceRefDto, RoleBindingDto, RoleBindingScopeDto, RoleDto, SetPasswordRequest,
         SpatialNodeDto, SpatialNodeType, TagDto, TenantDto, UpdateCameraRequest,
-        UpdateDeviceRequest, UpdateOrganizationUnitRequest, UpdateRoleBindingRequest,
-        UpdateRoleRequest, UpdateSpatialNodeRequest, UpdateTagRequest, UpdateUserRequest, UserDto,
+        UpdateConfigValueRequest, UpdateDeviceRequest, UpdateOrganizationUnitRequest,
+        UpdateRoleBindingRequest, UpdateRoleRequest, UpdateSpatialNodeRequest, UpdateTagRequest,
+        UpdateUserRequest, UserDto,
     },
     routes,
 };
@@ -82,8 +83,12 @@ use crate::{
         routes::resolve_external_binding_conflict,
         routes::delete_external_binding,
         routes::list_projections,
+        routes::list_audit_records,
         routes::get_audit_record,
+        routes::list_config_values,
         routes::get_config_value,
+        routes::update_config_value,
+        routes::list_config_definitions,
         routes::get_config_definition
     ),
     components(schemas(
@@ -134,6 +139,7 @@ use crate::{
         AuditRecordDto,
         AuditDetailsDto,
         ConfigValueDto,
+        UpdateConfigValueRequest,
         ConfigScopeDto,
         ConfigDefinitionDto
     ))
