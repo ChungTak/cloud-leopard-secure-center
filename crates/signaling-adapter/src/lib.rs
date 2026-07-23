@@ -5,6 +5,7 @@
 //! upstream base URL is supplied.
 
 pub mod event;
+pub mod reconciler;
 pub mod worker;
 
 use async_trait::async_trait;
