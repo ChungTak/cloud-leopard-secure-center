@@ -1,0 +1,21 @@
+[package]
+name = "domain-media"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+foundation = { path = "../foundation" }
+async-trait = "=0.1.89"
+serde = { version = "=1.0.228", features = ["derive"] }
+thiserror = "=2.0.18"
+
+[dev-dependencies]
+futures = "=0.3.31"

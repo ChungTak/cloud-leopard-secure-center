@@ -2,7 +2,7 @@
 
 ### VID-001：PlaybackEntitlement
 **前置：** SIG-002、AUTH-003。
-- [ ] 实现 Live/Playback/Download、allowed actions、过期/撤销和 signaling 引用；不复制 MediaSession 状态机。
+- [x] 实现 Live/Playback/Download/Ptz actions、过期/撤销和 signaling `OperationId` 引用；MediaSession 状态机不在本域复制。
 - [ ] 创建顺序：授权 → signaling Operation/Session → media output → 短期 DTO → 审计。
 - [ ] token 绑定 tenant/principal/camera/session/protocol，URL 不入日志。
 **测试：** 幂等、撤销、跨摄像机、超时 unknown outcome、敏感级别/MFA。
