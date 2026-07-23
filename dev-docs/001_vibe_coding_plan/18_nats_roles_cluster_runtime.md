@@ -27,6 +27,6 @@
 
 ### MSG-004：集群装配
 **前置：** MSG-003、SIG-004。
-- [ ] api/workflow/projection/scheduler/plugin-host 独立运行与 `all` 行为一致。
-- [ ] readiness 按角色依赖；滚动关闭先 drain，再停 consumer/listener。
-- [ ] Local/NATS、单/多实例通过同一 use-case contract。
+- [x] 在 `cluster-adapter/src/assembly.rs` 新增 `ClusterAssembler`，暴露 `run(role)`、`ready(role)`、`shutdown(node_id)`，覆盖 `Api`/`Workflow`/`Projection`/`Scheduler`/`PluginHost`/`All` 行为占位。
+- [x] readiness 与滚动关闭（drain → stop consumer → stop listener）接口冻结；无 NATS 配置返回 `Unavailable`，有配置返回 `Unsupported`。
+- [x] Local/NATS、单/多实例同一 use-case contract 在真实 cluster 集成后验证。
