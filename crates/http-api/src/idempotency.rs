@@ -109,7 +109,8 @@ fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
         .headers()
         .get("idempotency-key")
         .and_then(|value| value.to_str().ok())
-        .map(str::trim)?;
+        .map(str::trim)
+        .filter(|s| !s.is_empty())?;
 
     let token_fingerprint = extract_bearer(req.headers())
         .map(|token| fingerprint(&token))
