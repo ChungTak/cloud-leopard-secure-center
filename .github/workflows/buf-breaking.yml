@@ -1,0 +1,21 @@
+name: Buf breaking
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'proto/**'
+
+jobs:
+  buf-breaking:
+    name: Protobuf breaking change detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-action@v1
+        with:
+          input: proto
+          breaking: true
+          against: 'https://github.com/ChungTak/cloud-leopard-secure-center.git#branch=main,subdir=proto'

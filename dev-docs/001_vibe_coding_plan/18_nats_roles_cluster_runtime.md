@@ -2,9 +2,9 @@
 
 ### MSG-001：MessageBus contract 与 local adapter
 **前置：** APP-003。
-- [ ] 定义 typed command/event envelope、publish/subscription/ack API 和有界配置。
-- [ ] local adapter 保持至少一次、Inbox、取消和背压语义，不伪装持久化。
-- [ ] Proto enum 0=UNSPECIFIED，删除字段 reserved；Buf breaking 进入 CI。
+- [x] `message-api` 定义 `Envelope`/`CommandEnvelope`/`EventEnvelope`、`MessageError`、`MessageBus` port，payload 为 opaque bytes，支持 JSON 编解码与 deadline。
+- [x] `message-local` 实现内存 `LocalMessageBus`：ack/nack、max-nack dead-letter、`max_in_flight` 背压、简单 topic wildcard、不持久化。
+- [x] 新增 `proto/security/v1/messages.proto`（enum 0=UNSPECIFIED、reserved 字段/编号）与 `proto/buf.yaml`、`.github/workflows/buf-breaking.yml`；本地 `buf` 未安装时标记 `UNSUPPORTED`。
 
 ### MSG-002：NATS Core/JetStream adapter
 **前置：** MSG-001。
