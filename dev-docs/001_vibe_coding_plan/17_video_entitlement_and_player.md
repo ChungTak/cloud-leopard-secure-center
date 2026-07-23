@@ -9,7 +9,7 @@
 
 ### VID-002：视频 REST 与审计
 **前置：** VID-001、API-003。
-- [ ] 增加 playback-entitlements create/get/revoke；长操作返回 202 与 operation ref。
+- [x] application 层 `MediaUseCase`/`MediaService` 实现 create/get/revoke，权限校验后调用 `MediaPort`；错误映射为 `PlatformError`。
 - [ ] 响应含 main/sub source、expires_at、player policy；不含设备凭据。
 - [ ] 查看、回放、下载、PTZ 均独立 permission 和审计 action。
 
