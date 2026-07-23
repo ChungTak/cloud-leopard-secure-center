@@ -16,8 +16,8 @@
 
 ### API-003：并发、分页和实时通知
 **前置：** API-002、APP-002。
-- [ ] PUT/PATCH 使用 If-Match/ETag；写请求支持 Idempotency-Key。
-- [ ] cursor 不透明、可校验、稳定排序和最大 page size。
-- [ ] SSE 支持 filter/Last-Event-ID/有界 buffer；落后客户端收到 gap 后重查。
+- [x] PUT/PATCH 使用 If-Match/ETag；写请求支持 Idempotency-Key。
+- [x] cursor 不透明、可校验、稳定排序和最大 page size。
+- [x] SSE 支持 filter/Last-Event-ID/有界 buffer；落后客户端收到 gap 后重查。
 **测试：** ETag 冲突、游标篡改、重复 POST、慢 SSE、断线重连。
 

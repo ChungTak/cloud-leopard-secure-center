@@ -5,10 +5,14 @@ pub mod client_ip;
 pub mod context;
 pub mod dto;
 pub mod error;
+pub mod etag;
+pub mod idempotency;
 pub mod middleware;
 pub mod openapi;
+pub mod pagination;
 pub mod rate_limit;
 pub mod routes;
+pub mod sse;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
