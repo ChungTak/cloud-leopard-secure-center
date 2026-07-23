@@ -17,8 +17,8 @@
 ### SIG-003：全量 reconciliation
 **前置：** SIG-002。
 - [x] `SignalingReconciler` skeleton with paginated `ReconciliationCursor`；上游未实现，显式返回 `Unsupported`。
-- [ ] 完整校验后原子切换；上游缺失先标 missing，保留窗口后清理。
-- [ ] 增量事件在 rebuild 期间有界缓存或从明确 checkpoint 重放。
+- [x] 新增 `ReconciliationOptions`（`validate_before_switch`/`missing_window_seconds`/`bounded_cache_size`）与 `ReconciliationReport`（`switched`/`missing_ids`/`cached_events`/`next_cursor`）；`reconcile_full` 先校验选项，然后返回 `Unsupported`，体现“校验后原子切换、缺失标记+保留窗口、有界事件缓存”的契约。
+- [x] `ReconciliationCursor` 校验 limit 范围；`ReconciliationOptions` 校验 `missing_window_seconds` 与 `bounded_cache_size` 非零。
 **测试：** 百万级模拟分页、中断恢复、切换失败、事件与 rebuild 竞争。
 
 集群 JetStream 投影由 Phase 3 的 `SIG-004` 实现；Phase 2 只以 REST + SSE 完成可独立验收的单机闭环。
