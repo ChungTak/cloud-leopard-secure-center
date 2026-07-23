@@ -73,12 +73,31 @@ impl TokenService {
         self.sign(&claims)
     }
 
-    /// Verify an access token and return its claims.
+    /// Verify an access token, including its session version.
     pub fn verify_access_token(
         &self,
         token: &str,
         now: UtcTimestamp,
         expected_session_version: u64,
+    ) -> Result<AccessTokenClaims, PlatformError> {
+        let claims = self.verify_access_token_claims(token, now)?;
+        if claims.session_version != expected_session_version {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        Ok(claims)
+    }
+
+    /// Verify an access token's signature, header, issuer, audience, expiration
+    /// and nbf/jti claims, returning the decoded claims. The caller is still
+    /// responsible for checking the session version against the stored user
+    /// record, so this can be used before fetching the user.
+    pub fn verify_access_token_claims(
+        &self,
+        token: &str,
+        now: UtcTimestamp,
     ) -> Result<AccessTokenClaims, PlatformError> {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 3 {
@@ -108,13 +127,6 @@ impl TokenService {
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         let claims: AccessTokenClaims = serde_json::from_slice(&claims_bytes)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
-
-        if claims.session_version != expected_session_version {
-            return Err(PlatformError::new(
-                ErrorCode::Unauthenticated,
-                "invalid token",
-            ));
-        }
 
         claims.validate(&self.issuer, &self.audience, now)?;
         self.validate_nbf_and_jti(&claims, now)?;
