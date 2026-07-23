@@ -5,7 +5,9 @@ use domain_audit::audit_record::ActionRisk;
 use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::ResourceRef;
-use foundation::{Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid};
+use foundation::{
+    Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid,
+};
 use storage_api::{AuditWriter, Page, RoleRepository};
 
 use crate::authorization::AuthorizationPort;
@@ -162,7 +164,7 @@ where
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let id = RoleId::generate(&self.id_gen);
+        let id = RoleId::generate(&self.id_gen)?;
         let permissions = parse_permissions(request.payload.permissions)?;
         let role = Role::new(
             id,

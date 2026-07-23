@@ -201,8 +201,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -223,8 +223,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let mut token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -249,8 +249,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -268,8 +268,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let now = UtcTimestamp::from(foundation::chrono::Utc.timestamp_opt(1000, 0).unwrap());
         let token = service
             .issue_access_token(user_id, tenant_id, 1, now, "jti")
@@ -295,8 +295,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = issuer
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -317,8 +317,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -339,8 +339,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -366,8 +366,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let mut token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "jti")
             .expect("issue");
@@ -392,8 +392,8 @@ mod tests {
         )
         .expect("valid secret");
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let user_id = UserId::generate(&id_gen);
-        let tenant_id = TenantId::generate(&id_gen);
+        let user_id = UserId::generate(&id_gen).expect("generate user id");
+        let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
         let token = service
             .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "")
             .expect("issue");

@@ -414,7 +414,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
 
         let id = if failure.id.is_empty() {
             let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-            generator.generate()
+            generator.generate()?
         } else {
             Uuid::parse_str(&failure.id)
                 .map_err(|e| PlatformError::invalid("failure_id", e.to_string()))?
@@ -687,7 +687,7 @@ async fn record_failure_sql(
     payload: &str,
 ) -> Result<(), PlatformError> {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let id = generator.generate();
+    let id = generator.generate()?;
     sqlx::query(
         "INSERT INTO projection.failures
          (id, tenant_id, source_event_id, external_ref, reason, payload, created_at)

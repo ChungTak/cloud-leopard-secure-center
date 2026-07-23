@@ -271,6 +271,7 @@ impl MessageBus for LocalMessageBus {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp};
@@ -294,9 +295,9 @@ mod tests {
     fn make_envelope(kind: EnvelopeKind, topic: &str, payload: &[u8]) -> Envelope {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         Envelope {
-            id: MessageId::generate(&generator),
+            id: MessageId::generate(&generator).expect("generate message id"),
             kind,
-            tenant_id: TenantId::generate(&generator),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
             topic: topic.to_string(),
             payload: payload.to_vec(),
             headers: HashMap::new(),

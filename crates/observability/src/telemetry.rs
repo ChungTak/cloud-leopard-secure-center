@@ -154,6 +154,7 @@ impl TelemetryInitializer for UnsupportedTelemetryInitializer {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -209,7 +210,10 @@ mod tests {
         let init = UnsupportedTelemetryInitializer::new(false);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let redacted = init
-            .redact("secret=abc", TenantId::generate(&generator))
+            .redact(
+                "secret=abc",
+                TenantId::generate(&generator).expect("generate tenant id"),
+            )
             .await;
         assert_eq!(redacted, "[REDACTED]");
     }

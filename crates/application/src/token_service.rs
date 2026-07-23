@@ -57,9 +57,9 @@ impl TokenService {
         jti: impl Into<String>,
     ) -> Result<String, PlatformError> {
         let iat = now.timestamp_millis() / 1000;
-        let exp = iat.checked_add(self.access_ttl_seconds).ok_or_else(|| {
-            PlatformError::new(ErrorCode::Invalid, "token expiration overflow")
-        })?;
+        let exp = iat
+            .checked_add(self.access_ttl_seconds)
+            .ok_or_else(|| PlatformError::new(ErrorCode::Invalid, "token expiration overflow"))?;
         let claims = AccessTokenClaims {
             sub: user_id,
             tenant_id,
@@ -170,12 +170,12 @@ impl TokenService {
         clock: &dyn Clock,
     ) -> Result<(String, RefreshToken), PlatformError> {
         let mut raw = [0u8; 32];
-        random.fill_bytes(&mut raw);
+        random.fill_bytes(&mut raw)?;
         let raw = Base64UrlUnpadded::encode_string(&raw);
         let token_hash = hash_raw(&raw);
 
         let mut id_bytes = [0u8; 16];
-        random.fill_bytes(&mut id_bytes);
+        random.fill_bytes(&mut id_bytes)?;
         let id = Uuid::from_bytes(id_bytes);
 
         let created_at = clock.now();

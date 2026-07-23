@@ -149,7 +149,7 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
                     )
                 })?
         } else {
-            let id = SystemIdGenerator::new(SystemClock, SystemRandom).generate();
+            let id = SystemIdGenerator::new(SystemClock, SystemRandom).generate()?;
             let row = sqlx::query(
                 "INSERT INTO config.values
                  (config_value_id, tenant_id, scope_type, scope_id, config_key, value, raw_value, secret_ref, revision)

@@ -1,7 +1,7 @@
 use foundation::chrono::{DateTime, Utc};
 use foundation::retry::RetryPolicy;
 use foundation::uuid::Uuid;
-use foundation::{RandomSource, RequestContext, TenantId, UtcTimestamp};
+use foundation::{PlatformError, RandomSource, RequestContext, TenantId, UtcTimestamp};
 use storage_api::{InboxMessage, InboxRepository, InboxStatus, Job, JobRepository, JobStatus};
 use storage_postgres::inbox_repository::PostgresInboxRepository;
 use storage_postgres::job_repository::PostgresJobRepository;
@@ -50,10 +50,11 @@ fn message_id(seed: u8) -> Uuid {
 struct ZeroRandom;
 
 impl RandomSource for ZeroRandom {
-    fn fill_bytes(&self, buf: &mut [u8]) {
+    fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), PlatformError> {
         for b in buf.iter_mut() {
             *b = 0;
         }
+        Ok(())
     }
 }
 

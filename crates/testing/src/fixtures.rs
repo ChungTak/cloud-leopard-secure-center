@@ -6,7 +6,7 @@
 use foundation::{SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId};
 use message_local::{LocalMessageBus, LocalMessageBusConfig};
 use nats_adapter::{NatsMessageBus, NatsMessageBusConfig};
-use signaling_adapter::{jetstream::JetStreamSignalingConsumer, RestSignalingAdapter};
+use signaling_adapter::{RestSignalingAdapter, jetstream::JetStreamSignalingConsumer};
 
 /// A tenant/user pair with deterministic IDs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -18,9 +18,15 @@ pub struct TenantFixture {
 impl TenantFixture {
     pub fn generate() -> Self {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+        fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
+            match result {
+                Ok(v) => v,
+                Err(e) => panic!("{e}"),
+            }
+        }
         Self {
-            tenant_id: TenantId::generate(&generator),
-            owner_user_id: UserId::generate(&generator),
+            tenant_id: ok_or_panic(TenantId::generate(&generator)),
+            owner_user_id: ok_or_panic(UserId::generate(&generator)),
         }
     }
 }

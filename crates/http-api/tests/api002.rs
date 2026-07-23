@@ -26,21 +26,28 @@ use serde_json::json;
 use tokio::sync::Mutex;
 use tower::util::ServiceExt;
 
+fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
+    match result {
+        Ok(v) => v,
+        Err(e) => panic!("{e}"),
+    }
+}
+
 fn tenant_id(seed: u128) -> TenantId {
     let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
     // Deterministic enough for tests: generate and select by seed count.
-    let mut id = TenantId::generate(&id_gen);
+    let mut id = ok_or_panic(TenantId::generate(&id_gen));
     for _ in 0..(seed % 10) {
-        id = TenantId::generate(&id_gen);
+        id = ok_or_panic(TenantId::generate(&id_gen));
     }
     id
 }
 
 fn user_id(seed: u128) -> UserId {
     let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let mut id = UserId::generate(&id_gen);
+    let mut id = ok_or_panic(UserId::generate(&id_gen));
     for _ in 0..(seed % 10) {
-        id = UserId::generate(&id_gen);
+        id = ok_or_panic(UserId::generate(&id_gen));
     }
     id
 }

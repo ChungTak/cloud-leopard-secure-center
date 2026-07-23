@@ -19,24 +19,31 @@ use foundation::{
 use signaling_adapter::RestSignalingAdapter;
 use signaling_adapter::reconciler::SignalingReconciler;
 
+fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
+    match result {
+        Ok(v) => v,
+        Err(e) => panic!("{e}"),
+    }
+}
+
 fn tenant() -> TenantId {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    TenantId::generate(&generator)
+    ok_or_panic(TenantId::generate(&generator))
 }
 
 fn device() -> DeviceId {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    DeviceId::generate(&generator)
+    ok_or_panic(DeviceId::generate(&generator))
 }
 
 fn camera() -> CameraId {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    CameraId::generate(&generator)
+    ok_or_panic(CameraId::generate(&generator))
 }
 
 fn principal() -> UserId {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    UserId::generate(&generator)
+    ok_or_panic(UserId::generate(&generator))
 }
 
 fn deadline() -> Deadline {
@@ -78,7 +85,7 @@ async fn unsupported_signaling_create_media_session() {
     match port
         .create_media_session(CreateMediaSessionRequest {
             tenant_id: tenant(),
-            operation_id: foundation::OperationId::generate(&generator),
+            operation_id: ok_or_panic(foundation::OperationId::generate(&generator)),
             deadline: deadline(),
             parameters: serde_json::Value::Null,
         })
@@ -122,7 +129,10 @@ async fn unsupported_media_get_entitlement() {
     let port = UnsupportedMediaPort;
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     match port
-        .get_entitlement(tenant(), foundation::EntitlementId::generate(&generator))
+        .get_entitlement(
+            tenant(),
+            ok_or_panic(foundation::EntitlementId::generate(&generator)),
+        )
         .await
     {
         Ok(_) => panic!("expected unsupported"),
@@ -135,7 +145,10 @@ async fn unsupported_media_revoke_entitlement() {
     let port = UnsupportedMediaPort;
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     match port
-        .revoke_entitlement(tenant(), foundation::EntitlementId::generate(&generator))
+        .revoke_entitlement(
+            tenant(),
+            ok_or_panic(foundation::EntitlementId::generate(&generator)),
+        )
         .await
     {
         Ok(_) => panic!("expected unsupported"),
@@ -155,12 +168,12 @@ async fn full_signaling_reconciliation_is_unsupported() {
 #[tokio::test]
 async fn typed_ids_are_tenant_isolated() {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let t1 = TenantId::generate(&generator);
-    let t2 = TenantId::generate(&generator);
+    let t1 = ok_or_panic(TenantId::generate(&generator));
+    let t2 = ok_or_panic(TenantId::generate(&generator));
     assert_ne!(t1, t2);
 
-    let d1 = DeviceId::generate(&generator);
-    let d2 = DeviceId::generate(&generator);
+    let d1 = ok_or_panic(DeviceId::generate(&generator));
+    let d2 = ok_or_panic(DeviceId::generate(&generator));
     assert_ne!(d1, d2);
 }
 

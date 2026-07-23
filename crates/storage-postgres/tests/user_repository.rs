@@ -39,7 +39,7 @@ async fn create_and_read_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let repo = PostgresUserRepository::new(pool);
     let id_gen = generator();
     let user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "alice",
         "Alice Example",
@@ -67,7 +67,7 @@ async fn duplicate_username_in_same_tenant_fails(pool: sqlx::PgPool) -> sqlx::Re
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "bob",
         "Bob",
@@ -77,7 +77,7 @@ async fn duplicate_username_in_same_tenant_fails(pool: sqlx::PgPool) -> sqlx::Re
     ok_or_panic(repo.create(&user, &ctx).await);
 
     let duplicate = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "bob",
         "Another Bob",
@@ -99,7 +99,7 @@ async fn same_username_in_different_tenants_is_allowed(pool: sqlx::PgPool) -> sq
     let tenant_b = ctx_for("018e1234-5678-7abc-8def-0123456789ac");
 
     let user_a = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "charlie",
         "Charlie A",
@@ -109,7 +109,7 @@ async fn same_username_in_different_tenants_is_allowed(pool: sqlx::PgPool) -> sq
     ok_or_panic(repo.create(&user_a, &tenant_a).await);
 
     let user_b = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         parse_tenant("018e1234-5678-7abc-8def-0123456789ac"),
         "charlie",
         "Charlie B",
@@ -131,7 +131,7 @@ async fn soft_delete_allows_recreate_with_same_username(pool: sqlx::PgPool) -> s
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "dave",
         "Dave",
@@ -143,7 +143,7 @@ async fn soft_delete_allows_recreate_with_same_username(pool: sqlx::PgPool) -> s
     ok_or_panic(repo.delete(user.id, Revision::initial(), &ctx).await);
 
     let replacement = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "dave",
         "Dave 2",
@@ -165,7 +165,7 @@ async fn stale_revision_update_fails(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let mut user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id(),
         "eve",
         "Eve",

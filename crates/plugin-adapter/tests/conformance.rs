@@ -7,7 +7,9 @@
 use std::collections::HashSet;
 
 use foundation::{SystemClock, SystemIdGenerator, SystemRandom, TenantId};
-use plugin_adapter::grpc::{PluginFrame, PluginHello, ProcessPluginHost, UnsupportedProcessPluginHost};
+use plugin_adapter::grpc::{
+    PluginFrame, PluginHello, ProcessPluginHost, UnsupportedProcessPluginHost,
+};
 use plugin_adapter::manifest::{
     ManifestVerifier, Plugin, PluginErrorKind, PluginKind, PluginManifest, PluginState,
     UnsupportedManifestVerifier,
@@ -17,8 +19,8 @@ use plugin_adapter::wit::{UnsupportedWitHost, WitHost};
 fn make_manifest() -> PluginManifest {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     PluginManifest {
-        plugin_id: foundation::PluginId::generate(&generator),
-        tenant_id: TenantId::generate(&generator),
+        plugin_id: ok_or_panic(foundation::PluginId::generate(&generator)),
+        tenant_id: ok_or_panic(TenantId::generate(&generator)),
         version: "0.1.0".to_string(),
         kind: PluginKind::Wasm,
         api_range: "v1".to_string(),
@@ -85,24 +87,18 @@ async fn manifest_verifier_is_unsupported() {
 #[tokio::test]
 async fn wit_host_ports_are_unsupported_when_enabled() {
     let host = UnsupportedWitHost::new(true);
-    let plugin_id = foundation::PluginId::generate(&SystemIdGenerator::new(
-        SystemClock,
-        SystemRandom,
-    ));
-    let err = err_or_panic(
-        host.read_config(plugin_id, "key").await,
-    );
+    let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+    let plugin_id = ok_or_panic(foundation::PluginId::generate(&generator));
+    let err = err_or_panic(host.read_config(plugin_id, "key").await);
     assert_eq!(err.kind, PluginErrorKind::Unsupported);
 }
 
 #[tokio::test]
 async fn grpc_host_ports_are_unsupported_when_enabled() {
     let host = UnsupportedProcessPluginHost::new(true);
+    let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     let hello = PluginHello {
-        plugin_id: foundation::PluginId::generate(&SystemIdGenerator::new(
-            SystemClock,
-            SystemRandom,
-        )),
+        plugin_id: ok_or_panic(foundation::PluginId::generate(&generator)),
         version: "0.1.0".to_string(),
         instance: "i1".to_string(),
         scope: vec!["read".to_string()],

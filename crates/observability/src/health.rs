@@ -170,6 +170,7 @@ impl UnsupportedHealthMonitor {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -186,7 +187,9 @@ mod tests {
     async fn disabled_monitor_returns_unavailable() {
         let monitor = UnsupportedHealthMonitor::new(false);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let result = monitor.live(NodeId::generate(&generator)).await;
+        let result = monitor
+            .live(NodeId::generate(&generator).expect("generate node id"))
+            .await;
         assert_eq!(err_or_panic(result).kind, HealthErrorKind::Unavailable);
     }
 
@@ -195,7 +198,10 @@ mod tests {
         let monitor = UnsupportedHealthMonitor::new(true);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let result = monitor
-            .ready(NodeId::generate(&generator), Role::Api)
+            .ready(
+                NodeId::generate(&generator).expect("generate node id"),
+                Role::Api,
+            )
             .await;
         assert_eq!(err_or_panic(result).kind, HealthErrorKind::Unsupported);
     }

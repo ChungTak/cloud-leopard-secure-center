@@ -84,7 +84,7 @@ impl MfaFactor {
         let mut recovery_codes = Vec::with_capacity(recovery_code_count);
         for _ in 0..recovery_code_count {
             let mut bytes = [0u8; 8];
-            random.fill_bytes(&mut bytes);
+            random.fill_bytes(&mut bytes)?;
             let raw = Base64UrlUnpadded::encode_string(&bytes);
             recovery_codes.push(RecoveryCode::from_raw(&raw));
             raw_codes.push(raw);

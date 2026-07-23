@@ -139,8 +139,9 @@ mod tests {
     }
 
     fn make_hello() -> PluginHello {
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         PluginHello {
-            plugin_id: PluginId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)),
+            plugin_id: ok_or_panic(PluginId::generate(&generator)),
             version: "0.1.0".to_string(),
             instance: "instance-1".to_string(),
             scope: vec!["read".to_string()],

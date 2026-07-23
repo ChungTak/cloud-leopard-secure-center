@@ -150,6 +150,7 @@ impl SecurityAssessor for UnsupportedSecurityAssessor {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -172,7 +173,10 @@ mod tests {
             test_ref: "tenant_escalation_test".to_string(),
             residual_risk: RiskLevel::Low,
         });
-        assert_eq!(matrix.for_category(ThreatCategory::TenantEscalation).len(), 1);
+        assert_eq!(
+            matrix.for_category(ThreatCategory::TenantEscalation).len(),
+            1
+        );
     }
 
     #[tokio::test]
@@ -196,7 +200,10 @@ mod tests {
         let assessor = UnsupportedSecurityAssessor::new(false);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let result = assessor
-            .mtls_identity_matches(foundation::NodeId::generate(&generator), None)
+            .mtls_identity_matches(
+                foundation::NodeId::generate(&generator).expect("generate node id"),
+                None,
+            )
             .await;
         assert_eq!(err_or_panic(result).kind, SecurityErrorKind::Unavailable);
     }

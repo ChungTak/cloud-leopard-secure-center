@@ -75,7 +75,8 @@ impl RetentionPolicy {
     /// Compute the cutoff timestamp for data older than this policy.
     pub fn cutoff(&self, now: UtcTimestamp) -> Result<UtcTimestamp, PlatformError> {
         let dt: chrono::DateTime<chrono::Utc> = now.into();
-        let Some(cutoff) = dt.checked_sub_signed(chrono::Duration::days(i64::from(self.days))) else {
+        let Some(cutoff) = dt.checked_sub_signed(chrono::Duration::days(i64::from(self.days)))
+        else {
             return Err(PlatformError::invalid(
                 "days",
                 "retention cutoff overflowed timestamp range",

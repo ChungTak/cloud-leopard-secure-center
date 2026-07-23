@@ -14,7 +14,9 @@
 use async_trait::async_trait;
 use domain_audit::audit_record::{ActionRisk, AuditDetails, AuditRecord, AuditResult};
 use domain_authorization::role_binding::ResourceRef;
-use foundation::{Clock, ErrorCode, PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid};
+use foundation::{
+    Clock, ErrorCode, PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid,
+};
 
 pub use crate::authorization::{
     AuthorizationPort, AuthorizationRequest, AuthorizationResponse, Decision,

@@ -125,7 +125,7 @@ where
             usecase::tenant_authorization(actor, tenant_id, "tenant:organization:write", resource);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let id = OrganizationId::generate(&self.id_gen);
+        let id = OrganizationId::generate(&self.id_gen)?;
         let unit = OrganizationUnit::new(
             id,
             tenant_id,

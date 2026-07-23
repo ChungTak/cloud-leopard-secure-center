@@ -10,7 +10,11 @@ use axum::{
 use base64ct::Encoding;
 use http_body_util::BodyExt;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, sync::Arc, time::{Duration, Instant}};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::sync::Mutex;
 
 use crate::error::AppError;

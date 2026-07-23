@@ -203,6 +203,7 @@ impl RoleScheduler for ClusterRuntime {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -212,7 +213,7 @@ mod tests {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let now = UtcTimestamp::now();
         NodeDescriptor {
-            node_id: NodeId::generate(&generator),
+            node_id: NodeId::generate(&generator).expect("generate node id"),
             roles: vec![Role::Scheduler, Role::Api],
             capabilities: NodeCapabilities {
                 zone: Some("zone-a".to_string()),

@@ -129,7 +129,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let id = UserId::generate(&self.id_gen);
+        let id = UserId::generate(&self.id_gen)?;
         let user = User::new(
             id,
             tenant_id,

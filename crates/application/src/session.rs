@@ -227,12 +227,12 @@ pub async fn logout(
 
 fn generate_jti(random: &dyn RandomSource) -> Result<String, PlatformError> {
     let mut bytes = [0u8; 16];
-    random.fill_bytes(&mut bytes);
+    random.fill_bytes(&mut bytes)?;
     Ok(base64ct::Base64UrlUnpadded::encode_string(&bytes))
 }
 
 fn new_uuid(random: &dyn RandomSource) -> Result<Uuid, PlatformError> {
     let mut bytes = [0u8; 16];
-    random.fill_bytes(&mut bytes);
+    random.fill_bytes(&mut bytes)?;
     Ok(Uuid::from_bytes(bytes))
 }

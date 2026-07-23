@@ -32,10 +32,10 @@ pub async fn create_api_key(
     expires_at: UtcTimestamp,
 ) -> Result<CreatedApiKey, PlatformError> {
     let mut id_bytes = [0u8; 16];
-    random.fill_bytes(&mut id_bytes);
+    random.fill_bytes(&mut id_bytes)?;
     let id = Uuid::from_bytes(id_bytes);
 
-    let raw_token = generate_random_string(random, 32);
+    let raw_token = generate_random_string(random, 32)?;
     let token_hash = hash_raw(&raw_token);
 
     let api_key = ApiKey::new(
@@ -96,10 +96,10 @@ pub async fn revoke_api_key(
     repo.update(&key, ctx).await
 }
 
-fn generate_random_string(random: &dyn RandomSource, len: usize) -> String {
+fn generate_random_string(random: &dyn RandomSource, len: usize) -> Result<String, PlatformError> {
     let mut bytes = vec![0u8; len];
-    random.fill_bytes(&mut bytes);
-    Base64UrlUnpadded::encode_string(&bytes)
+    random.fill_bytes(&mut bytes)?;
+    Ok(Base64UrlUnpadded::encode_string(&bytes))
 }
 
 fn hash_raw(raw: &str) -> String {

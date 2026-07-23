@@ -2,7 +2,10 @@
 
 use async_trait::async_trait;
 use domain_audit::audit_record::{AuditDetails, AuditRecord, AuditRecordId};
-use foundation::{ErrorCode, PlatformError, RequestContext, UtcTimestamp, chrono::{DateTime, Utc}};
+use foundation::{
+    ErrorCode, PlatformError, RequestContext, UtcTimestamp,
+    chrono::{DateTime, Utc},
+};
 use sqlx::PgPool;
 use storage_api::AuditWriter;
 

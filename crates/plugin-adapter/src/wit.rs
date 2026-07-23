@@ -69,11 +69,8 @@ pub trait WitHost: Send + Sync {
         title: &str,
         severity: u8,
     ) -> Result<AlarmId, PluginError>;
-    async fn publish_event(
-        &self,
-        plugin: PluginId,
-        event: &PluginEvent,
-    ) -> Result<(), PluginError>;
+    async fn publish_event(&self, plugin: PluginId, event: &PluginEvent)
+    -> Result<(), PluginError>;
     fn limits(&self) -> WasmLimits;
 }
 
@@ -93,7 +90,12 @@ impl UnsupportedWitHost {
 
 #[async_trait::async_trait]
 impl WitHost for UnsupportedWitHost {
-    async fn log(&self, _plugin: PluginId, _level: &str, _message: &str) -> Result<(), PluginError> {
+    async fn log(
+        &self,
+        _plugin: PluginId,
+        _level: &str,
+        _message: &str,
+    ) -> Result<(), PluginError> {
         self.reject("log")
     }
 
@@ -149,6 +151,7 @@ impl UnsupportedWitHost {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -164,14 +167,18 @@ mod tests {
     #[tokio::test]
     async fn disabled_wit_host_returns_unavailable() {
         let host = UnsupportedWitHost::new(false);
-        let result = host.log(PluginId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)), "info", "x").await;
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+        let plugin_id = PluginId::generate(&generator).expect("generate plugin id");
+        let result = host.log(plugin_id, "info", "x").await;
         assert_eq!(err_or_panic(result).kind, PluginErrorKind::Unavailable);
     }
 
     #[tokio::test]
     async fn enabled_wit_host_returns_unsupported() {
         let host = UnsupportedWitHost::new(true);
-        let result = host.read_config(PluginId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)), "key").await;
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+        let plugin_id = PluginId::generate(&generator).expect("generate plugin id");
+        let result = host.read_config(plugin_id, "key").await;
         assert_eq!(err_or_panic(result).kind, PluginErrorKind::Unsupported);
     }
 

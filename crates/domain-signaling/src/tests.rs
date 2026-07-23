@@ -1,3 +1,5 @@
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+
 use foundation::{Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId};
 use futures::executor::block_on;
 
@@ -8,10 +10,12 @@ use crate::{
 
 fn tenant() -> TenantId {
     TenantId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom))
+        .expect("generate tenant id")
 }
 
 fn device() -> DeviceId {
     DeviceId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom))
+        .expect("generate device id")
 }
 
 fn deadline() -> Deadline {
@@ -49,7 +53,7 @@ fn unsupported_create_media_session_returns_unsupported() {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     match block_on(port.create_media_session(CreateMediaSessionRequest {
         tenant_id: tenant(),
-        operation_id: foundation::OperationId::generate(&generator),
+        operation_id: foundation::OperationId::generate(&generator).expect("generate operation id"),
         deadline: deadline(),
         parameters: serde_json::Value::Null,
     })) {
@@ -65,7 +69,8 @@ fn operation_state_strings_are_stable() {
             id: foundation::OperationId::generate(&SystemIdGenerator::new(
                 SystemClock,
                 SystemRandom
-            )),
+            ))
+            .expect("generate operation id"),
             tenant_id: tenant(),
             device_id: device(),
             state: OperationState::Running,
@@ -78,17 +83,14 @@ fn operation_state_strings_are_stable() {
 
 #[test]
 fn media_session_state_strings_are_stable() {
+    let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     assert_eq!(
         super::mapper::media_session_to_rest(&super::MediaSession {
-            id: foundation::MediaSessionId::generate(&SystemIdGenerator::new(
-                SystemClock,
-                SystemRandom
-            )),
+            id: foundation::MediaSessionId::generate(&generator)
+                .expect("generate media session id"),
             tenant_id: tenant(),
-            operation_id: foundation::OperationId::generate(&SystemIdGenerator::new(
-                SystemClock,
-                SystemRandom
-            )),
+            operation_id: foundation::OperationId::generate(&generator)
+                .expect("generate operation id"),
             state: MediaSessionState::Active,
             deadline: deadline(),
         })

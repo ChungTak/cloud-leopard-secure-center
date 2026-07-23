@@ -52,7 +52,10 @@ impl PluginManifest {
     /// deferred to the verifier port.
     pub fn validate(&self) -> Result<(), PluginError> {
         if self.version.is_empty() {
-            return Err(PluginError::new(PluginErrorKind::Invalid, "version is empty"));
+            return Err(PluginError::new(
+                PluginErrorKind::Invalid,
+                "version is empty",
+            ));
         }
         if self.api_range.is_empty() {
             return Err(PluginError::new(
@@ -193,8 +196,8 @@ mod tests {
     fn make_manifest() -> PluginManifest {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         PluginManifest {
-            plugin_id: PluginId::generate(&generator),
-            tenant_id: TenantId::generate(&generator),
+            plugin_id: ok_or_panic(PluginId::generate(&generator)),
+            tenant_id: ok_or_panic(TenantId::generate(&generator)),
             version: "0.1.0".to_string(),
             kind: PluginKind::Wasm,
             api_range: "v1".to_string(),
