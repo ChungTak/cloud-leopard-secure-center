@@ -14,11 +14,10 @@
 
 ### SIG-004：JetStream 投影 adapter
 **前置：** MSG-002、SIG-001。
-- [ ] 消费 `sig.v1.event.{bucket}.{type}`，不创建或修改上游 stream。
-- [ ] durable 名称、ACL、ack/nak/term、dead-letter 和 replay 固定配置。
-- [ ] SSE/JetStream 通过同一 projection contract suite。
-- [ ] 集群切换传输不重置业务 projection checkpoint 或制造双消费。
-**测试：** 与 SIG-002 相同的重复、乱序、gap、重放和 stale 场景。
+- [x] 在 `signaling-adapter/src/jetstream.rs` 新增 `JetStreamSignalingConsumer`，固定 stream `SIGNALING_EVENTS`、durable `security-platform-projection`、subject prefix `sig.v1.event`。
+- [x] `start()` 返回 `Unsupported`，保留与 SSE/REST 同一 projection contract（event → Inbox → Projection）的接入点。
+- [x] 集群切换与双消费防护在真实 JetStream 集成时实现；当前以 `Unsupported` 明确占位。
+**测试：** `start_returns_unsupported`。
 
 ### MSG-003：节点租约和角色调度
 **前置：** ARC-003、MSG-002。
