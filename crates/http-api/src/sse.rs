@@ -56,6 +56,8 @@ where
             .headers
             .get("last-event-id")
             .and_then(|value| value.to_str().ok())
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
             .map(|s| s.to_string());
         Ok(Self(header))
     }

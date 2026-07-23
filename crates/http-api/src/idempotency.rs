@@ -1,12 +1,6 @@
 //! HTTP idempotency support using `Idempotency-Key` headers.
 
-use axum::{
-    body::Body,
-    extract::Request,
-    http::{StatusCode, header},
-    middleware::Next,
-    response::Response,
-};
+use axum::{body::Body, extract::Request, http::StatusCode, middleware::Next, response::Response};
 use base64ct::Encoding;
 use http_body_util::BodyExt;
 use sha2::{Digest, Sha256};
@@ -18,6 +12,7 @@ use std::{
 use tokio::sync::Mutex;
 
 use crate::{
+    auth::extract_bearer,
     client_ip::{TrustedProxyConfig, resolve_client_ip},
     error::AppError,
 };
@@ -116,11 +111,8 @@ fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
         .and_then(|value| value.to_str().ok())
         .map(str::trim)?;
 
-    let token_fingerprint = req
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .map(|h| fingerprint(h.trim()))
+    let token_fingerprint = extract_bearer(req.headers())
+        .map(|token| fingerprint(&token))
         .unwrap_or_default();
 
     let client_ip = client_ip_hint(req);
