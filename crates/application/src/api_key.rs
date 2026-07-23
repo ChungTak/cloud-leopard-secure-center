@@ -31,9 +31,7 @@ pub async fn create_api_key(
     allowed_sources: Vec<String>,
     expires_at: UtcTimestamp,
 ) -> Result<CreatedApiKey, PlatformError> {
-    let mut id_bytes = [0u8; 16];
-    random.fill_bytes(&mut id_bytes)?;
-    let id = Uuid::from_bytes(id_bytes);
+    let id = foundation::generate_uuid(clock, random)?;
 
     let raw_token = generate_random_string(random, 32)?;
     let token_hash = hash_raw(&raw_token);

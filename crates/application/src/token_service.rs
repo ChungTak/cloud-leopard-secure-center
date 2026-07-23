@@ -174,9 +174,7 @@ impl TokenService {
         let raw = Base64UrlUnpadded::encode_string(&raw);
         let token_hash = hash_raw(&raw);
 
-        let mut id_bytes = [0u8; 16];
-        random.fill_bytes(&mut id_bytes)?;
-        let id = Uuid::from_bytes(id_bytes);
+        let id = foundation::generate_uuid(clock, random)?;
 
         let created_at = clock.now();
         let token = RefreshToken {

@@ -173,14 +173,24 @@ fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
         None => CorsLayer::permissive(),
         Some(origins) if origins.is_empty() => CorsLayer::new(),
         Some(origins) => {
+            if origins.iter().any(|o| o.trim() == "*") {
+                return CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods(Any)
+                    .allow_headers(Any);
+            }
             let allowed: Vec<HeaderValue> = origins
                 .iter()
                 .filter_map(|o| o.parse::<HeaderValue>().ok())
                 .collect();
-            CorsLayer::new()
-                .allow_origin(AllowOrigin::list(allowed))
-                .allow_methods(Any)
-                .allow_headers(Any)
+            if allowed.is_empty() {
+                CorsLayer::new()
+            } else {
+                CorsLayer::new()
+                    .allow_origin(AllowOrigin::list(allowed))
+                    .allow_methods(Any)
+                    .allow_headers(Any)
+            }
         }
     }
 }

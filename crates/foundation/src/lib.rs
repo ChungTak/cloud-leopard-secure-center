@@ -305,6 +305,23 @@ pub trait IdGenerator: Send + Sync {
     fn generate(&self) -> Result<Uuid, PlatformError>;
 }
 
+/// Generate a UUIDv7 from an injected clock and random source.
+///
+/// This is the standalone equivalent of [`StandardIdGenerator`] for callers that
+/// already hold `&dyn` trait objects.
+pub fn generate_uuid(clock: &dyn Clock, random: &dyn RandomSource) -> Result<Uuid, PlatformError> {
+    let ts = clock.now().timestamp_millis() as u64;
+    let mut rand = [0u8; 10];
+    random.fill_bytes(&mut rand)?;
+    let mut bytes = [0u8; 16];
+    bytes[0..6].copy_from_slice(&ts.to_be_bytes()[2..8]);
+    bytes[6..8].copy_from_slice(&rand[0..2]);
+    bytes[7] = (bytes[7] & 0x0F) | 0x70; // version 7
+    bytes[8..16].copy_from_slice(&rand[2..10]);
+    bytes[8] = (bytes[8] & 0x3F) | 0x80; // variant 10
+    Ok(Uuid::from_bytes(bytes))
+}
+
 /// Standard UUIDv7 generator backed by an injected clock and random source.
 pub struct StandardIdGenerator<C, R> {
     clock: C,

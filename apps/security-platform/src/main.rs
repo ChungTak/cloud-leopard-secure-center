@@ -66,27 +66,32 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or_default();
 
-    let cursor_secret = env::var("CLSC_CURSOR_SECRET")
+    let cursor_secret = if let Some(secret) = env::var("CLSC_CURSOR_SECRET")
         .ok()
         .filter(|s| !s.is_empty())
-        .map(|s| s.into_bytes())
-        .unwrap_or_else(|| {
-            eprintln!(
-                "warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret"
-            );
-            let mut buf = [0u8; 32];
-            if let Err(e) = SystemRandom.fill_bytes(&mut buf) {
-                eprintln!("failed to generate pagination secret: {e}");
-            }
-            buf.to_vec()
-        });
+    {
+        secret.into_bytes()
+    } else {
+        eprintln!(
+            "warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret"
+        );
+        let mut buf = [0u8; 32];
+        SystemRandom
+            .fill_bytes(&mut buf)
+            .map_err(|e| format!("failed to generate pagination secret: {e}"))?;
+        buf.to_vec()
+    };
     let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret));
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
         .ok()
+        .filter(|s| !s.is_empty())
         .map(|v| {
-            let origins: Vec<String> = v.split(',').map(|s| s.trim().to_string()).collect();
-            if origins.is_empty() { vec![] } else { origins }
+            v.split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+                .collect::<Vec<_>>()
         })
         .or_else(|| Some(vec![]));
 
@@ -111,6 +116,6 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     let listener = TcpListener::bind(addr).await?;
     println!("security-platform listening on {addr}");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
     Ok(())
 }

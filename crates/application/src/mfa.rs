@@ -4,7 +4,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use domain_identity::assurance::AssuranceLevel;
 use domain_identity::mfa::MfaFactor;
 use foundation::{
-    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, uuid::Uuid,
+    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId,
 };
 use storage_api::MfaRepository;
 
@@ -54,9 +54,7 @@ pub async fn enroll_totp(
 
     resolver.store(&secret_ref, &secret)?;
 
-    let mut id_bytes = [0u8; 16];
-    random.fill_bytes(&mut id_bytes)?;
-    let id = Uuid::from_bytes(id_bytes);
+    let id = foundation::generate_uuid(clock, random)?;
 
     let (factor, recovery_codes) = MfaFactor::new_totp(
         id,
