@@ -88,6 +88,7 @@ impl JobRepository for PostgresJobRepository {
                 WHERE tenant_id IS NOT DISTINCT FROM $1
                   AND queue = $2
                   AND status IN ('pending', 'running')
+                  AND attempts < max_attempts
                   AND next_run <= clock_timestamp()
                   AND (lease_until IS NULL OR lease_until <= clock_timestamp())
                 ORDER BY next_run, created_at

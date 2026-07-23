@@ -73,8 +73,7 @@ impl RetryPolicy {
 
         let total_ms = delay_ms.saturating_add(jitter_ms).min(max_ms);
         let next: chrono::DateTime<chrono::Utc> = now.into();
-        let next = next
-            .checked_add_signed(Duration::milliseconds(total_ms as i64))?;
+        let next = next.checked_add_signed(Duration::milliseconds(total_ms as i64))?;
 
         if self
             .deadline
