@@ -266,8 +266,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
              LIMIT $2 OFFSET $3",
         )
         .bind(principal_id.as_uuid())
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;

@@ -255,8 +255,8 @@ impl TagRepository for PostgresTagRepository {
         )
         .bind(resource_type.as_str())
         .bind(resource_id)
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;

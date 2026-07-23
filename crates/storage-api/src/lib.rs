@@ -47,6 +47,19 @@ pub struct ListOptions {
     pub limit: u32,
 }
 
+impl ListOptions {
+    /// Maximum items a single page can return.
+    pub const MAX_LIMIT: u32 = 10_000;
+
+    /// Return a validated copy with `limit` clamped to `[1, MAX_LIMIT]`.
+    pub fn validate(&self) -> Self {
+        Self {
+            offset: self.offset,
+            limit: self.limit.clamp(1, Self::MAX_LIMIT),
+        }
+    }
+}
+
 impl Default for ListOptions {
     fn default() -> Self {
         Self {

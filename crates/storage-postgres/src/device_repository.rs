@@ -249,8 +249,8 @@ impl DeviceRepository for PostgresDeviceRepository {
              ORDER BY code
              LIMIT $1 OFFSET $2",
         )
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
