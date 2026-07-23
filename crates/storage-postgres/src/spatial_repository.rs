@@ -937,8 +937,9 @@ impl SpatialRepository for PostgresSpatialRepository {
                 if a.coordinate_system != "WGS84" {
                     return false;
                 }
-                let lat = a.latitude.unwrap_or(0.0);
-                let lon = a.longitude.unwrap_or(0.0);
+                let (Some(lat), Some(lon)) = (a.latitude, a.longitude) else {
+                    return false;
+                };
                 haversine_distance(latitude, longitude, lat, lon) <= radius_meters
             })
             .collect();
