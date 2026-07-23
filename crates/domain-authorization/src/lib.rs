@@ -2,6 +2,7 @@
 
 pub mod permission;
 pub mod role;
+pub mod role_binding;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
