@@ -212,8 +212,8 @@ impl SpatialRepository for PostgresSpatialRepository {
              ORDER BY code
              LIMIT $1 OFFSET $2",
         )
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -406,8 +406,8 @@ impl SpatialRepository for PostgresSpatialRepository {
              ORDER BY code
              LIMIT $1 OFFSET $2",
         )
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -595,8 +595,8 @@ impl SpatialRepository for PostgresSpatialRepository {
              ORDER BY code
              LIMIT $1 OFFSET $2",
         )
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -875,8 +875,8 @@ impl SpatialRepository for PostgresSpatialRepository {
              ORDER BY code
              LIMIT $1 OFFSET $2",
         )
-        .bind((options.limit as i64) + 1)
-        .bind(options.offset as i64)
+        .bind((options.validate().limit as i64) + 1)
+        .bind(options.validate().offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -943,8 +943,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             })
             .collect();
 
-        let offset = options.offset as usize;
-        let limit = options.limit.max(1) as usize;
+        let offset = options.validate().offset as usize;
+        let limit = options.validate().limit.max(1) as usize;
         if offset >= items.len() {
             return Ok(Page {
                 items: Vec::new(),
@@ -953,7 +953,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         }
         let has_more = items.len() - offset > limit;
         let next_cursor = if has_more {
-            Some((options.offset + limit as u64).to_string())
+            Some((options.validate().offset + limit as u64).to_string())
         } else {
             None
         };

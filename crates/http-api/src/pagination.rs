@@ -35,15 +35,6 @@ impl PaginationConfig {
     }
 }
 
-impl Default for PaginationConfig {
-    fn default() -> Self {
-        Self {
-            max_page_size: 100,
-            cursor_secret: Vec::new(),
-        }
-    }
-}
-
 /// Sort order attached to a cursor.
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -208,11 +199,9 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let config = parts
-            .extensions
-            .get::<Arc<PaginationConfig>>()
-            .cloned()
-            .unwrap_or_default();
+        let Some(config) = parts.extensions.get::<Arc<PaginationConfig>>().cloned() else {
+            return Err(AppError::Internal);
+        };
 
         let Query(query): Query<PaginationQuery> = Query::from_request_parts(parts, state)
             .await

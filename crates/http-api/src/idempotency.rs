@@ -31,6 +31,7 @@ struct IdempotencyKey {
     method: String,
     path: String,
     token_fingerprint: String,
+    client_ip: String,
     idempotency_key: String,
 }
 
@@ -50,13 +51,6 @@ impl IdempotencyState {
             inner: Arc::new(Mutex::new(HashMap::new())),
             ttl,
         }
-    }
-
-    /// Clear expired entries. Called opportunistically on insert.
-    async fn cleanup(&self) {
-        let now = Instant::now();
-        let mut store = self.inner.lock().await;
-        store.retain(|_, cached| cached.expires_at > now);
     }
 }
 
@@ -88,14 +82,13 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     // Preserve the original request parts and re-inject the collected body.
     let req = Request::from_parts(parts, Body::from(body_bytes));
 
-    let cached = {
-        let store = state.inner.lock().await;
-        store.get(&key).cloned()
-    };
+    // Hold the lock across the handler so concurrent requests with the same
+    // idempotency key see a single execution result.
+    let mut store = state.inner.lock().await;
 
-    if let Some(cached) = cached {
+    if let Some(cached) = store.get(&key) {
         if cached.digest == digest {
-            return Ok(build_response(&cached));
+            return Ok(build_response(cached));
         }
         return Err(AppError::Conflict);
     }
@@ -103,8 +96,8 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     let response = next.run(req).await;
     let cached = cache_response(response, digest, state.ttl).await?;
 
-    state.cleanup().await;
-    let mut store = state.inner.lock().await;
+    let now = Instant::now();
+    store.retain(|_, cached| cached.expires_at > now);
     store.insert(key, cached.clone());
 
     Ok(build_response(&cached))
@@ -126,12 +119,29 @@ fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
         .map(fingerprint)
         .unwrap_or_default();
 
+    let client_ip = client_ip_hint(req);
+
     Some(IdempotencyKey {
         method: req.method().to_string(),
         path: req.uri().path().to_string(),
         token_fingerprint,
+        client_ip,
         idempotency_key: idempotency_key.to_string(),
     })
+}
+
+fn client_ip_hint(req: &Request<Body>) -> String {
+    if let Some(value) = req
+        .headers()
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+    {
+        return value.to_string();
+    }
+    if let Some(value) = req.headers().get("x-real-ip").and_then(|v| v.to_str().ok()) {
+        return value.to_string();
+    }
+    String::new()
 }
 
 fn is_write_method(method: &str) -> bool {

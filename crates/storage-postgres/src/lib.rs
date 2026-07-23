@@ -42,10 +42,14 @@ use sqlx::{PgPool, Postgres};
 use storage_api::{ListOptions as ListOptionsInner, Page};
 use tokio::sync::{Mutex, MutexGuard};
 
+/// Maximum number of items a single page can return. Requests with larger
+/// limits are silently clamped to prevent OOM and query failures.
+const MAX_PAGE_LIMIT: u32 = 10_000;
+
 /// Trim `items` to `options.limit` and produce a cursor for the next page when
 /// the query returned one extra row.
 pub(crate) fn paginate<T>(mut items: Vec<T>, options: ListOptionsInner) -> Page<T> {
-    let limit = options.limit.max(1) as usize;
+    let limit = options.limit.clamp(1, MAX_PAGE_LIMIT) as usize;
     let has_more = items.len() > limit;
     if has_more {
         items.truncate(limit);
