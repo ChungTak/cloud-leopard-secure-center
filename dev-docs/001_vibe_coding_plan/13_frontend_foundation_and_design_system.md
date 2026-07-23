@@ -16,8 +16,8 @@
 
 ### WEB-003：路由和权限壳
 **前置：** AUTH-003、WEB-002。
-- [ ] 路由/菜单声明 permission 和 capability；服务端返回有效 capability 集。
-- [ ] `Can` 组件只控制 UX；mutation 前不依赖本地判断代替服务端。
-- [ ] 会话结束销毁 query cache、SSE、播放器和敏感临时状态。
+- [x] 路由/菜单声明 permission 和 capability；服务端返回有效 capability 集。
+- [x] `Can` 组件只控制 UX；mutation 前不依赖本地判断代替服务端。
+- [x] 会话结束销毁 query cache、SSE、播放器和敏感临时状态。
 **测试：** 权限变化、深链接、租户切换、登出资源清理。
 

@@ -8,11 +8,10 @@ import ErrorBoundary from './components/ErrorBoundary';
 import axe from 'axe-core';
 import './i18n/index.ts';
 
-function setupMatchMedia(matches = false): void {
-  const listeners = new Set<EventListener>();
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
+function createMatchMedia(matches = false) {
+  return (query: string): MediaQueryList => {
+    const listeners = new Set<EventListener>();
+    return {
       matches,
       media: query,
       addEventListener: (_event: string, listener: EventListener) => {
@@ -25,7 +24,15 @@ function setupMatchMedia(matches = false): void {
         listeners.forEach((listener) => listener(event));
         return true;
       },
-    })),
+      onchange: null,
+    } as unknown as MediaQueryList;
+  };
+}
+
+function setupMatchMedia(matches = false): void {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: createMatchMedia(matches),
   });
 }
 
@@ -44,7 +51,6 @@ describe('App shell', () => {
 
   afterEach(() => {
     cleanup();
-    vi.restoreAllMocks();
   });
 
   it('renders dashboard and Chinese default translations', async () => {
