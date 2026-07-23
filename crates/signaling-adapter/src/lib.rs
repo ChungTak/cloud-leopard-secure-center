@@ -1,10 +1,12 @@
-//! Single-node REST + SSE adapter for cheetah-signaling.
+//! Single-node REST + SSE adapter and JetStream projection consumer for
+//! cheetah-signaling.
 //!
 //! Phase 1 freezes the event shapes and the `SignalingPort` adapter, but leaves the
-//! actual HTTP client unconfigured so the crate returns `Unavailable` when no
-//! upstream base URL is supplied.
+//! actual HTTP/NATS clients unconfigured so the crate returns `Unavailable` when no
+//! upstream base URL is supplied and `Unsupported` when one is supplied.
 
 pub mod event;
+pub mod jetstream;
 pub mod reconciler;
 pub mod worker;
 
