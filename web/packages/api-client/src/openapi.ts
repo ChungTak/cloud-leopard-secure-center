@@ -4,738 +4,1315 @@
  */
 
 export interface paths {
-  '/audit-records/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/audit-records/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an audit record by id. */
+        get: operations["get_audit_record"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get an audit record by id. */
-    get: operations['get_audit_record'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/cameras/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/cameras/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a camera by id. */
+        get: operations["get_camera"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a camera by id. */
-    get: operations['get_camera'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/config-definitions/{key}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/config-definitions/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a configuration definition by key. */
+        get: operations["get_config_definition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a configuration definition by key. */
-    get: operations['get_config_definition'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/config-values/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/config-values/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a configuration value by id. */
+        get: operations["get_config_value"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a configuration value by id. */
-    get: operations['get_config_value'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/devices/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a managed device by id. */
+        get: operations["get_device"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a managed device by id. */
-    get: operations['get_device'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/health': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Health check handler. */
+        get: operations["health"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Health check handler. */
-    get: operations['health'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/organization-units/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/organization-units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List organization units. */
+        get: operations["list_organization_units"];
+        put?: never;
+        /** Create an organization unit. */
+        post: operations["create_organization_unit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get an organization unit by id. */
-    get: operations['get_organization_unit'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/role-bindings/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/organization-units/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get an organization unit by id. */
+        get: operations["get_organization_unit"];
+        put?: never;
+        post?: never;
+        /** Delete an organization unit. */
+        delete: operations["delete_organization_unit"];
+        options?: never;
+        head?: never;
+        /** Update an organization unit. */
+        patch: operations["update_organization_unit"];
+        trace?: never;
     };
-    /** Get a role binding by id. */
-    get: operations['get_role_binding'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/roles/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/organization-units/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move an organization unit. */
+        post: operations["move_organization_unit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a role by id. */
-    get: operations['get_role'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/tenants/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/role-bindings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a role binding by id. */
+        get: operations["get_role_binding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a tenant by id. */
-    get: operations['get_tenant'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
-  '/users/{id}': {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    "/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a role by id. */
+        get: operations["get_role"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
     };
-    /** Get a user by id. */
-    get: operations['get_user'];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
+    "/spatial-nodes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List spatial nodes. */
+        get: operations["list_spatial_nodes"];
+        put?: never;
+        /** Create a spatial node. */
+        post: operations["create_spatial_node"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/spatial-nodes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a spatial node by id. */
+        get: operations["get_spatial_node"];
+        put?: never;
+        post?: never;
+        /** Delete a spatial node. */
+        delete: operations["delete_spatial_node"];
+        options?: never;
+        head?: never;
+        /** Update a spatial node. */
+        patch: operations["update_spatial_node"];
+        trace?: never;
+    };
+    "/spatial-nodes/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Move a spatial node. */
+        post: operations["move_spatial_node"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tenants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a tenant by id. */
+        get: operations["get_tenant"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a user by id. */
+        get: operations["get_user"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-  schemas: {
-    /** @description Stable API representation of audit record details. */
-    AuditDetailsDto: {
-      schema: string;
-      value: unknown;
-    };
-    /** @description Stable API representation of an audit record. */
-    AuditRecordDto: {
-      action: string;
-      actorId: string;
-      actorType: string;
-      afterDigest?: string | null;
-      beforeDigest?: string | null;
-      details: components['schemas']['AuditDetailsDto'];
-      id?: string | null;
-      occurredAt: string;
-      requestId?: string | null;
-      result: string;
-      risk: string;
-      sourceIp?: string | null;
-      targetId: string;
-      targetType: string;
-      tenantId: string;
-      traceId?: string | null;
-    };
-    /** @description Stable API representation of a camera. */
-    CameraDto: {
-      actor?: string | null;
-      areaId?: string | null;
-      code: string;
-      createdAt: string;
-      deviceId: string;
-      id: string;
-      isEnabled: boolean;
-      name: string;
-      /** Format: int64 */
-      revision: number;
-      sensitivity: string;
-      tenantId: string;
-      updatedAt: string;
-    };
-    /** @description Stable API representation of a configuration definition. */
-    ConfigDefinitionDto: {
-      configKey: string;
-      defaultValue: string;
-      dynamic: boolean;
-      schema?: string | null;
-      sensitive: boolean;
-      valueType: string;
-    };
-    /** @description Stable API representation of a configuration scope. */
-    ConfigScopeDto:
-      | {
-          /** @enum {string} */
-          kind: 'platform';
-        }
-      | {
-          /** @enum {string} */
-          kind: 'tenant';
-          tenant_id: string;
-        }
-      | {
-          /** @enum {string} */
-          kind: 'module';
-          module: string;
-          tenant_id: string;
+    schemas: {
+        /** @description Stable API representation of audit record details. */
+        AuditDetailsDto: {
+            schema: string;
+            value: unknown;
         };
-    /** @description Stable API representation of a configuration value. */
-    ConfigValueDto: {
-      configKey: string;
-      id?: string | null;
-      /** Format: int64 */
-      revision: number;
-      scope: components['schemas']['ConfigScopeDto'];
-      secretRef?: string | null;
-      value: string;
-    };
-    /** @description Stable API representation of a managed device. */
-    DeviceDto: {
-      actor?: string | null;
-      areaId?: string | null;
-      code: string;
-      createdAt: string;
-      id: string;
-      lifecycle: string;
-      name: string;
-      onlineState: string;
-      organizationId?: string | null;
-      /** Format: int64 */
-      revision: number;
-      serial?: string | null;
-      tenantId: string;
-      updatedAt: string;
-    };
-    /** @description Health status returned by the root endpoint. */
-    HealthDto: {
-      component: string;
-      status: string;
-    };
-    /** @description Stable API representation of an organization unit. */
-    OrganizationUnitDto: {
-      actor?: string | null;
-      code: string;
-      createdAt: string;
-      id: string;
-      name: string;
-      parentId?: string | null;
-      /** Format: int64 */
-      revision: number;
-      tenantId: string;
-      updatedAt: string;
-    };
-    /** @description Generic API problem details sent by this service. */
-    ProblemDetailsDto: {
-      detail: string;
-      instance?: string | null;
-      /** Format: int32 */
-      status: number;
-      title: string;
-      type: string;
-    };
-    /** @description Stable API representation of an explicit resource reference. */
-    ResourceRefDto: {
-      resourceId: string;
-      resourceType: string;
-    };
-    /** @description Stable API representation of a role binding. */
-    RoleBindingDto: {
-      actor?: string | null;
-      createdAt: string;
-      id: string;
-      principalId: string;
-      /** Format: int64 */
-      revision: number;
-      roleId: string;
-      scope: components['schemas']['RoleBindingScopeDto'];
-      tenantId: string;
-      updatedAt: string;
-      validFrom: string;
-      validUntil?: string | null;
-    };
-    /** @description Stable API representation of a role-binding scope. */
-    RoleBindingScopeDto:
-      | {
-          /** @enum {string} */
-          kind: 'tenant';
-        }
-      | {
-          /** @enum {string} */
-          kind: 'organization_subtree';
-          resource_id: string;
-        }
-      | {
-          /** @enum {string} */
-          kind: 'area_subtree';
-          resource_id: string;
-        }
-      | {
-          /** @enum {string} */
-          kind: 'resource_set';
-          resources: components['schemas']['ResourceRefDto'][];
+        /** @description Stable API representation of an audit record. */
+        AuditRecordDto: {
+            action: string;
+            actorId: string;
+            actorType: string;
+            afterDigest?: string | null;
+            beforeDigest?: string | null;
+            details: components["schemas"]["AuditDetailsDto"];
+            id?: string | null;
+            occurredAt: string;
+            requestId?: string | null;
+            result: string;
+            risk: string;
+            sourceIp?: string | null;
+            targetId: string;
+            targetType: string;
+            tenantId: string;
+            traceId?: string | null;
         };
-    /** @description Stable API representation of a role. */
-    RoleDto: {
-      actor?: string | null;
-      createdAt: string;
-      id: string;
-      isBuiltin: boolean;
-      name: string;
-      permissions: string[];
-      /** Format: int64 */
-      revision: number;
-      tenantId?: string | null;
-      updatedAt: string;
+        /** @description Stable API representation of a camera. */
+        CameraDto: {
+            actor?: string | null;
+            areaId?: string | null;
+            code: string;
+            createdAt: string;
+            deviceId: string;
+            id: string;
+            isEnabled: boolean;
+            name: string;
+            /** Format: int64 */
+            revision: number;
+            sensitivity: string;
+            tenantId: string;
+            updatedAt: string;
+        };
+        /** @description Stable API representation of a configuration definition. */
+        ConfigDefinitionDto: {
+            configKey: string;
+            defaultValue: string;
+            dynamic: boolean;
+            schema?: string | null;
+            sensitive: boolean;
+            valueType: string;
+        };
+        /** @description Stable API representation of a configuration scope. */
+        ConfigScopeDto: {
+            /** @enum {string} */
+            kind: "platform";
+        } | {
+            /** @enum {string} */
+            kind: "tenant";
+            tenant_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "module";
+            module: string;
+            tenant_id: string;
+        };
+        /** @description Stable API representation of a configuration value. */
+        ConfigValueDto: {
+            configKey: string;
+            id?: string | null;
+            /** Format: int64 */
+            revision: number;
+            scope: components["schemas"]["ConfigScopeDto"];
+            secretRef?: string | null;
+            value: string;
+        };
+        /** @description Request to create an organization unit. */
+        CreateOrganizationUnitRequest: {
+            code: string;
+            name: string;
+            parentId?: string | null;
+        };
+        /** @description Request to create a spatial node. */
+        CreateSpatialNodeRequest: {
+            code: string;
+            name: string;
+            nodeType: components["schemas"]["SpatialNodeType"];
+            parentId?: string | null;
+        };
+        /** @description Stable API representation of a managed device. */
+        DeviceDto: {
+            actor?: string | null;
+            areaId?: string | null;
+            code: string;
+            createdAt: string;
+            id: string;
+            lifecycle: string;
+            name: string;
+            onlineState: string;
+            organizationId?: string | null;
+            /** Format: int64 */
+            revision: number;
+            serial?: string | null;
+            tenantId: string;
+            updatedAt: string;
+        };
+        /** @description Health status returned by the root endpoint. */
+        HealthDto: {
+            component: string;
+            status: string;
+        };
+        /** @description Request to move an organization unit. */
+        MoveOrganizationUnitRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            parentId?: string | null;
+        };
+        /** @description Request to move a spatial node. */
+        MoveSpatialNodeRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            parentId?: string | null;
+        };
+        /** @description Stable API representation of an organization unit. */
+        OrganizationUnitDto: {
+            actor?: string | null;
+            code: string;
+            createdAt: string;
+            id: string;
+            name: string;
+            parentId?: string | null;
+            /** Format: int64 */
+            revision: number;
+            tenantId: string;
+            updatedAt: string;
+        };
+        /** @description Generic API problem details sent by this service. */
+        ProblemDetailsDto: {
+            detail: string;
+            instance?: string | null;
+            /** Format: int32 */
+            status: number;
+            title: string;
+            type: string;
+        };
+        /** @description Stable API representation of an explicit resource reference. */
+        ResourceRefDto: {
+            resourceId: string;
+            resourceType: string;
+        };
+        /** @description Stable API representation of a role binding. */
+        RoleBindingDto: {
+            actor?: string | null;
+            createdAt: string;
+            id: string;
+            principalId: string;
+            /** Format: int64 */
+            revision: number;
+            roleId: string;
+            scope: components["schemas"]["RoleBindingScopeDto"];
+            tenantId: string;
+            updatedAt: string;
+            validFrom: string;
+            validUntil?: string | null;
+        };
+        /** @description Stable API representation of a role-binding scope. */
+        RoleBindingScopeDto: {
+            /** @enum {string} */
+            kind: "tenant";
+        } | {
+            /** @enum {string} */
+            kind: "organization_subtree";
+            resource_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "area_subtree";
+            resource_id: string;
+        } | {
+            /** @enum {string} */
+            kind: "resource_set";
+            resources: components["schemas"]["ResourceRefDto"][];
+        };
+        /** @description Stable API representation of a role. */
+        RoleDto: {
+            actor?: string | null;
+            createdAt: string;
+            id: string;
+            isBuiltin: boolean;
+            name: string;
+            permissions: string[];
+            /** Format: int64 */
+            revision: number;
+            tenantId?: string | null;
+            updatedAt: string;
+        };
+        /** @description Stable API representation of a spatial node. */
+        SpatialNodeDto: {
+            actor?: string | null;
+            code: string;
+            createdAt: string;
+            id: string;
+            name: string;
+            nodeType: components["schemas"]["SpatialNodeType"];
+            parentId?: string | null;
+            /** Format: int64 */
+            revision: number;
+            tenantId: string;
+            updatedAt: string;
+        };
+        /**
+         * @description Spatial node kind.
+         * @enum {string}
+         */
+        SpatialNodeType: "site" | "building" | "floor" | "area";
+        /** @description Stable API representation of a tenant. */
+        TenantDto: {
+            actor?: string | null;
+            code: string;
+            createdAt: string;
+            id: string;
+            locale: string;
+            name: string;
+            /** Format: int64 */
+            revision: number;
+            status: string;
+            timezone: string;
+            updatedAt: string;
+        };
+        /** @description Request to update an organization unit. */
+        UpdateOrganizationUnitRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            name: string;
+        };
+        /** @description Request to update a spatial node. */
+        UpdateSpatialNodeRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            name: string;
+        };
+        /** @description Stable API representation of a user. */
+        UserDto: {
+            actor?: string | null;
+            createdAt: string;
+            deletedAt?: string | null;
+            displayName: string;
+            id: string;
+            /** Format: int64 */
+            revision: number;
+            /** Format: int64 */
+            sessionVersion: number;
+            status: string;
+            tenantId: string;
+            updatedAt: string;
+            username: string;
+        };
     };
-    /** @description Stable API representation of a tenant. */
-    TenantDto: {
-      actor?: string | null;
-      code: string;
-      createdAt: string;
-      id: string;
-      locale: string;
-      name: string;
-      /** Format: int64 */
-      revision: number;
-      status: string;
-      timezone: string;
-      updatedAt: string;
-    };
-    /** @description Stable API representation of a user. */
-    UserDto: {
-      actor?: string | null;
-      createdAt: string;
-      deletedAt?: string | null;
-      displayName: string;
-      id: string;
-      /** Format: int64 */
-      revision: number;
-      /** Format: int64 */
-      sessionVersion: number;
-      status: string;
-      tenantId: string;
-      updatedAt: string;
-      username: string;
-    };
-  };
-  responses: never;
-  parameters: never;
-  requestBodies: never;
-  headers: never;
-  pathItems: never;
+    responses: never;
+    parameters: never;
+    requestBodies: never;
+    headers: never;
+    pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-  get_audit_record: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_audit_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditRecordDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_camera: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['AuditRecordDto'];
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_camera: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_config_definition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigDefinitionDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_config_value: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['CameraDto'];
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigValueDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_config_definition: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        key: string;
-      };
-      cookie?: never;
+    get_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    health: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['ConfigDefinitionDto'];
+        requestBody?: never;
+        responses: {
+            /** @description Service is healthy */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_config_value: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    list_organization_units: {
+        parameters: {
+            query?: {
+                /** @description Filter by parent id */
+                parentId?: string;
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationUnitDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    create_organization_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['ConfigValueDto'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateOrganizationUnitRequest"];
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationUnitDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_device: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_organization_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationUnitDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    delete_organization_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['DeviceDto'];
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  health: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
+    update_organization_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateOrganizationUnitRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationUnitDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description Service is healthy */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    move_organization_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['HealthDto'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveOrganizationUnitRequest"];
+            };
         };
-      };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrganizationUnitDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-  };
-  get_organization_unit: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_role_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleBindingDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['OrganizationUnitDto'];
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_role_binding: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    list_spatial_nodes: {
+        parameters: {
+            query?: {
+                /** @description Filter by parent id */
+                parentId?: string;
+                /** @description Search term */
+                search?: string;
+                /** @description Filter by node type */
+                nodeType?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNodeDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    create_spatial_node: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['RoleBindingDto'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSpatialNodeRequest"];
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNodeDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_role: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_spatial_node: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNodeDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    delete_spatial_node: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['RoleDto'];
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_tenant: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    update_spatial_node: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSpatialNodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNodeDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    move_spatial_node: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['TenantDto'];
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MoveSpatialNodeRequest"];
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpatialNodeDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
-  get_user: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        id: string;
-      };
-      cookie?: never;
+    get_tenant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
     };
-    requestBody?: never;
-    responses: {
-      /** @description OK */
-      200: {
-        headers: {
-          [name: string]: unknown;
+    get_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
         };
-        content: {
-          'application/json': components['schemas']['UserDto'];
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
         };
-      };
-      /** @description Not implemented */
-      501: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          'application/json': components['schemas']['ProblemDetailsDto'];
-        };
-      };
     };
-  };
 }

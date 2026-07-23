@@ -89,6 +89,84 @@ impl From<&domain_organization::organization_unit::OrganizationUnit> for Organiz
     }
 }
 
+/// Request to create an organization unit.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateOrganizationUnitRequest {
+    pub parent_id: Option<String>,
+    pub code: String,
+    pub name: String,
+}
+
+/// Request to update an organization unit.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateOrganizationUnitRequest {
+    pub name: String,
+    pub expected_revision: u64,
+}
+
+/// Request to move an organization unit.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveOrganizationUnitRequest {
+    pub parent_id: Option<String>,
+    pub expected_revision: u64,
+}
+
+/// Stable API representation of a spatial node.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SpatialNodeDto {
+    pub id: String,
+    pub tenant_id: String,
+    pub parent_id: Option<String>,
+    #[schema(rename = "nodeType")]
+    pub node_type: SpatialNodeType,
+    pub code: String,
+    pub name: String,
+    pub revision: u64,
+    pub created_at: String,
+    pub updated_at: String,
+    pub actor: Option<String>,
+}
+
+/// Spatial node kind.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SpatialNodeType {
+    Site,
+    Building,
+    Floor,
+    Area,
+}
+
+/// Request to create a spatial node.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSpatialNodeRequest {
+    pub parent_id: Option<String>,
+    pub node_type: SpatialNodeType,
+    pub code: String,
+    pub name: String,
+}
+
+/// Request to update a spatial node.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSpatialNodeRequest {
+    pub name: String,
+    pub expected_revision: u64,
+}
+
+/// Request to move a spatial node.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct MoveSpatialNodeRequest {
+    pub parent_id: Option<String>,
+    pub expected_revision: u64,
+}
+
 /// Stable API representation of a user.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

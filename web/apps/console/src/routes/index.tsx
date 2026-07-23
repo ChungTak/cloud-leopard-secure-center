@@ -12,6 +12,8 @@ import {
   NotFoundPage,
   ForbiddenPage,
   ErrorPage,
+  OrganizationPage,
+  SpatialPage,
 } from '../pages/index.ts';
 
 export const routes: RouteObject[] = [
@@ -63,6 +65,22 @@ export const routes: RouteObject[] = [
             handle: {
               breadcrumb: 'settings' as const,
               permission: 'tenant:config:read' as const,
+            },
+          },
+          {
+            path: 'organizations',
+            element: <OrganizationPage />,
+            handle: {
+              breadcrumb: 'organizations' as const,
+              permission: 'tenant:organization:read' as const,
+            },
+          },
+          {
+            path: 'spatial',
+            element: <SpatialPage />,
+            handle: {
+              breadcrumb: 'spatial' as const,
+              permission: 'tenant:site:read' as const,
             },
           },
           { path: 'forbidden', element: <ForbiddenPage /> },
