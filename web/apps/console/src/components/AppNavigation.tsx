@@ -1,0 +1,75 @@
+import { useState } from 'react';
+import type { ReactNode } from 'react';
+import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useMediaQuery } from '../hooks/useMediaQuery.ts';
+
+interface NavItem {
+  to: string;
+  labelKey: 'dashboard' | 'tenants' | 'users' | 'settings';
+}
+
+const items: NavItem[] = [
+  { to: '/admin/dashboard', labelKey: 'dashboard' },
+  { to: '/admin/tenants', labelKey: 'tenants' },
+  { to: '/admin/users', labelKey: 'users' },
+  { to: '/admin/settings', labelKey: 'settings' },
+];
+
+export default function AppNavigation(): ReactNode {
+  const { t } = useTranslation('common');
+  const isNarrow = useMediaQuery('(max-width: 600px)');
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const showMenu = !isNarrow || mobileOpen;
+
+  return (
+    <header
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 'var(--clsc-spacing-medium)',
+        backgroundColor: 'var(--clsc-color-surface)',
+        borderBottom: '1px solid var(--clsc-color-border)',
+      }}
+    >
+      <span style={{ fontWeight: 700 }}>{t('appTitle')}</span>
+      <button
+        type="button"
+        aria-label="Toggle navigation"
+        aria-expanded={mobileOpen}
+        onClick={() => setMobileOpen((open) => !open)}
+        style={{ display: isNarrow ? 'block' : 'none' }}
+      >
+        ☰
+      </button>
+      {showMenu && (
+        <nav aria-label={t('mainNavigation')}>
+          <ul
+            style={{
+              display: 'flex',
+              gap: 'var(--clsc-spacing-medium)',
+              listStyle: 'none',
+            }}
+          >
+            {items.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  style={({ isActive }) => ({
+                    color: 'var(--clsc-color-text)',
+                    textDecoration: isActive ? 'underline' : 'none',
+                    fontWeight: isActive ? 700 : 400,
+                  })}
+                >
+                  {t(item.labelKey)}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+    </header>
+  );
+}
