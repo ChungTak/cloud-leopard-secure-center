@@ -324,6 +324,8 @@ name = "domain-audit"
 version = "0.1.0"
 dependencies = [
  "foundation",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1390,7 +1392,9 @@ name = "storage-api"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "domain-audit",
  "domain-authorization",
+ "domain-configuration",
  "domain-identity",
  "domain-organization",
  "domain-resource",
@@ -1402,11 +1406,14 @@ name = "storage-postgres"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "domain-audit",
  "domain-authorization",
+ "domain-configuration",
  "domain-identity",
  "domain-organization",
  "domain-resource",
  "foundation",
+ "serde_json",
  "sqlx",
  "storage-api",
  "tokio",

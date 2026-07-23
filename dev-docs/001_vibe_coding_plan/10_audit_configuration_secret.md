@@ -2,9 +2,9 @@
 
 ### AUD-001：追加写审计
 **前置：** DB-004、FND-002。
-- [ ] 建立月分区 audit.records 和专用 writer；业务账号无 UPDATE/DELETE。
-- [ ] 记录 actor、tenant、action、target、result、request/trace、IP、前后 digest；details 有 schema/大小限制。
-- [ ] 成功与拒绝的高风险操作均审计；审计失败按 action 风险选择拒绝或告警，不静默丢失。
+- [x] 建立月分区 audit.records 和专用 writer；业务账号无 UPDATE/DELETE。
+- [x] 记录 actor、tenant、action、target、result、request/trace、IP、前后 digest；details 有 schema/大小限制。
+- [x] 成功与拒绝的高风险操作均审计；审计失败按 action 风险选择拒绝或告警，不静默丢失。
 **测试：** 修改/删除被 DB 拒绝、分区路由、脱敏、审计 writer 故障策略。
 
 ### AUD-002：配置定义和值

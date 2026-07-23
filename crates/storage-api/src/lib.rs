@@ -1,6 +1,7 @@
 //! Storage port traits (repository contract, unit of work).
 
 use async_trait::async_trait;
+use domain_audit::audit_record::{AuditRecord, AuditRecordId};
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::RoleBinding;
 use domain_identity::api_key::ApiKey;
@@ -685,6 +686,18 @@ pub trait ProjectionRepository: Send + Sync {
         failure: ProjectionFailure,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
+}
+
+/// Append-only audit writer port. Implementations must guarantee that written
+/// records cannot be updated or deleted by the application role.
+#[async_trait]
+pub trait AuditWriter: Send + Sync {
+    /// Persist an audit record and return the generated database identifier.
+    async fn write(
+        &self,
+        record: &AuditRecord,
+        ctx: &RequestContext,
+    ) -> Result<AuditRecordId, PlatformError>;
 }
 
 pub fn version() -> &'static str {
