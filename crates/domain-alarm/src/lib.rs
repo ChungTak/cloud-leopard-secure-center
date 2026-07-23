@@ -5,6 +5,7 @@
 
 use foundation::{AlarmId, MessageId, TenantId, UtcTimestamp};
 
+pub mod linkage;
 pub mod notification;
 
 /// Alarm severity with explicit upper bounds per tenant policy.

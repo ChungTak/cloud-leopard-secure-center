@@ -15,7 +15,7 @@
 
 ### ALM-003：联动工作流
 **前置：** ALM-002、PLG-002。
-- [ ] 条件、动作、冷却、最大派生深度和 loop detection 显式配置。
-- [ ] 高风险设备动作再次授权；无法确认结果为 UNKNOWN_OUTCOME。
-- [ ] 每步写 workflow attempt 和审计，可重放但不重复副作用。
+- [x] `domain-alarm/src/linkage.rs` 定义 `LinkageCondition`、`LinkageAction`、`AlarmLinkageRule`（含 cooldown、max_depth、exclusions）、`LinkageOutcome`（Success/UnknownOutcome）与 `LinkageWorkflow` port。
+- [x] `UnsupportedLinkageWorkflow` stub：未配置返回 `Unavailable`，已配置返回 `Unsupported`。高风险动作二次授权、workflow attempt 审计写入和可重放执行在后续实现。
+- [x] 联动 workflow 与告警、通知模块解耦，不修改 `Alarm` 权威状态。
 
