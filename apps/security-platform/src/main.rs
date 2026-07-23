@@ -3,11 +3,13 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::{Extension, Router};
 use foundation::config::RateLimitConfig;
 use foundation::{RandomSource, SystemRandom};
 use http_api::client_ip::TrustedProxyConfig;
+use http_api::idempotency::IdempotencyState;
 use http_api::pagination::PaginationConfig;
 use http_api::rate_limit::RateLimitState;
 use tokio::net::TcpListener;
@@ -86,10 +88,13 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         })
         .or_else(|| Some(vec![]));
 
+    let idempotency_state = Arc::new(IdempotencyState::new(Duration::from_secs(24 * 60 * 60)));
+
     let api = http_api::middleware::with_middleware(http_api::routes::router(), cors_allowed_origins)
         .layer(Extension(rate_limit_state))
         .layer(Extension(proxy_config))
-        .layer(Extension(pagination_config));
+        .layer(Extension(pagination_config))
+        .layer(Extension(idempotency_state));
     let app = if static_dir.is_dir() {
         let serve = ServeDir::new(&static_dir).append_index_html_on_directories(true);
         Router::new().nest("/api/v1", api).fallback_service(serve)
