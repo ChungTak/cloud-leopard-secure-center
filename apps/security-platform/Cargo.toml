@@ -18,7 +18,9 @@ observability = { path = "../../crates/observability" }
 foundation = { path = "../../crates/foundation" }
 
 [dev-dependencies]
+domain-authorization = { path = "../../crates/domain-authorization" }
 domain-identity = { path = "../../crates/domain-identity" }
+domain-organization = { path = "../../crates/domain-organization" }
 storage-api = { path = "../../crates/storage-api" }
 storage-postgres = { path = "../../crates/storage-postgres" }
 tokio = { version = "=1.52.3", features = ["full"] }

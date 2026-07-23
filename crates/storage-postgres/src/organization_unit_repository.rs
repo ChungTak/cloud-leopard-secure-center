@@ -355,6 +355,32 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             next_cursor: None,
         })
     }
+
+    async fn is_descendant_of(
+        &self,
+        ancestor: OrganizationId,
+        descendant: OrganizationId,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError> {
+        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let exists: Option<(i64,)> = sqlx::query_as(
+            "SELECT 1::int8 FROM org.organization_unit_closure
+             WHERE tenant_id = $1 AND ancestor_id = $2 AND descendant_id = $3
+             LIMIT 1",
+        )
+        .bind(
+            ctx.tenant_id
+                .map(|t| *t.as_uuid())
+                .ok_or_else(missing_tenant)?,
+        )
+        .bind(ancestor.as_uuid())
+        .bind(descendant.as_uuid())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
+        Ok(exists.is_some())
+    }
 }
 
 async fn update_closure(
@@ -441,4 +467,11 @@ fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
 
 fn db_error(e: sqlx::Error) -> PlatformError {
     PlatformError::new(ErrorCode::Unavailable, e.to_string())
+}
+
+fn missing_tenant() -> PlatformError {
+    PlatformError::new(
+        ErrorCode::Invalid,
+        "tenant_id is required in request context".to_string(),
+    )
 }

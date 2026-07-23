@@ -16,9 +16,9 @@
 
 ### AUTH-003：AuthorizationPort
 **前置：** AUTH-002。
-- [ ] 输入 principal/tenant/action/resource/context；输出 allow/deny、policy IDs、安全 reason code。
-- [ ] 默认拒绝；先验证 tenant，再解析角色和 scope；无 action 不 fallback 通配。
-- [ ] 缓存 key 含 tenant/principal/action/resource revision；失效优先于 TTL。
+- [x] 输入 principal/tenant/action/resource/context；输出 allow/deny、policy IDs、安全 reason code。
+- [x] 默认拒绝；先验证 tenant，再解析角色和 scope；无 action 不 fallback 通配。
+- [x] 缓存 key 含 tenant/principal/action/resource revision；失效优先于 TTL。
 **测试：** 表驱动允许/拒绝、缓存失效、敏感摄像机预留 context、P95 benchmark。
 
 ## 完成条件

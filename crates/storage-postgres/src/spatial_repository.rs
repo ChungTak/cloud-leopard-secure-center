@@ -893,6 +893,32 @@ impl SpatialRepository for PostgresSpatialRepository {
             next_cursor: None,
         })
     }
+
+    async fn is_area_descendant_of(
+        &self,
+        ancestor: AreaId,
+        descendant: AreaId,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError> {
+        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let exists: Option<(i64,)> = sqlx::query_as(
+            "SELECT 1::int8 FROM org.area_closure
+             WHERE tenant_id = $1 AND ancestor_id = $2 AND descendant_id = $3
+             LIMIT 1",
+        )
+        .bind(
+            ctx.tenant_id
+                .map(|t| *t.as_uuid())
+                .ok_or_else(missing_tenant)?,
+        )
+        .bind(ancestor.as_uuid())
+        .bind(descendant.as_uuid())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
+        Ok(exists.is_some())
+    }
 }
 
 async fn validate_area_references(
