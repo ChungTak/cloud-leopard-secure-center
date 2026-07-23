@@ -1,5 +1,9 @@
 //! Organization aggregate (tenants, org units, spatial tree).
 
+pub mod organization_unit;
+pub mod spatial;
+pub mod tenant;
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

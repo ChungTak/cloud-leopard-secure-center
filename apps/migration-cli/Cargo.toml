@@ -12,9 +12,9 @@ publish = false
 workspace = true
 
 [dependencies]
-application = { path = "../../crates/application" }
 storage-postgres = { path = "../../crates/storage-postgres" }
-message-local = { path = "../../crates/message-local" }
 foundation = { path = "../../crates/foundation" }
-sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-none", "postgres", "migrate", "macros", "chrono", "uuid"] }
-tokio = { version = "1.52.3", features = ["full"] }
+tokio = { version = "=1.52.3", features = ["full"] }
+
+[dev-dependencies]
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-none", "postgres", "migrate", "macros", "chrono", "uuid"] }

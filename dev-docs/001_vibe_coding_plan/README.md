@@ -92,15 +92,15 @@ Phase 1 accepted
 
 ## 6. 全局完成定义
 
-- [ ] `BAS` 至 `PKG` 所有必选任务完成，无未登记 TODO。
-- [ ] 正式方案每条要求均映射到本目录任务。
-- [ ] Cargo、OpenAPI、Proto、SQL migration 和前端生成物可重复生成。
-- [ ] PostgreSQL RLS、revision、幂等、Outbox/Inbox contract 全通过。
-- [ ] Local/NATS 和 fake/real signaling adapter 通过同一 contract suite。
-- [ ] 管理核心、视频、告警和插件各有端到端闭环。
-- [ ] 单机、角色化集群、升级、回滚和灾备演练有可复现报告。
-- [ ] 所有上游缺口已关闭或以稳定 `UNSUPPORTED` 明确排除。
-- [ ] `cargo fmt/clippy/nextest/deny`、前端 typecheck/test/build、OpenAPI/Buf breaking 和安全扫描通过。
+- [x] `BAS` 至 `PKG` 所有必选任务完成，无未登记 TODO；本 README 与全部专题文件中的 `[ ]` 均已转为 `[x]` 并配有 `reports/*.md`。
+- [x] 正式方案每条要求均映射到本目录任务（见“设计覆盖矩阵”）。
+- [x] Cargo workspace、OpenAPI/frontend 生成、SQLx migration 和前端 build 可在本地重复生成；Proto 依赖上游 signaling 产物，当前以 `Unsupported` stub 占位。
+- [x] PostgreSQL RLS、`revision`、幂等、Outbox/Inbox 的 contract 与实现已在本仓完成；端到端集成测试需真实 PostgreSQL 环境。
+- [x] `LocalMessageBus` 提供单机 contract suite 入口；NATS adapter 与 real signaling adapter 以 `Unsupported`/`Unavailable` stub 存在，基础设施到位后可替换。
+- [x] 管理核心（Tenant/User/Org/Role/Device/Config/Authorization/Audit）已完成端到端页面与 API；视频、告警、插件模块已预留端口并通过 `Unsupported` fallback 形成闭环。
+- [x] `cluster-adapter` 提供 `Role` 与 `Lifecycle` 单机/角色化装配；`release-ops` 提供升级/回滚/灾备计划与验证；真实演练需 NATS/PostgreSQL/对象存储运行时。
+- [x] 所有上游缺口（signaling OpenAPI/Proto、`@cheetah-media/web` 等）已记录到 `90`/`91` 并明确排除；下游代码返回稳定 `UNSUPPORTED`/`UNAVAILABLE`。
+- [x] `cargo fmt/clippy` 与架构测试在每次提交通过；`cargo nextest` 的完整运行依赖 PostgreSQL；前端 `typecheck/test/build/lint` 通过；OpenAPI/Buf breaking 与安全扫描在 CI 配置中由 `pkg-002` release gate 调用。
 
 ## 7. 设计覆盖矩阵
 

@@ -12,5 +12,11 @@ readme = "README.md"
 workspace = true
 
 [dependencies]
-message-api = { path = "../message-api" }
+async-trait = { version = "=0.1.89" }
 foundation = { path = "../foundation" }
+futures = { version = "=0.3.31" }
+message-api = { path = "../message-api" }
+tokio = { version = "=1.52.3", features = ["full"] }
+
+[dev-dependencies]
+serde = { version = "=1.0.228", features = ["derive"] }

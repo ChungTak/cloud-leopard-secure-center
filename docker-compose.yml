@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_USER: ${CLSC_POSTGRES_USER:-clsc}
+      POSTGRES_PASSWORD: ${CLSC_POSTGRES_PASSWORD:-clsc}
+      POSTGRES_DB: ${CLSC_POSTGRES_DB:-clsc}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5432:5432"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./ops/otel/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "55679:55679"
+
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      CLSC_HTTP_PORT: ${CLSC_HTTP_PORT:-8080}
+      CLSC_STATIC_DIR: /var/www/static
+      CLSC_DATABASE_URL: ${CLSC_DATABASE_URL:-postgres://clsc:clsc@postgres:5432/clsc}
+      CLSC_OTEL_GRPC_ENDPOINT: ${CLSC_OTEL_GRPC_ENDPOINT:-http://otel-collector:4317}
+    ports:
+      - "${CLSC_HTTP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+volumes:
+  pgdata:

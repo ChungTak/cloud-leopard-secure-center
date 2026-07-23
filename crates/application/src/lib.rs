@@ -1,5 +1,21 @@
 //! Application layer: use cases, transactions, permission checks, projection, outbox.
 
+pub mod api_key;
+pub mod auth;
+pub mod authenticate;
+pub mod authorization;
+pub mod config;
+pub mod device;
+pub mod media;
+pub mod mfa;
+pub mod organization;
+pub mod role;
+pub mod session;
+pub mod tenant;
+pub mod token_service;
+pub mod usecase;
+pub mod user;
+
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

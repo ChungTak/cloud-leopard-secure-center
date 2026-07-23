@@ -20,10 +20,10 @@
 
 **前置：** DB-001。
 
-- [ ] 所有租户表 ENABLE + FORCE RLS，policy 同时约束 USING/WITH CHECK。
-- [ ] storage adapter 每个 tenant 操作开启 transaction 后执行 `SET LOCAL app.tenant_id`。
-- [ ] pool 归还连接后 tenant context 不残留；无上下文默认拒绝。
-- [ ] 平台管理使用独立受限角色和显式 API，不通过隐藏 bypass flag。
+- [x] 所有租户表 ENABLE + FORCE RLS，policy 同时约束 USING/WITH CHECK。
+- [x] storage adapter 每个 tenant 操作开启 transaction 后执行 `SET LOCAL app.tenant_id`。
+- [x] pool 归还连接后 tenant context 不残留；无上下文默认拒绝。
+- [x] 平台管理使用独立受限角色和显式 API，不通过隐藏 bypass flag。
 
 **测试：** 两租户读写/关联/分页/并发；伪造 path、遗漏 context、pool 重用均不能串读。
 
@@ -31,10 +31,10 @@
 
 **前置：** DB-002、FND-002。
 
-- [ ] storage-api 按聚合定义最小 repository，不暴露 row、SQL error 或通用 transaction closure。
-- [ ] update/delete 必须带 expected revision；零行映射 `REVISION_CONFLICT` 或 `NOT_FOUND`，不可混淆。
-- [ ] 定义明确 UnitOfWork 组合，聚合与 Outbox 同事务。
-- [ ] cursor 包含稳定排序键并签名/校验，设置最大 page size。
+- [x] storage-api 按聚合定义最小 repository，不暴露 row、SQL error 或通用 transaction closure。
+- [x] update/delete 必须带 expected revision；零行映射 `REVISION_CONFLICT` 或 `NOT_FOUND`，不可混淆。
+- [x] 定义明确 UnitOfWork 组合，聚合与 Outbox 同事务。
+- [x] cursor 包含稳定排序键并签名/校验，设置最大 page size。
 
 **测试：** CRUD、软删除唯一性、并发写、事务回滚、游标篡改、RLS 和连接中断。
 
@@ -42,10 +42,10 @@
 
 **前置：** DB-001。
 
-- [ ] audit/login-attempt 按月分区并预建未来分区；默认分区只用于告警，不长期承载数据。
-- [ ] 清理使用有界 batch 和可恢复 checkpoint。
-- [ ] 提供 pg_dump/restore 验证脚本和分区 runbook。
-- [ ] CI 使用 PostgreSQL 17；兼容流水线覆盖下一受支持 major。
+- [x] audit/login-attempt 按月分区并预建未来分区；默认分区只用于告警，不长期承载数据。
+- [x] 清理使用有界 batch 和可恢复 checkpoint。
+- [x] 提供 pg_dump/restore 验证脚本和分区 runbook。
+- [x] CI 使用 PostgreSQL 17；兼容流水线覆盖下一受支持 major。
 
 ## 完成条件
 

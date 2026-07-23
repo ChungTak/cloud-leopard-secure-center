@@ -1,11 +1,6 @@
-export interface HealthResponse {
-  status: string;
-}
-
-export class ApiClient {
-  constructor(public readonly baseUrl: string) {}
-
-  async health(): Promise<HealthResponse> {
-    return { status: 'ok' };
-  }
-}
+export {
+  createApiClient,
+  type TokenStore,
+  type CreateApiClientOptions,
+} from './client';
+export { ApiError, type ProblemDetails } from './errors';

@@ -1,9 +1,18 @@
-import * as React from 'react';
-
-export interface PlayerProps {
-  streamUrl: string;
-}
-
-export function Player({ streamUrl }: PlayerProps): React.ReactElement {
-  return <div data-testid="player">Stream: {streamUrl}</div>;
-}
+export { Player } from './Player';
+export {
+  SecurityPlayer,
+  type SecurityPlayerProps,
+  type SecurityPlayerError,
+  type StreamSource,
+} from './SecurityPlayer';
+export {
+  MultiPlayerLayout,
+  type LayoutSize,
+  type MultiPlayerLayoutProps,
+} from './MultiPlayerLayout';
+export { loadSecurityPlayerWorker, type WorkerLoadResult } from './useSecurityPlayerWorker';
+export {
+  defaultPlayerSecurityPolicy,
+  securePlayerBrowserMatrix,
+  type PlayerSecurityPolicy,
+} from './playerConfig';

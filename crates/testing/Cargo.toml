@@ -1,0 +1,30 @@
+[package]
+name = "testing"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { version = "=0.1.89" }
+application = { path = "../application" }
+domain-alarm = { path = "../domain-alarm" }
+domain-identity = { path = "../domain-identity" }
+domain-organization = { path = "../domain-organization" }
+domain-resource = { path = "../domain-resource" }
+domain-signaling = { path = "../domain-signaling" }
+foundation = { path = "../foundation" }
+message-api = { path = "../message-api" }
+message-local = { path = "../message-local" }
+nats-adapter = { path = "../nats-adapter" }
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = { version = "=1.0.151" }
+signaling-adapter = { path = "../signaling-adapter" }
+storage-api = { path = "../storage-api" }
+thiserror = { version = "=2.0.18" }
+tokio = { version = "=1.52.3", features = ["full"] }

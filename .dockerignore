@@ -1,0 +1,10 @@
+target/
+web/node_modules/
+web/**/node_modules/
+web/apps/console/dist/
+**/.git/
+.gitignore
+*.md
+dev-docs/
+ops/otel/otel-collector-config.yaml
+scripts/

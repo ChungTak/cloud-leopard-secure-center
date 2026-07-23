@@ -13,3 +13,10 @@ workspace = true
 
 [dependencies]
 foundation = { path = "../foundation" }
+domain-audit = { path = "../domain-audit" }
+domain-authorization = { path = "../domain-authorization" }
+domain-configuration = { path = "../domain-configuration" }
+domain-identity = { path = "../domain-identity" }
+domain-organization = { path = "../domain-organization" }
+domain-resource = { path = "../domain-resource" }
+async-trait = "=0.1.89"

@@ -12,19 +12,27 @@
     "format": "prettier --check ."
   },
   "dependencies": {
+    "@clsc/api-client": "workspace:*",
+    "@clsc/player": "workspace:*",
+    "@clsc/ui": "workspace:*",
+    "@tanstack/react-query": "5.101.2",
+    "i18next": "26.3.6",
+    "i18next-browser-languagedetector": "8.2.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "@clsc/ui": "workspace:*",
-    "@clsc/player": "workspace:*",
-    "@clsc/api-client": "workspace:*"
+    "react-i18next": "17.0.9",
+    "react-router-dom": "7.18.1",
+    "zustand": "5.0.14"
   },
   "devDependencies": {
     "@douyinfe/semi-ui": "2.101.1",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "16.2.0",
+    "@testing-library/user-event": "14.6.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
-    "@testing-library/react": "16.2.0",
-    "@testing-library/dom": "10.4.0",
+    "axe-core": "4.12.1",
     "jsdom": "26.0.0",
     "oxlint": "1.74.0",
     "playwright": "1.61.1",

@@ -9,14 +9,23 @@ members = [
     "crates/domain-authorization",
     "crates/domain-resource",
     "crates/domain-audit",
+    "crates/domain-alarm",
     "crates/domain-configuration",
+    "crates/domain-signaling",
+    "crates/domain-media",
+    "crates/signaling-adapter",
     "crates/application",
     "crates/storage-api",
     "crates/storage-postgres",
     "crates/message-api",
     "crates/message-local",
+    "crates/nats-adapter",
     "crates/http-api",
     "crates/observability",
+    "crates/cluster-adapter",
+    "crates/plugin-adapter",
+    "crates/release-ops",
+    "crates/testing",
 ]
 
 [workspace.package]

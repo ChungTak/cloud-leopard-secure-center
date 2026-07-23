@@ -42,8 +42,10 @@ fn layer(name: &str) -> Option<u8> {
         n if n == "http-api" => Some(4),
         n if n.ends_with("-api") => Some(2),
         "storage-postgres" | "message-local" => Some(4),
+        n if n.ends_with("-adapter") => Some(4),
         "application" => Some(3),
         n if n.starts_with("security-") || n.starts_with("migration-") => Some(5),
+        "testing" | "release-ops" => Some(6),
         _ => None,
     }
 }
