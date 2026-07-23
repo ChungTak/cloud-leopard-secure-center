@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use axum::{Extension, Router};
 use foundation::config::RateLimitConfig;
+use foundation::{RandomSource, SystemRandom};
 use http_api::client_ip::TrustedProxyConfig;
+use http_api::pagination::PaginationConfig;
 use http_api::rate_limit::RateLimitState;
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
@@ -53,7 +55,29 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             window_seconds: 60,
         },
     ));
-    let proxy_config = TrustedProxyConfig::default();
+
+    let proxy_config = env::var("CLSC_TRUSTED_PROXIES")
+        .ok()
+        .map(|v| {
+            let raw: Vec<String> = v.split(',').map(|s| s.trim().to_string()).collect();
+            TrustedProxyConfig::parse(&raw)
+        })
+        .unwrap_or_default();
+
+    let cursor_secret = env::var("CLSC_CURSOR_SECRET")
+        .ok()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.into_bytes())
+        .unwrap_or_else(|| {
+            eprintln!("warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret");
+            let mut buf = [0u8; 32];
+            if let Err(e) = SystemRandom.fill_bytes(&mut buf) {
+                eprintln!("failed to generate pagination secret: {e}");
+            }
+            buf.to_vec()
+        });
+    let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret));
+
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
         .ok()
         .map(|v| {
@@ -64,7 +88,8 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let api = http_api::middleware::with_middleware(http_api::routes::router(), cors_allowed_origins)
         .layer(Extension(rate_limit_state))
-        .layer(Extension(proxy_config));
+        .layer(Extension(proxy_config))
+        .layer(Extension(pagination_config));
     let app = if static_dir.is_dir() {
         let serve = ServeDir::new(&static_dir).append_index_html_on_directories(true);
         Router::new().nest("/api/v1", api).fallback_service(serve)
