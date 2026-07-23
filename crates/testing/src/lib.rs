@@ -3,8 +3,10 @@
 //! Phase 1 provides in-memory fakes and configuration-driven stubs. Real
 //! PostgreSQL/NATS-backed test runs are left to the test runner environment.
 
+pub mod chaos;
 pub mod contract_suite;
 pub mod fixtures;
+pub mod performance;
 
 /// Return the crate version.
 pub fn version() -> &'static str {
