@@ -73,9 +73,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.96.1
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          command: check
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check
 
   rust-lint-fixture:
     name: Lint violation fixture
