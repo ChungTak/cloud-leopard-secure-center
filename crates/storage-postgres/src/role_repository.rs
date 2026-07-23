@@ -8,9 +8,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{Page, RoleRepository};
+use storage_api::{ListOptions, Page, RoleRepository};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed role repository.
 #[derive(Debug, Clone)]
@@ -237,7 +237,11 @@ impl RoleRepository for PostgresRoleRepository {
         Ok(())
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<Role>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Role>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -245,8 +249,10 @@ impl RoleRepository for PostgresRoleRepository {
              FROM authz.roles
              WHERE deleted_at IS NULL
              ORDER BY name
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -261,10 +267,7 @@ impl RoleRepository for PostgresRoleRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

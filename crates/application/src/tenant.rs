@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_audit::audit_record::ActionRisk;
 use domain_organization::tenant::{Tenant, TenantStatus};
 use foundation::{Clock, IdGenerator, PlatformError, RequestContext, Revision, TenantId};
-use storage_api::{AuditWriter, Page, TenantRepository};
+use storage_api::{AuditWriter, ListOptions, Page, TenantRepository};
 
 use crate::authorization::AuthorizationPort;
 use crate::usecase::{self, WriteRequest, WriteResponse};
@@ -287,7 +287,7 @@ where
         let auth_req = usecase::platform_authorization(actor, "platform:tenant:read");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx).await?;
+        let page = self.repo.list(ctx, ListOptions::default()).await?;
         Ok(Page {
             items: page.items.iter().map(TenantDto::from).collect(),
             next_cursor: page.next_cursor,

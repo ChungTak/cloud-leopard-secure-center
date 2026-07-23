@@ -7,7 +7,7 @@ use foundation::{
     AreaId, CameraId, DeviceId, OrganizationId, RequestContext, SystemClock, TenantId, uuid::Uuid,
 };
 use storage_api::{
-    CameraRepository, DeviceRepository, OrganizationUnitRepository, SpatialRepository,
+    CameraRepository, DeviceRepository, ListOptions, OrganizationUnitRepository, SpatialRepository,
     TenantRepository,
 };
 use storage_postgres::camera_repository::PostgresCameraRepository;
@@ -213,7 +213,11 @@ async fn camera_references_and_sensitivity(pool: sqlx::PgPool) -> sqlx::Result<(
     let read = ok_or_panic(camera_repo.by_id(camera.id, &ctx).await);
     assert_eq!(read.sensitivity, Sensitivity::Critical);
 
-    let cameras = ok_or_panic(camera_repo.list_by_device(device.id, &ctx).await);
+    let cameras = ok_or_panic(
+        camera_repo
+            .list_by_device(device.id, &ctx, ListOptions::default())
+            .await,
+    );
     assert_eq!(cameras.items.len(), 1);
 
     Ok(())
@@ -249,7 +253,7 @@ async fn retired_device_is_persisted_not_deleted(pool: sqlx::PgPool) -> sqlx::Re
     let read = ok_or_panic(repo.by_id(device.id, &ctx).await);
     assert_eq!(read.lifecycle, DeviceLifecycle::Retired);
 
-    let list = ok_or_panic(repo.list(&ctx).await);
+    let list = ok_or_panic(repo.list(&ctx, ListOptions::default()).await);
     assert!(list.items.iter().any(|d| d.id == device.id));
 
     Ok(())

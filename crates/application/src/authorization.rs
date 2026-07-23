@@ -5,7 +5,8 @@ use domain_authorization::permission::Permission;
 use domain_authorization::role_binding::{ResourceRef, RoleBinding, Scope};
 use foundation::{BindingId, Clock, PlatformError, RequestContext, TenantId, UserId, UtcTimestamp};
 use storage_api::{
-    OrganizationUnitRepository, RoleBindingRepository, RoleRepository, SpatialRepository,
+    ListOptions, OrganizationUnitRepository, RoleBindingRepository, RoleRepository,
+    SpatialRepository,
 };
 
 /// Authorization decision.
@@ -116,7 +117,7 @@ where
 
         let page = self
             .binding_repo
-            .list_by_principal(req.principal, ctx)
+            .list_by_principal(req.principal, ctx, ListOptions::default())
             .await?;
 
         let mut allowed = Vec::new();

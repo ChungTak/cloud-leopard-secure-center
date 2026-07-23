@@ -38,6 +38,24 @@ pub struct Page<T> {
     pub next_cursor: Option<String>,
 }
 
+/// Pagination options for repository list queries.
+#[derive(Debug, Clone, Copy)]
+pub struct ListOptions {
+    /// Number of rows to skip.
+    pub offset: u64,
+    /// Maximum number of rows to return.
+    pub limit: u32,
+}
+
+impl Default for ListOptions {
+    fn default() -> Self {
+        Self {
+            offset: 0,
+            limit: 100,
+        }
+    }
+}
+
 /// Unit of work boundary. Implementations wrap a transaction around an
 /// arbitrary operation so that all repository calls inside the operation
 /// participate in the same atomic commit.
@@ -84,7 +102,11 @@ pub trait TenantRepository: Send + Sync {
     ) -> Result<(), PlatformError>;
 
     /// List tenants visible in the current tenant context.
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<Tenant>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Tenant>, PlatformError>;
 }
 
 /// Repository contract for the `OrganizationUnit` aggregate.
@@ -124,7 +146,11 @@ pub trait OrganizationUnitRepository: Send + Sync {
     ) -> Result<(), PlatformError>;
 
     /// List organization units in the current tenant context, ordered by code.
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<OrganizationUnit>, PlatformError>;
 
     /// Returns `true` if `descendant` is `ancestor` itself or a descendant in the closure table.
     async fn is_descendant_of(
@@ -156,7 +182,11 @@ pub trait SpatialRepository: Send + Sync {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
-    async fn list_sites(&self, ctx: &RequestContext) -> Result<Page<Site>, PlatformError>;
+    async fn list_sites(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Site>, PlatformError>;
 
     // Building
     async fn building_by_id(
@@ -181,7 +211,11 @@ pub trait SpatialRepository: Send + Sync {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
-    async fn list_buildings(&self, ctx: &RequestContext) -> Result<Page<Building>, PlatformError>;
+    async fn list_buildings(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Building>, PlatformError>;
 
     // Floor
     async fn floor_by_id(&self, id: FloorId, ctx: &RequestContext) -> Result<Floor, PlatformError>;
@@ -198,7 +232,11 @@ pub trait SpatialRepository: Send + Sync {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
-    async fn list_floors(&self, ctx: &RequestContext) -> Result<Page<Floor>, PlatformError>;
+    async fn list_floors(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Floor>, PlatformError>;
 
     // Area
     async fn area_by_id(&self, id: AreaId, ctx: &RequestContext) -> Result<Area, PlatformError>;
@@ -215,13 +253,18 @@ pub trait SpatialRepository: Send + Sync {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
-    async fn list_areas(&self, ctx: &RequestContext) -> Result<Page<Area>, PlatformError>;
+    async fn list_areas(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Area>, PlatformError>;
     async fn areas_within_radius(
         &self,
         latitude: f64,
         longitude: f64,
         radius_meters: f64,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Area>, PlatformError>;
 
     /// Returns `true` if `descendant` is `ancestor` itself or a descendant in the area closure table.
@@ -269,7 +312,11 @@ pub trait UserRepository: Send + Sync {
     ) -> Result<(), PlatformError>;
 
     /// List users visible in the current tenant context.
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<User>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<User>, PlatformError>;
 }
 
 /// Repository contract for a user's `Credential`.
@@ -402,6 +449,7 @@ pub trait ApiKeyRepository: Send + Sync {
         &self,
         owner_id: UserId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ApiKey>, PlatformError>;
 }
 
@@ -456,7 +504,11 @@ pub trait RoleRepository: Send + Sync {
     ) -> Result<(), PlatformError>;
 
     /// List roles in the current tenant context.
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<Role>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Role>, PlatformError>;
 }
 
 /// Repository contract for the `RoleBinding` aggregate.
@@ -497,6 +549,7 @@ pub trait RoleBindingRepository: Send + Sync {
         &self,
         principal_id: UserId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<RoleBinding>, PlatformError>;
 }
 
@@ -529,7 +582,11 @@ pub trait DeviceRepository: Send + Sync {
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<ManagedDevice>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<ManagedDevice>, PlatformError>;
 }
 
 /// Repository contract for the `Camera` aggregate.
@@ -557,6 +614,7 @@ pub trait CameraRepository: Send + Sync {
         &self,
         device_id: DeviceId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Camera>, PlatformError>;
 }
 
@@ -586,6 +644,7 @@ pub trait TagRepository: Send + Sync {
         resource_type: ResourceType,
         resource_id: Uuid,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Tag>, PlatformError>;
 }
 
@@ -633,6 +692,7 @@ pub trait ExternalBindingRepository: Send + Sync {
         resource_type: ResourceType,
         resource_id: Uuid,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ExternalBinding>, PlatformError>;
 
     async fn list_by_external_ref(
@@ -640,6 +700,7 @@ pub trait ExternalBindingRepository: Send + Sync {
         external_kind: &str,
         external_ref: &str,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ExternalBinding>, PlatformError>;
 }
 

@@ -2,7 +2,7 @@ use domain_organization::tenant::Tenant;
 use domain_resource::external_binding::{ExternalBinding, ExternalBindingState};
 use domain_resource::tag::{MAX_TAGS_PER_RESOURCE, ResourceType, Tag};
 use foundation::{ExternalBindingId, FakeClock, RequestContext, TagId, TenantId, uuid::Uuid};
-use storage_api::{ExternalBindingRepository, TagRepository, TenantRepository};
+use storage_api::{ExternalBindingRepository, ListOptions, TagRepository, TenantRepository};
 use storage_postgres::external_binding_repository::PostgresExternalBindingRepository;
 use storage_postgres::tag_repository::PostgresTagRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -153,7 +153,7 @@ async fn external_binding_activation_and_conflict(pool: sqlx::PgPool) -> sqlx::R
     assert_eq!(conflicting.state, ExternalBindingState::Conflict);
 
     let list = ok_or_panic(
-        repo.list_by_external_ref("serial", "upstream-123", &ctx)
+        repo.list_by_external_ref("serial", "upstream-123", &ctx, ListOptions::default())
             .await,
     );
     let states: Vec<_> = list.items.iter().map(|b| b.state).collect();

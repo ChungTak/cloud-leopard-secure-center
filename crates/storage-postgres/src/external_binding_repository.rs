@@ -10,9 +10,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{ExternalBindingRepository as ExternalBindingRepositoryPort, Page};
+use storage_api::{ExternalBindingRepository as ExternalBindingRepositoryPort, ListOptions, Page};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed external binding repository.
 #[derive(Debug, Clone)]
@@ -289,6 +289,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         resource_type: ResourceType,
         resource_id: Uuid,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ExternalBinding>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -297,10 +298,13 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
                     state, activated_at, revision, created_at, updated_at, actor
              FROM resource.external_bindings
              WHERE resource_type = $1 AND resource_id = $2 AND deleted_at IS NULL
-             ORDER BY created_at",
+             ORDER BY created_at
+             LIMIT $3 OFFSET $4",
         )
         .bind(resource_type.as_str())
         .bind(resource_id)
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -312,10 +316,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn list_by_external_ref(
@@ -323,6 +324,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         external_kind: &str,
         external_ref: &str,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ExternalBinding>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -331,10 +333,13 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
                     state, activated_at, revision, created_at, updated_at, actor
              FROM resource.external_bindings
              WHERE external_kind = $1 AND external_ref = $2 AND deleted_at IS NULL
-             ORDER BY created_at",
+             ORDER BY created_at
+             LIMIT $3 OFFSET $4",
         )
         .bind(external_kind)
         .bind(external_ref)
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -346,10 +351,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

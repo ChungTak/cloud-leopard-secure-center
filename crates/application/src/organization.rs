@@ -7,7 +7,7 @@ use domain_organization::organization_unit::OrganizationUnit;
 use foundation::{
     Clock, IdGenerator, OrganizationId, PlatformError, RequestContext, Revision, TenantId,
 };
-use storage_api::{AuditWriter, OrganizationUnitRepository, Page};
+use storage_api::{AuditWriter, ListOptions, OrganizationUnitRepository, Page};
 
 use crate::authorization::AuthorizationPort;
 use crate::usecase::{self, WriteRequest, WriteResponse};
@@ -240,7 +240,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx).await?;
+        let page = self.repo.list(ctx, ListOptions::default()).await?;
         Ok(Page {
             items: page.items.iter().map(OrganizationUnitDto::from).collect(),
             next_cursor: page.next_cursor,

@@ -9,9 +9,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{OrganizationUnitRepository, Page};
+use storage_api::{ListOptions, OrganizationUnitRepository, Page};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed organization unit repository.
 #[derive(Debug, Clone)]
@@ -340,7 +340,11 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         Ok(())
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<OrganizationUnit>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -348,8 +352,10 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
              FROM org.organization_units
              WHERE deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -361,10 +367,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn is_descendant_of(
