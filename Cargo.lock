@@ -1876,6 +1876,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "testing"
+version = "0.1.0"
+dependencies = [
+ "application",
+ "async-trait",
+ "domain-alarm",
+ "domain-identity",
+ "domain-organization",
+ "domain-resource",
+ "domain-signaling",
+ "foundation",
+ "message-api",
+ "message-local",
+ "nats-adapter",
+ "serde",
+ "serde_json",
+ "signaling-adapter",
+ "storage-api",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

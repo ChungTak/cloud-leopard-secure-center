@@ -24,6 +24,7 @@ members = [
     "crates/observability",
     "crates/cluster-adapter",
     "crates/plugin-adapter",
+    "crates/testing",
 ]
 
 [workspace.package]

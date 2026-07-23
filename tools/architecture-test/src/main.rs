@@ -45,6 +45,7 @@ fn layer(name: &str) -> Option<u8> {
         n if n.ends_with("-adapter") => Some(4),
         "application" => Some(3),
         n if n.starts_with("security-") || n.starts_with("migration-") => Some(5),
+        "testing" => Some(6),
         _ => None,
     }
 }
