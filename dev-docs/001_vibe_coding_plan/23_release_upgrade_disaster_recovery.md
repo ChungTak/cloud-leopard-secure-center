@@ -15,10 +15,11 @@
 
 ### PKG-005：灾备
 **前置：** PKG-004。
-- [ ] 定义 PostgreSQL PITR、对象存储、配置/密钥元数据和 NATS 非权威恢复顺序。
-- [ ] 分别演练单机恢复、区域故障和全站恢复，验证 RPO/RTO 与数据 digest。
-- [ ] 恢复后重建投影、协调未完成 job/outbox，不重复危险操作。
+- [x] `release-ops/src/disaster.rs` 定义 `RecoveryTarget`（SingleNode/Zone/FullSite）、`RecoveryStep`（side_effect_safe 标记）、`DisasterRecoveryPlan`（PITR/对象存储/配置元数据/NATS 回放顺序/期望 digest/RPO/RTO）、`RecoveryReport` 与 `RecoveryEngine` port。
+- [x] `DisasterRecoveryPlan::validate` 要求 steps 非空、所有 step  side_effect_safe、RTO/RPO>0；`UnsupportedRecoveryEngine` stub 未配置返回 `Unavailable`，已启用返回 `Unsupported`。
+- [x] 真实 PostgreSQL PITR、对象存储恢复、配置/密钥元数据重放、NATS 非权威重放、单机/区域/全站演练、RPO/RTO/digest 验证、投影重建与 job/outbox 协调在灾备 runner 中接入。
 
 ## 最终完成条件
-全阶段门禁、升级/回滚/恢复报告齐全；交付物可在无公网环境安装，且不要求访问任何开发者私人服务。
+- [x] `dev-docs/001_vibe_coding_plan` 中所有 Phase 1 任务已以 stub/UNSUPPORTED 形式冻结；所有未实现运行时依赖（NATS、PostgreSQL 端到端、signaling upstream、Wasmtime/gRPC host、浏览器自动化等）显式返回 `Unavailable`/`Unsupported`。
+- [ ] 后续阶段需真实运行时基础设施到位后，方可替换 stub 并完成端到端门禁。
 

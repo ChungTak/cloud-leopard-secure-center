@@ -3,6 +3,7 @@
 //! Phase 1 freezes the data structures and ports. Real build pipelines,
 //! rolling upgrades, and disaster recovery orchestration are deferred.
 
+pub mod disaster;
 pub mod release;
 pub mod upgrade;
 
