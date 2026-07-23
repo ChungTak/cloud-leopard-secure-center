@@ -11,6 +11,7 @@ members = [
     "crates/domain-audit",
     "crates/domain-configuration",
     "crates/domain-signaling",
+    "crates/signaling-adapter",
     "crates/application",
     "crates/storage-api",
     "crates/storage-postgres",
