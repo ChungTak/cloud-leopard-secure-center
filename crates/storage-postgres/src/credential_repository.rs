@@ -33,7 +33,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         credential_type: &str,
         ctx: &RequestContext,
     ) -> Result<Credential, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT user_id, tenant_id, credential_type, value, parameters, revision, created_at, updated_at
              FROM iam.credentials
@@ -49,7 +50,8 @@ impl CredentialRepository for PostgresCredentialRepository {
             .map(row_to_credential)
             .transpose()?
             .ok_or_else(|| PlatformError::new(ErrorCode::NotFound, "credential not found"))?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(credential)
     }
 
@@ -58,7 +60,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         credential: &Credential,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO iam.credentials
              (user_id, tenant_id, credential_type, value, parameters, revision, created_at, updated_at)
@@ -75,7 +78,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -85,7 +89,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> = sqlx::query_as(
             "SELECT revision FROM iam.credentials WHERE user_id = $1 AND credential_type = $2",
@@ -136,7 +141,8 @@ impl CredentialRepository for PostgresCredentialRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -146,7 +152,8 @@ impl CredentialRepository for PostgresCredentialRepository {
         credential_type: &str,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows =
             sqlx::query("DELETE FROM iam.credentials WHERE user_id = $1 AND credential_type = $2")
                 .bind(*user_id.as_uuid())
@@ -163,7 +170,8 @@ impl CredentialRepository for PostgresCredentialRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 }

@@ -28,7 +28,8 @@ impl PostgresTagRepository {
 #[async_trait]
 impl TagRepository for PostgresTagRepository {
     async fn by_id(&self, id: TagId, ctx: &RequestContext) -> Result<Tag, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, key, value,
                     revision, created_at, updated_at, actor
@@ -49,12 +50,14 @@ impl TagRepository for PostgresTagRepository {
                 ));
             }
         };
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(tag)
     }
 
     async fn create(&self, tag: &Tag, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -108,7 +111,8 @@ impl TagRepository for PostgresTagRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -118,7 +122,8 @@ impl TagRepository for PostgresTagRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.tags WHERE id = $1 AND deleted_at IS NULL",
@@ -167,7 +172,8 @@ impl TagRepository for PostgresTagRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -177,7 +183,8 @@ impl TagRepository for PostgresTagRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.tags WHERE id = $1 AND deleted_at IS NULL",
@@ -224,7 +231,8 @@ impl TagRepository for PostgresTagRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -234,7 +242,8 @@ impl TagRepository for PostgresTagRepository {
         resource_id: Uuid,
         ctx: &RequestContext,
     ) -> Result<Page<Tag>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, key, value,
                     revision, created_at, updated_at, actor
@@ -253,7 +262,8 @@ impl TagRepository for PostgresTagRepository {
             .map(row_to_tag)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,

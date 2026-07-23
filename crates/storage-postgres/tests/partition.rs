@@ -23,10 +23,10 @@ fn ctx_for(tenant: &str) -> RequestContext {
     }
 }
 
-async fn begin_tx<'a>(
-    pool: &'a sqlx::PgPool,
-    context: &'a RequestContext,
-) -> sqlx::Transaction<'a, sqlx::Postgres> {
+async fn begin_tx(
+    pool: &sqlx::PgPool,
+    context: &RequestContext,
+) -> storage_postgres::ManagedTransaction {
     match begin_tenant_transaction(pool, context).await {
         Ok(tx) => tx,
         Err(e) => panic!("{e}"),
@@ -46,20 +46,24 @@ async fn audit_tables_are_partitioned_and_tenant_isolated(pool: sqlx::PgPool) ->
     .await?;
 
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
-    let mut tx = begin_tx(&pool, &ctx).await;
+    let tx_managed = begin_tx(&pool, &ctx).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM audit.events")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 1);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     let other = ctx_for("018f1234-5678-7abc-8def-0123456789ab");
-    let mut tx = begin_tx(&pool, &other).await;
+    let tx_managed = begin_tx(&pool, &other).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM audit.events")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     Ok(())
 }

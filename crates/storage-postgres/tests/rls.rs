@@ -22,10 +22,10 @@ fn ctx_for(tenant: &str) -> RequestContext {
     }
 }
 
-async fn begin_tx<'a>(
-    pool: &'a sqlx::PgPool,
-    context: &'a RequestContext,
-) -> sqlx::Transaction<'a, sqlx::Postgres> {
+async fn begin_tx(
+    pool: &sqlx::PgPool,
+    context: &RequestContext,
+) -> storage_postgres::ManagedTransaction {
     match begin_tenant_transaction(pool, context).await {
         Ok(tx) => tx,
         Err(e) => panic!("{e}"),
@@ -43,28 +43,34 @@ async fn tenants_table_is_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result
     .await?;
 
     let context = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
-    let mut tx = begin_tx(&pool, &context).await;
+    let tx_managed = begin_tx(&pool, &context).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 1);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     let other = ctx_for("018f1234-5678-7abc-8def-0123456789ab");
-    let mut tx = begin_tx(&pool, &other).await;
+    let tx_managed = begin_tx(&pool, &other).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     let empty = RequestContext::default();
-    let mut tx = begin_tx(&pool, &empty).await;
+    let tx_managed = begin_tx(&pool, &empty).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     Ok(())
 }
@@ -91,20 +97,24 @@ async fn event_trigger_enables_rls_on_new_tenant_tables(pool: sqlx::PgPool) -> s
         .await?;
 
     let context = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
-    let mut tx = begin_tx(&pool, &context).await;
+    let tx_managed = begin_tx(&pool, &context).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM resource.devices")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 1);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     let empty = RequestContext::default();
-    let mut tx = begin_tx(&pool, &empty).await;
+    let tx_managed = begin_tx(&pool, &empty).await;
+    let mut tx = tx_managed.lock().await;
     let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM resource.devices")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);
-    tx.rollback().await?;
+    drop(tx);
+    tx_managed.rollback().await?;
 
     Ok(())
 }

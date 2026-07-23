@@ -33,7 +33,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         id: BindingId,
         ctx: &RequestContext,
     ) -> Result<RoleBinding, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, principal_id, role_id, scope_type, scope_ref,
                     valid_from, valid_until, revision, created_at, updated_at, actor
@@ -58,7 +59,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
             let resources = fetch_resources(&mut *tx, id).await?;
             binding.scope = Scope::ResourceSet(resources);
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(binding)
     }
 
@@ -67,7 +69,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         binding: &RoleBinding,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -104,9 +107,10 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         .await
         .map_err(db_error)?;
 
-        insert_resources(&mut tx, binding).await?;
+        insert_resources(&mut *tx, binding).await?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -116,7 +120,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM authz.role_bindings WHERE id = $1 AND deleted_at IS NULL",
@@ -178,9 +183,10 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
-        insert_resources(&mut tx, binding).await?;
+        insert_resources(&mut *tx, binding).await?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -190,7 +196,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM authz.role_bindings WHERE id = $1 AND deleted_at IS NULL",
@@ -237,7 +244,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -246,7 +254,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         principal_id: UserId,
         ctx: &RequestContext,
     ) -> Result<Page<RoleBinding>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, principal_id, role_id, scope_type, scope_ref,
                     valid_from, valid_until, revision, created_at, updated_at, actor
@@ -270,7 +279,8 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
             items.push(binding);
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -299,7 +309,7 @@ async fn fetch_resources(
 }
 
 async fn insert_resources(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     binding: &RoleBinding,
 ) -> Result<(), PlatformError> {
     if let Scope::ResourceSet(resources) = &binding.scope {
@@ -313,7 +323,7 @@ async fn insert_resources(
             .bind(binding.id.as_uuid())
             .bind(resource.resource_type())
             .bind(resource.as_uuid())
-            .execute(&mut **tx)
+            .execute(&mut *tx)
             .await
             .map_err(db_error)?;
         }

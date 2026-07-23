@@ -33,7 +33,8 @@ impl DeviceRepository for PostgresDeviceRepository {
         id: DeviceId,
         ctx: &RequestContext,
     ) -> Result<ManagedDevice, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, organization_id, area_id, code, name, serial,
                     lifecycle, online_state, revision, created_at, updated_at, actor
@@ -54,7 +55,8 @@ impl DeviceRepository for PostgresDeviceRepository {
                 ));
             }
         };
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(device)
     }
 
@@ -63,7 +65,8 @@ impl DeviceRepository for PostgresDeviceRepository {
         device: &ManagedDevice,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -99,7 +102,8 @@ impl DeviceRepository for PostgresDeviceRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -109,7 +113,8 @@ impl DeviceRepository for PostgresDeviceRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.managed_devices WHERE id = $1 AND deleted_at IS NULL",
@@ -165,7 +170,8 @@ impl DeviceRepository for PostgresDeviceRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -175,7 +181,8 @@ impl DeviceRepository for PostgresDeviceRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.managed_devices WHERE id = $1 AND deleted_at IS NULL",
@@ -222,12 +229,14 @@ impl DeviceRepository for PostgresDeviceRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list(&self, ctx: &RequestContext) -> Result<Page<ManagedDevice>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, organization_id, area_id, code, name, serial,
                     lifecycle, online_state, revision, created_at, updated_at, actor
@@ -245,7 +254,8 @@ impl DeviceRepository for PostgresDeviceRepository {
             .map(row_to_device)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,

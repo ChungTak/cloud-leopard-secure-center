@@ -33,7 +33,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         id: OrganizationId,
         ctx: &RequestContext,
     ) -> Result<OrganizationUnit, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, parent_id, code, name, revision, created_at, updated_at, actor
              FROM org.organization_units
@@ -50,7 +51,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                 "organization unit not found".to_string(),
             )
         })?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(unit)
     }
 
@@ -59,7 +61,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         unit: &OrganizationUnit,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         if let Some(parent_id) = unit.parent_id {
             let parent: Option<(Uuid,)> = sqlx::query_as(
@@ -70,7 +73,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             .await
             .map_err(db_error)?;
             if parent.is_none() {
-                tx.rollback().await.map_err(db_error)?;
+                drop(tx);
+                tx_managed.rollback().await.map_err(db_error)?;
                 return Err(PlatformError::new(
                     ErrorCode::NotFound,
                     "parent organization unit not found".to_string(),
@@ -124,7 +128,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             .map_err(db_error)?;
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -134,7 +139,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64, Option<Uuid>)> = sqlx::query_as(
             "SELECT revision, parent_id FROM org.organization_units WHERE id = $1 AND deleted_at IS NULL",
@@ -195,7 +201,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                 }
 
                 update_closure(
-                    &mut tx,
+                    &mut *tx,
                     unit.tenant_id.as_uuid(),
                     unit.id.as_uuid(),
                     old_parent_uuid,
@@ -204,7 +210,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                 .await?;
             } else {
                 update_closure(
-                    &mut tx,
+                    &mut *tx,
                     unit.tenant_id.as_uuid(),
                     unit.id.as_uuid(),
                     old_parent_uuid,
@@ -239,7 +245,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -249,7 +256,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> = sqlx::query_as(
             "SELECT revision FROM org.organization_units WHERE id = $1 AND deleted_at IS NULL",
@@ -327,12 +335,14 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list(&self, ctx: &RequestContext) -> Result<Page<OrganizationUnit>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, parent_id, code, name, revision, created_at, updated_at, actor
              FROM org.organization_units
@@ -349,7 +359,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             .map(row_to_unit)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -362,7 +373,8 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         descendant: OrganizationId,
         ctx: &RequestContext,
     ) -> Result<bool, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let exists: Option<(i64,)> = sqlx::query_as(
             "SELECT 1::int8 FROM org.organization_unit_closure
              WHERE tenant_id = $1 AND ancestor_id = $2 AND descendant_id = $3
@@ -378,13 +390,14 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(exists.is_some())
     }
 }
 
 async fn update_closure(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: &Uuid,
     unit_uuid: &Uuid,
     _old_parent_uuid: Option<Uuid>,
@@ -404,7 +417,7 @@ async fn update_closure(
     )
     .bind(*tenant_uuid)
     .bind(*unit_uuid)
-    .execute(&mut **tx)
+    .execute(&mut *tx)
     .await
     .map_err(db_error)?;
 
@@ -422,7 +435,7 @@ async fn update_closure(
         .bind(*tenant_uuid)
         .bind(parent_uuid)
         .bind(*unit_uuid)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     }

@@ -29,7 +29,8 @@ impl PostgresSpatialRepository {
 #[async_trait]
 impl SpatialRepository for PostgresSpatialRepository {
     async fn site_by_id(&self, id: SiteId, ctx: &RequestContext) -> Result<Site, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, organization_unit_id, code, name, address, timezone,
                     revision, created_at, updated_at, actor
@@ -44,12 +45,14 @@ impl SpatialRepository for PostgresSpatialRepository {
             .map(site_row_to_site)
             .transpose()?
             .ok_or_else(|| PlatformError::new(ErrorCode::NotFound, "site not found".to_string()))?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(site)
     }
 
     async fn create_site(&self, site: &Site, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         if let Some(ou_id) = site.organization_unit_id {
             let exists: Option<(Uuid,)> = sqlx::query_as(
                 "SELECT id FROM org.organization_units WHERE id = $1 AND deleted_at IS NULL",
@@ -85,7 +88,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -95,7 +99,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         if let Some(ou_id) = site.organization_unit_id {
             let exists: Option<(Uuid,)> = sqlx::query_as(
                 "SELECT id FROM org.organization_units WHERE id = $1 AND deleted_at IS NULL",
@@ -137,7 +142,8 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -147,7 +153,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -185,12 +192,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list_sites(&self, ctx: &RequestContext) -> Result<Page<Site>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, organization_unit_id, code, name, address, timezone,
                     revision, created_at, updated_at, actor
@@ -206,7 +215,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .into_iter()
             .map(site_row_to_site)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -218,7 +228,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         id: BuildingId,
         ctx: &RequestContext,
     ) -> Result<Building, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, site_id, code, name, revision, created_at, updated_at, actor
              FROM org.buildings
@@ -234,7 +245,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .ok_or_else(|| {
                 PlatformError::new(ErrorCode::NotFound, "building not found".to_string())
             })?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(building)
     }
 
@@ -243,7 +255,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         building: &Building,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let site: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.sites WHERE id = $1 AND deleted_at IS NULL")
                 .bind(building.site_id.as_uuid())
@@ -273,7 +286,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -283,7 +297,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let site: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.sites WHERE id = $1 AND deleted_at IS NULL")
                 .bind(building.site_id.as_uuid())
@@ -319,7 +334,8 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -329,7 +345,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -367,12 +384,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list_buildings(&self, ctx: &RequestContext) -> Result<Page<Building>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, site_id, code, name, revision, created_at, updated_at, actor
              FROM org.buildings
@@ -387,7 +406,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .into_iter()
             .map(building_row_to_building)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -395,7 +415,8 @@ impl SpatialRepository for PostgresSpatialRepository {
     }
 
     async fn floor_by_id(&self, id: FloorId, ctx: &RequestContext) -> Result<Floor, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, building_id, code, name, level,
                     revision, created_at, updated_at, actor
@@ -409,12 +430,14 @@ impl SpatialRepository for PostgresSpatialRepository {
         let floor = row.map(floor_row_to_floor).transpose()?.ok_or_else(|| {
             PlatformError::new(ErrorCode::NotFound, "floor not found".to_string())
         })?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(floor)
     }
 
     async fn create_floor(&self, floor: &Floor, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let building: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.buildings WHERE id = $1 AND deleted_at IS NULL")
                 .bind(floor.building_id.as_uuid())
@@ -446,7 +469,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -456,7 +480,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let building: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.buildings WHERE id = $1 AND deleted_at IS NULL")
                 .bind(floor.building_id.as_uuid())
@@ -494,7 +519,8 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -504,7 +530,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -542,12 +569,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "revision conflict".to_string(),
             ));
         }
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list_floors(&self, ctx: &RequestContext) -> Result<Page<Floor>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, building_id, code, name, level,
                     revision, created_at, updated_at, actor
@@ -563,7 +592,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .into_iter()
             .map(floor_row_to_floor)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -571,7 +601,8 @@ impl SpatialRepository for PostgresSpatialRepository {
     }
 
     async fn area_by_id(&self, id: AreaId, ctx: &RequestContext) -> Result<Area, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, floor_id, parent_id, code, name,
                     coordinate_system, latitude, longitude, altitude,
@@ -587,13 +618,15 @@ impl SpatialRepository for PostgresSpatialRepository {
             .map(area_row_to_area)
             .transpose()?
             .ok_or_else(|| PlatformError::new(ErrorCode::NotFound, "area not found".to_string()))?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(area)
     }
 
     async fn create_area(&self, area: &Area, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
-        validate_area_references(&mut tx, area).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
+        validate_area_references(&mut *tx, area).await?;
 
         sqlx::query(
             "INSERT INTO org.areas
@@ -648,7 +681,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .map_err(db_error)?;
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -658,7 +692,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64, Option<Uuid>)> = sqlx::query_as(
             "SELECT revision, parent_id FROM org.areas WHERE id = $1 AND deleted_at IS NULL",
@@ -684,7 +719,7 @@ impl SpatialRepository for PostgresSpatialRepository {
             Some((rev, parent)) => (rev, parent),
         };
 
-        validate_area_references(&mut tx, area).await?;
+        validate_area_references(&mut *tx, area).await?;
 
         let new_parent_uuid = area.parent_id.map(|p| *p.as_uuid());
         if new_parent_uuid != old_parent_uuid {
@@ -707,14 +742,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 }
 
                 update_area_closure(
-                    &mut tx,
+                    &mut *tx,
                     area.tenant_id.as_uuid(),
                     area.id.as_uuid(),
                     Some(parent_uuid),
                 )
                 .await?;
             } else {
-                update_area_closure(&mut tx, area.tenant_id.as_uuid(), area.id.as_uuid(), None)
+                update_area_closure(&mut *tx, area.tenant_id.as_uuid(), area.id.as_uuid(), None)
                     .await?;
             }
         }
@@ -751,7 +786,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -761,7 +797,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -808,12 +845,14 @@ impl SpatialRepository for PostgresSpatialRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list_areas(&self, ctx: &RequestContext) -> Result<Page<Area>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, floor_id, parent_id, code, name,
                     coordinate_system, latitude, longitude, altitude,
@@ -830,7 +869,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .into_iter()
             .map(area_row_to_area)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -856,7 +896,8 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "center coordinates are out of range",
             ));
         }
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, floor_id, parent_id, code, name,
                     coordinate_system, latitude, longitude, altitude,
@@ -875,7 +916,8 @@ impl SpatialRepository for PostgresSpatialRepository {
             .into_iter()
             .map(area_row_to_area)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
 
         let items = areas
             .into_iter()
@@ -900,7 +942,8 @@ impl SpatialRepository for PostgresSpatialRepository {
         descendant: AreaId,
         ctx: &RequestContext,
     ) -> Result<bool, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let exists: Option<(i64,)> = sqlx::query_as(
             "SELECT 1::int8 FROM org.area_closure
              WHERE tenant_id = $1 AND ancestor_id = $2 AND descendant_id = $3
@@ -916,20 +959,21 @@ impl SpatialRepository for PostgresSpatialRepository {
         .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(exists.is_some())
     }
 }
 
 async fn validate_area_references(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     area: &Area,
 ) -> Result<(), PlatformError> {
     if let Some(floor_id) = area.floor_id {
         let floor: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.floors WHERE id = $1 AND deleted_at IS NULL")
                 .bind(floor_id.as_uuid())
-                .fetch_optional(&mut **tx)
+                .fetch_optional(&mut *tx)
                 .await
                 .map_err(db_error)?;
         if floor.is_none() {
@@ -943,7 +987,7 @@ async fn validate_area_references(
         let parent: Option<(Uuid,)> =
             sqlx::query_as("SELECT id FROM org.areas WHERE id = $1 AND deleted_at IS NULL")
                 .bind(parent_id.as_uuid())
-                .fetch_optional(&mut **tx)
+                .fetch_optional(&mut *tx)
                 .await
                 .map_err(db_error)?;
         if parent.is_none() {
@@ -957,7 +1001,7 @@ async fn validate_area_references(
 }
 
 async fn update_area_closure(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: &Uuid,
     area_uuid: &Uuid,
     new_parent_uuid: Option<Uuid>,
@@ -976,7 +1020,7 @@ async fn update_area_closure(
     )
     .bind(*tenant_uuid)
     .bind(*area_uuid)
-    .execute(&mut **tx)
+    .execute(&mut *tx)
     .await
     .map_err(db_error)?;
 
@@ -994,7 +1038,7 @@ async fn update_area_closure(
         .bind(*tenant_uuid)
         .bind(parent_uuid)
         .bind(*area_uuid)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     }

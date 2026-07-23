@@ -28,7 +28,8 @@ impl PostgresRoleRepository {
 #[async_trait]
 impl RoleRepository for PostgresRoleRepository {
     async fn by_id(&self, id: RoleId, ctx: &RequestContext) -> Result<Role, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, name, is_builtin, revision, created_at, updated_at, actor
              FROM authz.roles
@@ -49,12 +50,14 @@ impl RoleRepository for PostgresRoleRepository {
             }
         };
         role.permissions = fetch_permissions_for_id(&mut *tx, id).await?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(role)
     }
 
     async fn create(&self, role: &Role, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -84,9 +87,10 @@ impl RoleRepository for PostgresRoleRepository {
         .await
         .map_err(db_error)?;
 
-        insert_permissions(&mut tx, role).await?;
+        insert_permissions(&mut *tx, role).await?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -96,7 +100,8 @@ impl RoleRepository for PostgresRoleRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let existing: Option<(bool, i64)> = sqlx::query_as(
             "SELECT is_builtin, revision FROM authz.roles WHERE id = $1 AND deleted_at IS NULL",
@@ -158,9 +163,10 @@ impl RoleRepository for PostgresRoleRepository {
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
-        insert_permissions(&mut tx, role).await?;
+        insert_permissions(&mut *tx, role).await?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -170,7 +176,8 @@ impl RoleRepository for PostgresRoleRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let existing: Option<(bool, i64)> = sqlx::query_as(
             "SELECT is_builtin, revision FROM authz.roles WHERE id = $1 AND deleted_at IS NULL",
@@ -225,12 +232,14 @@ impl RoleRepository for PostgresRoleRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list(&self, ctx: &RequestContext) -> Result<Page<Role>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, name, is_builtin, revision, created_at, updated_at, actor
              FROM authz.roles
@@ -250,7 +259,8 @@ impl RoleRepository for PostgresRoleRepository {
             items.push(role);
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -273,7 +283,7 @@ async fn fetch_permissions_for_id(
 }
 
 async fn insert_permissions(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     role: &Role,
 ) -> Result<(), PlatformError> {
     for key in &role.permissions {
@@ -284,7 +294,7 @@ async fn insert_permissions(
         .bind(role.id.as_uuid())
         .bind(role.tenant_id.map(|t| *t.as_uuid()))
         .bind(key)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     }

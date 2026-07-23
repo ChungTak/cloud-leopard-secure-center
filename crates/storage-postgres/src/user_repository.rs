@@ -28,7 +28,8 @@ impl PostgresUserRepository {
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn by_id(&self, id: UserId, ctx: &RequestContext) -> Result<User, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, username, display_name, status, session_version, revision, created_at, updated_at, actor, deleted_at
              FROM iam.users
@@ -43,7 +44,8 @@ impl UserRepository for PostgresUserRepository {
             .map(row_to_user)
             .transpose()?
             .ok_or_else(|| PlatformError::new(ErrorCode::NotFound, "user not found"))?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(user)
     }
 
@@ -53,7 +55,8 @@ impl UserRepository for PostgresUserRepository {
         ctx: &RequestContext,
     ) -> Result<User, PlatformError> {
         let username = normalize_username(username)?;
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, username, display_name, status, session_version, revision, created_at, updated_at, actor, deleted_at
              FROM iam.users
@@ -68,12 +71,14 @@ impl UserRepository for PostgresUserRepository {
             .map(row_to_user)
             .transpose()?
             .ok_or_else(|| PlatformError::new(ErrorCode::NotFound, "user not found"))?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(user)
     }
 
     async fn create(&self, user: &User, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO iam.users
              (id, tenant_id, username, display_name, status, session_version, revision, created_at, updated_at, actor, deleted_at)
@@ -92,7 +97,8 @@ impl UserRepository for PostgresUserRepository {
         .execute(&mut *tx)
         .await
         .map_err(map_create_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -102,7 +108,8 @@ impl UserRepository for PostgresUserRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> =
             sqlx::query_as("SELECT revision FROM iam.users WHERE id = $1 AND deleted_at IS NULL")
@@ -151,7 +158,8 @@ impl UserRepository for PostgresUserRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -161,7 +169,8 @@ impl UserRepository for PostgresUserRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> =
             sqlx::query_as("SELECT revision FROM iam.users WHERE id = $1 AND deleted_at IS NULL")
@@ -203,12 +212,14 @@ impl UserRepository for PostgresUserRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list(&self, ctx: &RequestContext) -> Result<Page<User>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, username, display_name, status, session_version, revision, created_at, updated_at, actor, deleted_at
              FROM iam.users
@@ -225,7 +236,8 @@ impl UserRepository for PostgresUserRepository {
             .map(row_to_user)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,

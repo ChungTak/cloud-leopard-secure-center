@@ -28,7 +28,8 @@ impl AuditWriter for PostgresAuditWriter {
         record: &AuditRecord,
         ctx: &RequestContext,
     ) -> Result<AuditRecordId, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         sqlx::query("SET LOCAL ROLE clsc_audit_writer")
             .execute(&mut *tx)
@@ -74,7 +75,8 @@ impl AuditWriter for PostgresAuditWriter {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(AuditRecordId::new(id))
     }
 }

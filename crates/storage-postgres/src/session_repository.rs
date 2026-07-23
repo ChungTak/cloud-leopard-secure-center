@@ -32,7 +32,8 @@ impl SessionRepository for PostgresSessionRepository {
         token: &RefreshToken,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO iam.refresh_tokens
              (id, tenant_id, user_id, family_id, token_hash, session_version, used, expires_at, created_at)
@@ -51,7 +52,8 @@ impl SessionRepository for PostgresSessionRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -60,7 +62,8 @@ impl SessionRepository for PostgresSessionRepository {
         token_hash: &str,
         ctx: &RequestContext,
     ) -> Result<Option<RefreshToken>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, user_id, family_id, token_hash, session_version, used, expires_at, created_at
              FROM iam.refresh_tokens
@@ -72,7 +75,8 @@ impl SessionRepository for PostgresSessionRepository {
         .map_err(db_error)?;
 
         let token = row.map(row_to_refresh_token).transpose()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(token)
     }
 
@@ -81,7 +85,8 @@ impl SessionRepository for PostgresSessionRepository {
         token: &RefreshToken,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "UPDATE iam.refresh_tokens
              SET used = true
@@ -100,7 +105,8 @@ impl SessionRepository for PostgresSessionRepository {
                     .fetch_optional(&mut *tx)
                     .await
                     .map_err(db_error)?;
-            tx.rollback().await.map_err(db_error)?;
+            drop(tx);
+            tx_managed.rollback().await.map_err(db_error)?;
             return match used {
                 Some((true,)) => Err(PlatformError::new(
                     ErrorCode::Conflict,
@@ -113,7 +119,8 @@ impl SessionRepository for PostgresSessionRepository {
             };
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -122,13 +129,15 @@ impl SessionRepository for PostgresSessionRepository {
         family_id: Uuid,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query("DELETE FROM iam.refresh_tokens WHERE family_id = $1")
             .bind(family_id)
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -137,13 +146,15 @@ impl SessionRepository for PostgresSessionRepository {
         user_id: UserId,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query("DELETE FROM iam.refresh_tokens WHERE user_id = $1")
             .bind(*user_id.as_uuid())
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 }

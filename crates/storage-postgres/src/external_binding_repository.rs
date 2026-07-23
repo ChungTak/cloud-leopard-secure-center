@@ -34,7 +34,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         id: ExternalBindingId,
         ctx: &RequestContext,
     ) -> Result<ExternalBinding, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, external_ref, external_kind,
                     state, activated_at, revision, created_at, updated_at, actor
@@ -55,7 +56,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
                 ));
             }
         };
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(binding)
     }
 
@@ -64,7 +66,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         binding: &ExternalBinding,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -99,7 +102,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -109,8 +113,9 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
-        check_revision(&mut tx, binding.id, expected).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
+        check_revision(&mut *tx, binding.id, expected).await?;
 
         let rows = sqlx::query(
             "UPDATE resource.external_bindings
@@ -141,7 +146,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -151,7 +157,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<ExternalBinding, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let binding_row = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, external_ref, external_kind,
@@ -236,7 +243,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         binding.revision = next_revision;
         binding.updated_at = now.into();
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(binding)
     }
 
@@ -246,8 +254,9 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
-        check_revision(&mut tx, id, expected).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
+        check_revision(&mut *tx, id, expected).await?;
 
         let rows = sqlx::query(
             "UPDATE resource.external_bindings
@@ -270,7 +279,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -280,7 +290,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         resource_id: Uuid,
         ctx: &RequestContext,
     ) -> Result<Page<ExternalBinding>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, external_ref, external_kind,
                     state, activated_at, revision, created_at, updated_at, actor
@@ -299,7 +310,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
             .map(row_to_binding)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -312,7 +324,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         external_ref: &str,
         ctx: &RequestContext,
     ) -> Result<Page<ExternalBinding>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, resource_type, resource_id, external_ref, external_kind,
                     state, activated_at, revision, created_at, updated_at, actor
@@ -331,7 +344,8 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
             .map(row_to_binding)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
@@ -340,7 +354,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 }
 
 async fn check_revision(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     id: ExternalBindingId,
     expected: Revision,
 ) -> Result<(), PlatformError> {
@@ -348,7 +362,7 @@ async fn check_revision(
         "SELECT revision FROM resource.external_bindings WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(id.as_uuid())
-    .fetch_optional(&mut **tx)
+    .fetch_optional(&mut *tx)
     .await
     .map_err(db_error)?;
 

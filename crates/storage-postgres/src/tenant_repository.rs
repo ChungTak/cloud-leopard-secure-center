@@ -28,7 +28,8 @@ impl PostgresTenantRepository {
 #[async_trait]
 impl TenantRepository for PostgresTenantRepository {
     async fn by_id(&self, id: TenantId, ctx: &RequestContext) -> Result<Tenant, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, code, name, locale, timezone, status, revision, created_at, updated_at, actor
              FROM org.tenants
@@ -42,12 +43,14 @@ impl TenantRepository for PostgresTenantRepository {
         let tenant = row.map(row_to_tenant).transpose()?.ok_or_else(|| {
             PlatformError::new(ErrorCode::NotFound, "tenant not found".to_string())
         })?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(tenant)
     }
 
     async fn create(&self, tenant: &Tenant, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO org.tenants
              (id, code, name, locale, timezone, status, revision, created_at, updated_at, actor, deleted_at)
@@ -66,7 +69,8 @@ impl TenantRepository for PostgresTenantRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -76,7 +80,8 @@ impl TenantRepository for PostgresTenantRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> =
             sqlx::query_as("SELECT revision FROM org.tenants WHERE id = $1 AND deleted_at IS NULL")
@@ -127,7 +132,8 @@ impl TenantRepository for PostgresTenantRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -137,7 +143,8 @@ impl TenantRepository for PostgresTenantRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<(i64,)> =
             sqlx::query_as("SELECT revision FROM org.tenants WHERE id = $1 AND deleted_at IS NULL")
@@ -184,12 +191,14 @@ impl TenantRepository for PostgresTenantRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn list(&self, ctx: &RequestContext) -> Result<Page<Tenant>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, code, name, locale, timezone, status, revision, created_at, updated_at, actor
              FROM org.tenants
@@ -206,7 +215,8 @@ impl TenantRepository for PostgresTenantRepository {
             .map(row_to_tenant)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,
