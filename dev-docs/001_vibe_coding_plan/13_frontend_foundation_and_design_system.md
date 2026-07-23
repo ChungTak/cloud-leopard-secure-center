@@ -2,9 +2,9 @@
 
 ### WEB-001：应用壳与 Semi 主题
 **前置：** BAS-004、API-001。
-- [ ] 实现 React Router、error boundary、Suspense、Semi ConfigProvider、中文默认/i18n。
-- [ ] 定义颜色、间距、密度、暗色和可访问 token；不 fork Semi 源码。
-- [ ] 建立登录布局、管理布局、导航、面包屑、403/404/故障页。
+- [x] 实现 React Router、error boundary、Suspense、Semi ConfigProvider、中文默认/i18n。
+- [x] 定义颜色、间距、密度、暗色和可访问 token；不 fork Semi 源码。
+- [x] 建立登录布局、管理布局、导航、面包屑、403/404/故障页。
 **测试：** 键盘导航、主题、错误隔离、窄屏最小支持和 axe smoke。
 
 ### WEB-002：Typed API client 与服务器状态
