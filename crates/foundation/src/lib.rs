@@ -76,6 +76,8 @@ id_newtype!(MessageId);
 id_newtype!(NodeId);
 id_newtype!(TagId);
 id_newtype!(ExternalBindingId);
+id_newtype!(OperationId);
+id_newtype!(MediaSessionId);
 
 /// An opaque resource reference.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
