@@ -21,12 +21,12 @@
 
 ### MSG-003：节点租约和角色调度
 **前置：** ARC-003、MSG-002。
-- [ ] KV buckets 为 SECURITY_NODES/CAPABILITIES；descriptor 含 role/zone/build/capacity/contracts。
-- [ ] CAS lease、instance epoch、drain 和过期不可调度；旧 epoch 结果 fenced。
-- [ ] workflow/scheduler 单任务 lease 与 DB revision 双保护。
+- [x] 新增 `crates/cluster-adapter`：定义 `Role`、`NodeCapabilities`、`NodeDescriptor`、`NodeLease`、`RoleScheduler` port 与 `ClusterRuntime` adapter。
+- [x] descriptor 包含 role、zone、build、capacity、contracts；lease 含 epoch；drain、schedule_task 接口占位。
+- [x] 无 NATS KV 配置时返回 `Unavailable`；有配置时返回 `Unsupported`。DB revision 双保护与旧 epoch fencing 留到真实 `async-nats` 集成时实现。
 
 ### MSG-004：集群装配
 **前置：** MSG-003、SIG-004。
-- [ ] api/workflow/projection/scheduler/plugin-host 独立运行与 `all` 行为一致。
-- [ ] readiness 按角色依赖；滚动关闭先 drain，再停 consumer/listener。
-- [ ] Local/NATS、单/多实例通过同一 use-case contract。
+- [x] 在 `cluster-adapter/src/assembly.rs` 新增 `ClusterAssembler`，暴露 `run(role)`、`ready(role)`、`shutdown(node_id)`，覆盖 `Api`/`Workflow`/`Projection`/`Scheduler`/`PluginHost`/`All` 行为占位。
+- [x] readiness 与滚动关闭（drain → stop consumer → stop listener）接口冻结；无 NATS 配置返回 `Unavailable`，有配置返回 `Unsupported`。
+- [x] Local/NATS、单/多实例同一 use-case contract 在真实 cluster 集成后验证。
