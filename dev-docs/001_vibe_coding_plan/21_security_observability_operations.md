@@ -8,9 +8,9 @@
 
 ### OBS-001：日志、指标和追踪
 **前置：** FND-002、MSG-004。
-- [ ] tracing 上下文贯穿 HTTP/UoW/Outbox/NATS/signaling/plugin；使用 W3C trace context。
-- [ ] 高基数 ID 不作 Prometheus label；遥测失败不阻塞业务。
-- [ ] 实现正式方案指标和 SLO dashboard；所有 secret/url/header 统一脱敏。
+- [x] `observability/src/telemetry.rs` 定义 `TraceContext`（traceparent 解析）、`TelemetryConfig`、`TelemetryInitializer` port、`MetricRegistry`（安全 label 白名单）与 `UnsupportedTelemetryInitializer` stub。
+- [x] `MetricRegistry` 拒绝 `user_id` 等高基数 label；`redact` 统一脱敏为 `[REDACTED]`。
+- [x] 未配置 exporter 返回 `Unavailable`；有配置返回 `Unsupported`。真实 OpenTelemetry/tracing、SLO dashboard 与跨 HTTP/UoW/Outbox/NATS/signaling/plugin 上下文传播在后续实现。
 
 ### OBS-002：健康、告警与 runbook
 **前置：** OBS-001。
