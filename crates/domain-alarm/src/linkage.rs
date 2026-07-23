@@ -131,18 +131,30 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn disabled_workflow_returns_unavailable() {
-        let workflow = UnsupportedLinkageWorkflow::new(false);
-        let e = err_or_panic(workflow.run(make_rule().tenant_id, &make_sample_alarm(), &[make_rule()]).await);
-        assert_eq!(e.kind, AlarmErrorKind::Unavailable);
+    #[test]
+    fn disabled_workflow_returns_unavailable() {
+        futures::executor::block_on(async {
+            let workflow = UnsupportedLinkageWorkflow::new(false);
+            let e = err_or_panic(
+                workflow
+                    .run(make_rule().tenant_id, &make_sample_alarm(), &[make_rule()])
+                    .await,
+            );
+            assert_eq!(e.kind, AlarmErrorKind::Unavailable);
+        });
     }
 
-    #[tokio::test]
-    async fn enabled_workflow_returns_unsupported() {
-        let workflow = UnsupportedLinkageWorkflow::new(true);
-        let e = err_or_panic(workflow.run(make_rule().tenant_id, &make_sample_alarm(), &[make_rule()]).await);
-        assert_eq!(e.kind, AlarmErrorKind::Unsupported);
+    #[test]
+    fn enabled_workflow_returns_unsupported() {
+        futures::executor::block_on(async {
+            let workflow = UnsupportedLinkageWorkflow::new(true);
+            let e = err_or_panic(
+                workflow
+                    .run(make_rule().tenant_id, &make_sample_alarm(), &[make_rule()])
+                    .await,
+            );
+            assert_eq!(e.kind, AlarmErrorKind::Unsupported);
+        });
     }
 
     fn make_sample_alarm() -> Alarm {

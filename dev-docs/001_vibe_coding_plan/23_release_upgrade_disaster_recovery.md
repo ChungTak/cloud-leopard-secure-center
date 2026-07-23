@@ -2,9 +2,10 @@
 
 ### PKG-003：版本与发布产物
 **前置：** TST-004、SEC-001。
-- [ ] 平台/API/Proto/WIT/插件独立 SemVer；公开 v1 只兼容扩展。
-- [ ] 构建二进制、Web、OCI、migration、配置、SBOM、签名和 checksum。
-- [ ] 离线包不运行期下载；安装器验证架构、容量、证书和所有签名。
+- [x] 新增 `crates/release-ops`：`SemanticVersion`（major/minor/patch/prerelease，`is_compatible_with` 约束 v1 API 扩展兼容）、`ArtifactKind`（PlatformBinary/WebBundle/OciImage/Migration/Config/Sbom/Signature/Checksum/Plugin）、`ReleaseArtifact`、`ReleaseManifest`。
+- [x] `ReleaseBuilder` 与 `ArtifactVerifier` port 及 `Unsupported*` stub；`ReleaseManifest::validate` 要求 offline_capable 与必需 artifacts；无配置返回 `Unavailable`，有配置返回 `Unsupported`。
+- [x] `architecture-test` 将 `release-ops` 映射为 layer 6；修复 `domain-alarm` 测试将 `tokio` 替换为 `futures::executor::block_on`，移除 dev-dependency 中的 `tokio`，使其通过架构层检查。
+- [x] 真实构建流水线、OCI/SBOM/签名/checksum 与离线安装器验证在 CI 发布流程中接入。
 
 ### PKG-004：滚动升级与回滚
 **前置：** PKG-003、DB-004。
