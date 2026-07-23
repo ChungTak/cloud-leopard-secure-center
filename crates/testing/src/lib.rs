@@ -3,6 +3,8 @@
 //! Phase 1 provides in-memory fakes and configuration-driven stubs. Real
 //! PostgreSQL/NATS-backed test runs are left to the test runner environment.
 
+#![allow(clippy::panic, clippy::unwrap_used, clippy::expect_used)]
+
 pub mod chaos;
 pub mod contract_suite;
 pub mod fixtures;

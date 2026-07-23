@@ -42,25 +42,21 @@ impl storage_api::UnitOfWork for PostgresUnitOfWork {
             .map_err(db_error)?;
         set_tenant_context(&mut *conn, ctx).await?;
 
-        let conn = Arc::new(Mutex::new(Some(conn)));
+        let conn = Arc::new(Mutex::new(conn));
         let result = CURRENT_TX.scope(conn.clone(), operation()).await;
 
         match result {
             Ok(value) => {
                 let mut guard = conn.lock().await;
-                if let Some(c) = guard.as_mut() {
-                    sqlx::query("COMMIT")
-                        .execute(&mut **c)
-                        .await
-                        .map_err(db_error)?;
-                }
+                sqlx::query("COMMIT")
+                    .execute(&mut **guard)
+                    .await
+                    .map_err(db_error)?;
                 Ok(value)
             }
             Err(error) => {
                 let mut guard = conn.lock().await;
-                if let Some(c) = guard.as_mut() {
-                    let _ = sqlx::query("ROLLBACK").execute(&mut **c).await;
-                }
+                let _ = sqlx::query("ROLLBACK").execute(&mut **guard).await;
                 Err(error)
             }
         }

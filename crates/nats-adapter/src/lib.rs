@@ -64,11 +64,11 @@ impl NatsMessageBus {
         )
     }
 
-    fn maybe_error(&self) -> Result<(), MessageError> {
+    fn error(&self) -> MessageError {
         if self.config.servers.is_some() {
-            Err(Self::unsupported())
+            Self::unsupported()
         } else {
-            Err(Self::unavailable())
+            Self::unavailable()
         }
     }
 }
@@ -76,26 +76,22 @@ impl NatsMessageBus {
 #[async_trait]
 impl MessageBus for NatsMessageBus {
     async fn publish(&self, _envelope: Envelope) -> Result<MessageId, MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 
     async fn subscribe(
         &self,
         _topic_filter: &str,
     ) -> Result<BoxStream<'static, Envelope>, MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 
     async fn ack(&self, _message_id: MessageId) -> Result<(), MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 
     async fn nack(&self, _message_id: MessageId) -> Result<(), MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 }
 

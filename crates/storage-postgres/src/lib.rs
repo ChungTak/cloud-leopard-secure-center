@@ -60,14 +60,14 @@ pub async fn run_migrations(database_url: &str) -> Result<(), PlatformError> {
 // unit of work. Repository methods will reuse this connection (and its
 // transaction) instead of acquiring a new one when it is present.
 tokio::task_local! {
-    static CURRENT_TX: Arc<Mutex<Option<PoolConnection<Postgres>>>>;
+    static CURRENT_TX: Arc<Mutex<PoolConnection<Postgres>>>;
 }
 
 /// A database connection that is either owned by the caller or borrowed from
 /// an active unit of work.
 #[derive(Clone)]
 pub struct ManagedTransaction {
-    inner: Arc<Mutex<Option<PoolConnection<Postgres>>>>,
+    inner: Arc<Mutex<PoolConnection<Postgres>>>,
     owned: bool,
 }
 
@@ -93,9 +93,7 @@ impl ManagedTransaction {
             return Ok(());
         }
         let mut guard = self.inner.lock().await;
-        if let Some(conn) = guard.as_mut() {
-            sqlx::query("COMMIT").execute(&mut **conn).await?;
-        }
+        sqlx::query("COMMIT").execute(&mut **guard).await?;
         Ok(())
     }
 
@@ -106,35 +104,27 @@ impl ManagedTransaction {
             return Ok(());
         }
         let mut guard = self.inner.lock().await;
-        if let Some(conn) = guard.as_mut() {
-            sqlx::query("ROLLBACK").execute(&mut **conn).await?;
-        }
+        sqlx::query("ROLLBACK").execute(&mut **guard).await?;
         Ok(())
     }
 }
 
 /// RAII handle to a connection currently held by a [`ManagedTransaction`].
 pub struct ManagedConnection<'a> {
-    guard: MutexGuard<'a, Option<PoolConnection<Postgres>>>,
+    guard: MutexGuard<'a, PoolConnection<Postgres>>,
 }
 
 impl Deref for ManagedConnection<'_> {
     type Target = PgConnection;
 
     fn deref(&self) -> &Self::Target {
-        match self.guard.as_ref() {
-            Some(conn) => conn,
-            None => panic!("connection missing"),
-        }
+        &*self.guard
     }
 }
 
 impl DerefMut for ManagedConnection<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        match self.guard.as_mut() {
-            Some(conn) => conn,
-            None => panic!("connection missing"),
-        }
+        &mut *self.guard
     }
 }
 
@@ -163,7 +153,7 @@ pub async fn begin_tenant_transaction(
     set_tenant_context(&mut *conn, context).await?;
 
     Ok(ManagedTransaction {
-        inner: Arc::new(Mutex::new(Some(conn))),
+        inner: Arc::new(Mutex::new(conn)),
         owned: true,
     })
 }
