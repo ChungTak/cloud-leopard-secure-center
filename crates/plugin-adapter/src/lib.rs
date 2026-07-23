@@ -4,6 +4,7 @@
 //! hosts are not linked; unimplemented paths return `Unsupported`.
 
 pub mod manifest;
+pub mod wit;
 
 /// Return the crate version.
 pub fn version() -> &'static str {
