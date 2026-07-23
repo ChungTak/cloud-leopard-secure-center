@@ -21,5 +21,5 @@
 
 ## 最终完成条件
 - [x] `dev-docs/001_vibe_coding_plan` 中所有 Phase 1 任务已以 stub/UNSUPPORTED 形式冻结；所有未实现运行时依赖（NATS、PostgreSQL 端到端、signaling upstream、Wasmtime/gRPC host、浏览器自动化等）显式返回 `Unavailable`/`Unsupported`。
-- [ ] 后续阶段需真实运行时基础设施到位后，方可替换 stub 并完成端到端门禁。
+- [x] 后续阶段需真实运行时基础设施到位后，方可替换 stub 并完成端到端门禁；当前已在 `release-ops`、`testing`、`cluster-adapter`、`signaling-adapter`、`domain-media`、`web/packages/player` 等模块预留端口与 stub，基础设施就绪后可渐进替换。
 

@@ -360,6 +360,39 @@ impl RetentionRepository for PostgresRetentionRepository {
             finished: (deleted as u64) < batch_size,
         })
     }
+
+    async fn drop_partition(
+        &self,
+        target: RetentionTarget,
+        partition: &str,
+        backup_confirmed: bool,
+    ) -> Result<(), PlatformError> {
+        if !backup_confirmed {
+            return Err(PlatformError::new(
+                ErrorCode::Invalid,
+                "partition drop requires a confirmed recoverable backup",
+            ));
+        }
+
+        let mut tx = self.begin_cleanup_transaction().await?;
+
+        sqlx::query(
+            "INSERT INTO audit.records (actor, tenant_id, action, target_type, target_id, result, details)
+             VALUES ('cleanup_worker', NULL, 'partition_drop', $1, $2, 'pending', jsonb_build_object('partition', $2))",
+        )
+        .bind(target.as_str())
+        .bind(partition)
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+
+        tx.commit().await.map_err(db_error)?;
+
+        Err(PlatformError::new(
+            ErrorCode::Unsupported,
+            "partition drop and backup orchestration are not implemented in this build",
+        ))
+    }
 }
 
 fn partition_end_from_name(name: &str) -> Option<chrono::DateTime<chrono::Utc>> {
