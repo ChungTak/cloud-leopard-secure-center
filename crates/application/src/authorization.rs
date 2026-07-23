@@ -111,7 +111,6 @@ where
                 .binding_repo
                 .list_by_principal(principal, ctx, options)
                 .await?;
-            let has_more = page.next_cursor.is_some();
             bindings.extend(page.items);
             let Some(cursor) = page.next_cursor else {
                 break;
@@ -119,9 +118,6 @@ where
             options.offset = cursor.parse::<u64>().map_err(|_| {
                 PlatformError::new(ErrorCode::Internal, "invalid pagination cursor".to_string())
             })?;
-            if !has_more {
-                break;
-            }
         }
         Ok(bindings)
     }

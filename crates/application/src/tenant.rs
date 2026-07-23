@@ -88,7 +88,11 @@ pub trait TenantUseCase: Send + Sync {
     async fn get(&self, id: TenantId, ctx: &RequestContext) -> Result<TenantDto, PlatformError>;
 
     /// List tenants visible to the caller.
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<TenantDto>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<TenantDto>, PlatformError>;
 }
 
 /// Default tenant application service.
@@ -281,13 +285,17 @@ where
         Ok(TenantDto::from(&tenant))
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<TenantDto>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<TenantDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let auth_req = usecase::platform_authorization(actor, "platform:tenant:read");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx, ListOptions::default()).await?;
+        let page = self.repo.list(ctx, options).await?;
         Ok(Page {
             items: page.items.iter().map(TenantDto::from).collect(),
             next_cursor: page.next_cursor,

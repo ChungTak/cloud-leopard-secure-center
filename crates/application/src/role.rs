@@ -96,7 +96,11 @@ pub trait RoleUseCase: Send + Sync {
 
     async fn get(&self, id: RoleId, ctx: &RequestContext) -> Result<RoleDto, PlatformError>;
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<RoleDto>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<RoleDto>, PlatformError>;
 }
 
 /// Default role application service.
@@ -352,7 +356,11 @@ where
         Ok(RoleDto::from(&role))
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<RoleDto>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<RoleDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let tenant_id = ctx.tenant_id;
@@ -364,7 +372,7 @@ where
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx, ListOptions::default()).await?;
+        let page = self.repo.list(ctx, options).await?;
         Ok(Page {
             items: page.items.iter().map(RoleDto::from).collect(),
             next_cursor: page.next_cursor,

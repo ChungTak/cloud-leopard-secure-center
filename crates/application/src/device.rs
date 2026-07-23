@@ -90,7 +90,11 @@ pub trait DeviceUseCase: Send + Sync {
 
     async fn get(&self, id: DeviceId, ctx: &RequestContext) -> Result<DeviceDto, PlatformError>;
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<DeviceDto>, PlatformError>;
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<DeviceDto>, PlatformError>;
 }
 
 /// Default device application service.
@@ -313,7 +317,11 @@ where
         Ok(DeviceDto::from(&device))
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<DeviceDto>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<DeviceDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let tenant_id = usecase::require_tenant(ctx)?;
@@ -326,7 +334,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx, ListOptions::default()).await?;
+        let page = self.repo.list(ctx, options).await?;
         Ok(Page {
             items: page.items.iter().map(DeviceDto::from).collect(),
             next_cursor: page.next_cursor,
