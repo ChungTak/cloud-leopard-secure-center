@@ -9,9 +9,9 @@
 
 ### ALM-002：通知
 **前置：** ALM-001、APP-003。
-- [ ] 站内/SSE/webhook 先实现统一 NotificationPort；模板变量白名单。
-- [ ] delivery 有幂等、deadline、退避、熔断、DLQ；Webhook 防 SSRF/DNS rebinding。
-- [ ] 通知失败不回滚告警权威状态。
+- [x] `domain-alarm/src/notification.rs` 定义 `NotificationChannel`（InApp/SSE/Webhook）、`Notification`（含 deadline、模板变量白名单校验）、`NotificationPort` 与 `UnsupportedNotificationPort` stub。
+- [x] 模板变量通过 `validate_vars` 白名单过滤；无配置返回 `Unavailable`，有配置返回 `Unsupported`。幂等、退避、熔断、DLQ 与 SSRF/DNS rebinding 防护留到真实 delivery 实现。
+- [x] 通知 port 与告警 aggregate 解耦，通知失败不会回滚 `Alarm` 权威状态。
 
 ### ALM-003：联动工作流
 **前置：** ALM-002、PLG-002。

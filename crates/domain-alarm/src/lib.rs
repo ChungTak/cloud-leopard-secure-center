@@ -5,6 +5,8 @@
 
 use foundation::{AlarmId, MessageId, TenantId, UtcTimestamp};
 
+pub mod notification;
+
 /// Alarm severity with explicit upper bounds per tenant policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
