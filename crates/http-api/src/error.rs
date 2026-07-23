@@ -78,7 +78,7 @@ impl AppError {
             Self::VersionMismatch => StatusCode::PRECONDITION_FAILED,
             Self::UnprocessableEntity(_) => StatusCode::UNPROCESSABLE_ENTITY,
             Self::RateLimit => StatusCode::TOO_MANY_REQUESTS,
-            Self::Timeout => StatusCode::REQUEST_TIMEOUT,
+            Self::Timeout => StatusCode::GATEWAY_TIMEOUT,
             Self::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             Self::ServiceUnavailable => StatusCode::SERVICE_UNAVAILABLE,
             Self::NotImplemented => StatusCode::NOT_IMPLEMENTED,

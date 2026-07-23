@@ -144,7 +144,7 @@ async fn map_problem_details(response: Response) -> Response {
 
     let detail = match status {
         StatusCode::PAYLOAD_TOO_LARGE => "request payload too large",
-        StatusCode::REQUEST_TIMEOUT => "request timeout",
+        StatusCode::GATEWAY_TIMEOUT => "request timeout",
         _ => status.canonical_reason().unwrap_or("error"),
     };
 
