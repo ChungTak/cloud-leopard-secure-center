@@ -16,9 +16,9 @@
 
 ### PLG-003：进程插件 gRPC
 **前置：** PLG-001、MSG-003。
-- [ ] UDS/mTLS 双向 handshake：hello/welcome、版本、instance、scope、credit、heartbeat/config revision。
-- [ ] frame 支持 command/result/event/health/drain/shutdown、seq/ack 和有限重放。
-- [ ] 插件不获得 DB DSN、NATS 管理权限或 secret 枚举。
+- [x] `plugin-adapter/src/grpc.rs` 定义 `PluginHello`（version/instance/scope/credits）、`HostWelcome`（heartbeat/config_revision/allowed_capabilities）与 `PluginFrame`（Command/Result/Event/Health/Drain/Shutdown，含 seq/ack）。
+- [x] `ProcessPluginHost` port 与 `UnsupportedProcessPluginHost` stub；未配置返回 `Unavailable`，已启用返回 `Unsupported`。
+- [x] 握手 scope 与 allowed_capabilities 用于后续能力裁剪；插件不暴露 DSN/NATS/secret 访问。
 
 ### PLG-004：Conformance kit
 **前置：** PLG-002、PLG-003。

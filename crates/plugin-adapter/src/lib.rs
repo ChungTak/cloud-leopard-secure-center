@@ -3,6 +3,7 @@
 //! Phase 1 freezes the plugin SDK contracts and lifecycle. Real Wasmtime gRPC
 //! hosts are not linked; unimplemented paths return `Unsupported`.
 
+pub mod grpc;
 pub mod manifest;
 pub mod wit;
 
