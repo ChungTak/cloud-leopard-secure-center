@@ -71,7 +71,9 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|s| !s.is_empty())
         .map(|s| s.into_bytes())
         .unwrap_or_else(|| {
-            eprintln!("warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret");
+            eprintln!(
+                "warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret"
+            );
             let mut buf = [0u8; 32];
             if let Err(e) = SystemRandom.fill_bytes(&mut buf) {
                 eprintln!("failed to generate pagination secret: {e}");
@@ -90,11 +92,12 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let idempotency_state = Arc::new(IdempotencyState::new(Duration::from_secs(24 * 60 * 60)));
 
-    let api = http_api::middleware::with_middleware(http_api::routes::router(), cors_allowed_origins)
-        .layer(Extension(rate_limit_state))
-        .layer(Extension(proxy_config))
-        .layer(Extension(pagination_config))
-        .layer(Extension(idempotency_state));
+    let api =
+        http_api::middleware::with_middleware(http_api::routes::router(), cors_allowed_origins)
+            .layer(Extension(rate_limit_state))
+            .layer(Extension(proxy_config))
+            .layer(Extension(pagination_config))
+            .layer(Extension(idempotency_state));
     let app = if static_dir.is_dir() {
         let index = static_dir.join("index.html");
         let serve = ServeDir::new(&static_dir)
