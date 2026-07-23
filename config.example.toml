@@ -7,6 +7,7 @@ log_level = "info"
 [http]
 host = "127.0.0.1"
 port = 8080
+trusted_proxies = []
 
 [storage]
 url = "${secret:db.connection_string}"
@@ -15,6 +16,15 @@ max_connections = 10
 [security]
 token_expiry_seconds = 3600
 issuer = "clsc"
+audience = "clsc-api"
+
+[security.login_rate_limit]
+requests = 10
+window_seconds = 60
+
+[security.api_rate_limit]
+requests = 1000
+window_seconds = 60
 
 [observability]
 trace_collector = "http://localhost:4317"

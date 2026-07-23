@@ -82,7 +82,11 @@ pub fn with_middleware(router: Router) -> Router {
 
     // Convert raw status-only error responses (e.g. payload too large) to RFC 9457.
     // Applied outside the main ServiceBuilder to avoid type-inference issues with from_fn.
-    router.layer(axum::middleware::map_response(map_problem_details))
+    let router = router.layer(axum::middleware::map_response(map_problem_details));
+
+    // Enforce pre-login and authenticated API rate limits.
+    // The `RateLimitState` and `TrustedProxyConfig` extensions are supplied by the app.
+    router.layer(axum::middleware::from_fn(crate::rate_limit::rate_limit))
 }
 
 /// Request ID generator backed by `Uuid::new_v7`.

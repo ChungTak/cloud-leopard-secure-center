@@ -1,6 +1,7 @@
 //! Application layer: use cases, transactions, permission checks, projection, outbox.
 
 pub mod api_key;
+pub mod auth;
 pub mod authenticate;
 pub mod authorization;
 pub mod config;

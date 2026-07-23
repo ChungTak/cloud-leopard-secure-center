@@ -1,9 +1,13 @@
 //! Axum HTTP transport adapter, OpenAPI definitions, and middleware.
 
+pub mod auth;
+pub mod client_ip;
+pub mod context;
 pub mod dto;
 pub mod error;
 pub mod middleware;
 pub mod openapi;
+pub mod rate_limit;
 pub mod routes;
 
 pub fn version() -> &'static str {

@@ -16,6 +16,9 @@ pub struct AccessTokenClaims {
     pub aud: String,
     /// Issuer.
     pub iss: String,
+    /// Not-before time in seconds since the Unix epoch.
+    #[serde(default)]
+    pub nbf: i64,
     /// Expiration time in seconds since the Unix epoch.
     pub exp: i64,
     /// Unique token identifier.
