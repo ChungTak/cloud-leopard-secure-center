@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package security.v1;
+
+option csharp_namespace = "Security.V1";
+option go_package = "security/v1";
+option java_multiple_files = true;
+option java_package = "com.security.v1";
+
+// Envelope kind. 0 is reserved for forward-compatible UNSPECIFIED.
+enum EnvelopeKind {
+  ENVELOPE_KIND_UNSPECIFIED = 0;
+  ENVELOPE_KIND_COMMAND = 1;
+  ENVELOPE_KIND_EVENT = 2;
+}
+
+// A typed message envelope on the security message bus.
+// Field numbers 1-15 are reserved for future core envelope fields; do not reuse.
+message Envelope {
+  reserved 1 to 15;
+  reserved "topic_v0", "payload_v0";
+
+  string message_id = 16;
+  EnvelopeKind kind = 17;
+  string tenant_id = 18;
+  string topic = 19;
+  bytes payload = 20;
+  map<string, string> headers = 21;
+  string timestamp = 22;  // RFC 3339
+  optional string deadline = 23;  // RFC 3339, empty when absent
+}
+
+// Wrapper for a batch of envelopes; used by the local adapter replay path.
+message EnvelopeBatch {
+  repeated Envelope envelopes = 1;
+}

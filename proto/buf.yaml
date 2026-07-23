@@ -1,0 +1,12 @@
+version: v1
+name: github.com/chungtak/cloud-leopard-secure-center
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    - DEFAULT
+  enum_zero_value_suffix: _UNSPECIFIED
+  service_suffix: Service
+  except:
+    - PACKAGE_VERSION_SUFFIX
