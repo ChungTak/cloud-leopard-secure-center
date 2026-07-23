@@ -38,6 +38,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cameras": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List cameras. */
+        get: operations["list_cameras"];
+        put?: never;
+        /** Create a camera. */
+        post: operations["create_camera"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cameras/{id}": {
         parameters: {
             query?: never;
@@ -49,10 +67,12 @@ export interface paths {
         get: operations["get_camera"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete a camera. */
+        delete: operations["delete_camera"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update a camera. */
+        patch: operations["update_camera"];
         trace?: never;
     };
     "/config-definitions/{key}": {
@@ -89,6 +109,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List managed devices. */
+        get: operations["list_devices"];
+        put?: never;
+        /** Create a managed device. */
+        post: operations["create_device"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/devices/{id}": {
         parameters: {
             query?: never;
@@ -100,6 +138,77 @@ export interface paths {
         get: operations["get_device"];
         put?: never;
         post?: never;
+        /** Delete a managed device. */
+        delete: operations["delete_device"];
+        options?: never;
+        head?: never;
+        /** Update a managed device. */
+        patch: operations["update_device"];
+        trace?: never;
+    };
+    "/devices/{id}/lifecycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change a device lifecycle. */
+        post: operations["change_device_lifecycle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/external-bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List external bindings. */
+        get: operations["list_external_bindings"];
+        put?: never;
+        /** Create an external binding. */
+        post: operations["create_external_binding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/external-bindings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete an external binding. */
+        delete: operations["delete_external_binding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/external-bindings/{id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resolve an external binding conflict. */
+        post: operations["resolve_external_binding_conflict"];
         delete?: never;
         options?: never;
         head?: never;
@@ -171,6 +280,23 @@ export interface paths {
         put?: never;
         /** Move an organization unit. */
         post: operations["move_organization_unit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List projection states. */
+        get: operations["list_projections"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -320,6 +446,42 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List tags for a resource. */
+        get: operations["list_tags"];
+        put?: never;
+        /** Create a tag. */
+        post: operations["create_tag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tags/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a tag. */
+        delete: operations["delete_tag"];
+        options?: never;
+        head?: never;
+        /** Update a tag. */
+        patch: operations["update_tag"];
         trace?: never;
     };
     "/tenants/{id}": {
@@ -491,6 +653,12 @@ export interface components {
             tenantId: string;
             updatedAt: string;
         };
+        /** @description Request to change a device lifecycle. */
+        ChangeDeviceLifecycleRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            lifecycle: string;
+        };
         /** @description Request to change a user status. */
         ChangeUserStatusRequest: {
             /** Format: int64 */
@@ -530,6 +698,29 @@ export interface components {
             secretRef?: string | null;
             value: string;
         };
+        /** @description Request to create a camera. */
+        CreateCameraRequest: {
+            areaId?: string | null;
+            code: string;
+            deviceId: string;
+            name: string;
+            sensitivity: string;
+        };
+        /** @description Request to create a managed device. */
+        CreateDeviceRequest: {
+            areaId?: string | null;
+            code: string;
+            name: string;
+            organizationId?: string | null;
+            serial?: string | null;
+        };
+        /** @description Request to create an external binding. */
+        CreateExternalBindingRequest: {
+            externalKind: string;
+            externalRef: string;
+            resourceId: string;
+            resourceType: string;
+        };
         /** @description Request to create an organization unit. */
         CreateOrganizationUnitRequest: {
             code: string;
@@ -560,6 +751,13 @@ export interface components {
             nodeType: components["schemas"]["SpatialNodeType"];
             parentId?: string | null;
         };
+        /** @description Request to create a tag. */
+        CreateTagRequest: {
+            key: string;
+            resourceId: string;
+            resourceType: string;
+            value: string;
+        };
         /** @description Request to create a user. */
         CreateUserRequest: {
             displayName: string;
@@ -579,6 +777,22 @@ export interface components {
             /** Format: int64 */
             revision: number;
             serial?: string | null;
+            tenantId: string;
+            updatedAt: string;
+        };
+        /** @description Stable API representation of an external binding. */
+        ExternalBindingDto: {
+            activatedAt?: string | null;
+            actor?: string | null;
+            createdAt: string;
+            externalKind: string;
+            externalRef: string;
+            id: string;
+            resourceId: string;
+            resourceType: string;
+            /** Format: int64 */
+            revision: number;
+            state: string;
             tenantId: string;
             updatedAt: string;
         };
@@ -626,6 +840,21 @@ export interface components {
             status: number;
             title: string;
             type: string;
+        };
+        /** @description Stable API representation of a projection node. */
+        ProjectionStateDto: {
+            channelId: string;
+            deviceId: string;
+            isOnline: boolean;
+            isStale: boolean;
+            observedAt: string;
+            tenantId: string;
+        };
+        /** @description Request to resolve an external binding conflict. */
+        ResolveExternalBindingConflictRequest: {
+            action: string;
+            /** Format: int64 */
+            expectedRevision: number;
         };
         /** @description Stable API representation of an explicit resource reference. */
         ResourceRefDto: {
@@ -702,6 +931,20 @@ export interface components {
          * @enum {string}
          */
         SpatialNodeType: "site" | "building" | "floor" | "area";
+        /** @description Stable API representation of a tag. */
+        TagDto: {
+            actor?: string | null;
+            createdAt: string;
+            id: string;
+            key: string;
+            resourceId: string;
+            resourceType: string;
+            /** Format: int64 */
+            revision: number;
+            tenantId: string;
+            updatedAt: string;
+            value: string;
+        };
         /** @description Stable API representation of a tenant. */
         TenantDto: {
             actor?: string | null;
@@ -715,6 +958,24 @@ export interface components {
             status: string;
             timezone: string;
             updatedAt: string;
+        };
+        /** @description Request to update a camera. */
+        UpdateCameraRequest: {
+            areaId?: string | null;
+            /** Format: int64 */
+            expectedRevision: number;
+            isEnabled: boolean;
+            name: string;
+            sensitivity: string;
+        };
+        /** @description Request to update a managed device. */
+        UpdateDeviceRequest: {
+            areaId?: string | null;
+            /** Format: int64 */
+            expectedRevision: number;
+            name: string;
+            organizationId?: string | null;
+            serial?: string | null;
         };
         /** @description Request to update an organization unit. */
         UpdateOrganizationUnitRequest: {
@@ -743,6 +1004,12 @@ export interface components {
             /** Format: int64 */
             expectedRevision: number;
             name: string;
+        };
+        /** @description Request to update a tag. */
+        UpdateTagRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            value: string;
         };
         /** @description Request to update a user. */
         UpdateUserRequest: {
@@ -839,6 +1106,77 @@ export interface operations {
             };
         };
     };
+    list_cameras: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                search?: string;
+                /** @description Device filter */
+                deviceId?: string;
+                /** @description Area filter */
+                areaId?: string;
+                /** @description Sensitivity filter */
+                sensitivity?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_camera: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCameraRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_camera: {
         parameters: {
             query?: never;
@@ -857,6 +1195,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CameraDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    delete_camera: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_camera: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCameraRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CameraDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Not implemented */
@@ -932,6 +1352,77 @@ export interface operations {
             };
         };
     };
+    list_devices: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                search?: string;
+                /** @description Organization filter */
+                organizationId?: string;
+                /** @description Area filter */
+                areaId?: string;
+                /** @description Lifecycle filter */
+                lifecycle?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_device: {
         parameters: {
             query?: never;
@@ -950,6 +1441,294 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    delete_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDeviceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    change_device_lifecycle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeDeviceLifecycleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    list_external_bindings: {
+        parameters: {
+            query?: {
+                /** @description Resource type */
+                resourceType?: string;
+                /** @description Resource ID */
+                resourceId?: string;
+                /** @description Search term */
+                search?: string;
+                /** @description State filter */
+                state?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalBindingDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_external_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExternalBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalBindingDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    delete_external_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    resolve_external_binding_conflict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveExternalBindingConflictRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExternalBindingDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Not implemented */
@@ -1203,6 +1982,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    list_projections: {
+        parameters: {
+            query?: {
+                /** @description Device filter */
+                deviceId?: string;
+                /** @description Stale filter */
+                isStale?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectionStateDto"][];
                 };
             };
             /** @description Not implemented */
@@ -1822,6 +2635,148 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    list_tags: {
+        parameters: {
+            query?: {
+                /** @description Resource type */
+                resourceType?: string;
+                /** @description Resource ID */
+                resourceId?: string;
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    delete_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTagRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagDto"];
                 };
             };
             /** @description Precondition failed */

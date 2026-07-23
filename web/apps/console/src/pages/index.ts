@@ -10,3 +10,5 @@ export const SpatialPage = lazy(() => import('./SpatialPage.tsx'));
 export const UsersPage = lazy(() => import('./UsersPage.tsx'));
 export const RolesPage = lazy(() => import('./RolesPage.tsx'));
 export const RoleBindingsPage = lazy(() => import('./RoleBindingsPage.tsx'));
+export const DevicesPage = lazy(() => import('./DevicesPage.tsx'));
+export const CamerasPage = lazy(() => import('./CamerasPage.tsx'));

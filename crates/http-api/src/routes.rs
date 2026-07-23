@@ -3,19 +3,22 @@
 use axum::{
     Json, Router,
     extract::{Path, Query},
-    routing::{get, post},
+    routing::{delete, get, patch, post},
 };
 
 use crate::{
     dto::{
         ApiKeyCreatedDto, AuditRecordDto, AuthExplainRequest, AuthExplainResponse, CameraDto,
-        ChangeUserStatusRequest, ConfigDefinitionDto, ConfigValueDto,
+        ChangeDeviceLifecycleRequest, ChangeUserStatusRequest, ConfigDefinitionDto, ConfigValueDto,
+        CreateCameraRequest, CreateDeviceRequest, CreateExternalBindingRequest,
         CreateOrganizationUnitRequest, CreateRoleBindingRequest, CreateRoleRequest,
-        CreateServiceAccountRequest, CreateSpatialNodeRequest, CreateUserRequest, DeviceDto,
-        HealthDto, ManageMfaRequest, MoveOrganizationUnitRequest, MoveSpatialNodeRequest,
-        OrganizationUnitDto, ProblemDetailsDto, RoleBindingDto, RoleDto, SetPasswordRequest,
-        SpatialNodeDto, TenantDto, UpdateOrganizationUnitRequest, UpdateRoleBindingRequest,
-        UpdateRoleRequest, UpdateSpatialNodeRequest, UpdateUserRequest, UserDto,
+        CreateServiceAccountRequest, CreateSpatialNodeRequest, CreateTagRequest, CreateUserRequest,
+        DeviceDto, ExternalBindingDto, HealthDto, ManageMfaRequest, MoveOrganizationUnitRequest,
+        MoveSpatialNodeRequest, OrganizationUnitDto, ProblemDetailsDto, ProjectionStateDto,
+        ResolveExternalBindingConflictRequest, RoleBindingDto, RoleDto, SetPasswordRequest,
+        SpatialNodeDto, TagDto, TenantDto, UpdateCameraRequest, UpdateDeviceRequest,
+        UpdateOrganizationUnitRequest, UpdateRoleBindingRequest, UpdateRoleRequest,
+        UpdateSpatialNodeRequest, UpdateTagRequest, UpdateUserRequest, UserDto,
     },
     error::AppError,
 };
@@ -651,6 +654,316 @@ pub(crate) async fn explain_auth(
     Err(AppError::NotImplemented)
 }
 
+/// List managed devices.
+#[utoipa::path(
+    get,
+    path = "/devices",
+    params(
+        ("search" = Option<String>, Query, description = "Search term"),
+        ("organizationId" = Option<String>, Query, description = "Organization filter"),
+        ("areaId" = Option<String>, Query, description = "Area filter"),
+        ("lifecycle" = Option<String>, Query, description = "Lifecycle filter")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<DeviceDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_devices(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<DeviceDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a managed device.
+#[utoipa::path(
+    post,
+    path = "/devices",
+    request_body = CreateDeviceRequest,
+    responses(
+        (status = 201, description = "Created", body = DeviceDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_device(
+    Json(_body): Json<CreateDeviceRequest>,
+) -> Result<Json<DeviceDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a managed device.
+#[utoipa::path(
+    patch,
+    path = "/devices/{id}",
+    request_body = UpdateDeviceRequest,
+    responses(
+        (status = 200, description = "OK", body = DeviceDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_device(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateDeviceRequest>,
+) -> Result<Json<DeviceDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Change a device lifecycle.
+#[utoipa::path(
+    post,
+    path = "/devices/{id}/lifecycle",
+    request_body = ChangeDeviceLifecycleRequest,
+    responses(
+        (status = 200, description = "OK", body = DeviceDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn change_device_lifecycle(
+    Path(_id): Path<String>,
+    Json(_body): Json<ChangeDeviceLifecycleRequest>,
+) -> Result<Json<DeviceDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete a managed device.
+#[utoipa::path(
+    delete,
+    path = "/devices/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_device(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List cameras.
+#[utoipa::path(
+    get,
+    path = "/cameras",
+    params(
+        ("search" = Option<String>, Query, description = "Search term"),
+        ("deviceId" = Option<String>, Query, description = "Device filter"),
+        ("areaId" = Option<String>, Query, description = "Area filter"),
+        ("sensitivity" = Option<String>, Query, description = "Sensitivity filter")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<CameraDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_cameras(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<CameraDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a camera.
+#[utoipa::path(
+    post,
+    path = "/cameras",
+    request_body = CreateCameraRequest,
+    responses(
+        (status = 201, description = "Created", body = CameraDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_camera(
+    Json(_body): Json<CreateCameraRequest>,
+) -> Result<Json<CameraDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a camera.
+#[utoipa::path(
+    patch,
+    path = "/cameras/{id}",
+    request_body = UpdateCameraRequest,
+    responses(
+        (status = 200, description = "OK", body = CameraDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_camera(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateCameraRequest>,
+) -> Result<Json<CameraDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete a camera.
+#[utoipa::path(
+    delete,
+    path = "/cameras/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_camera(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List tags for a resource.
+#[utoipa::path(
+    get,
+    path = "/tags",
+    params(
+        ("resourceType" = Option<String>, Query, description = "Resource type"),
+        ("resourceId" = Option<String>, Query, description = "Resource ID"),
+        ("search" = Option<String>, Query, description = "Search term")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<TagDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_tags(Query(_q): Query<ListQuery>) -> Result<Json<Vec<TagDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a tag.
+#[utoipa::path(
+    post,
+    path = "/tags",
+    request_body = CreateTagRequest,
+    responses(
+        (status = 201, description = "Created", body = TagDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_tag(
+    Json(_body): Json<CreateTagRequest>,
+) -> Result<Json<TagDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a tag.
+#[utoipa::path(
+    patch,
+    path = "/tags/{id}",
+    request_body = UpdateTagRequest,
+    responses(
+        (status = 200, description = "OK", body = TagDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_tag(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateTagRequest>,
+) -> Result<Json<TagDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete a tag.
+#[utoipa::path(
+    delete,
+    path = "/tags/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_tag(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List external bindings.
+#[utoipa::path(
+    get,
+    path = "/external-bindings",
+    params(
+        ("resourceType" = Option<String>, Query, description = "Resource type"),
+        ("resourceId" = Option<String>, Query, description = "Resource ID"),
+        ("search" = Option<String>, Query, description = "Search term"),
+        ("state" = Option<String>, Query, description = "State filter")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<ExternalBindingDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_external_bindings(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<ExternalBindingDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create an external binding.
+#[utoipa::path(
+    post,
+    path = "/external-bindings",
+    request_body = CreateExternalBindingRequest,
+    responses(
+        (status = 201, description = "Created", body = ExternalBindingDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_external_binding(
+    Json(_body): Json<CreateExternalBindingRequest>,
+) -> Result<Json<ExternalBindingDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Resolve an external binding conflict.
+#[utoipa::path(
+    post,
+    path = "/external-bindings/{id}/resolve",
+    request_body = ResolveExternalBindingConflictRequest,
+    responses(
+        (status = 200, description = "OK", body = ExternalBindingDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn resolve_external_binding_conflict(
+    Path(_id): Path<String>,
+    Json(_body): Json<ResolveExternalBindingConflictRequest>,
+) -> Result<Json<ExternalBindingDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete an external binding.
+#[utoipa::path(
+    delete,
+    path = "/external-bindings/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_external_binding(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List projection states.
+#[utoipa::path(
+    get,
+    path = "/projections",
+    params(
+        ("deviceId" = Option<String>, Query, description = "Device filter"),
+        ("isStale" = Option<bool>, Query, description = "Stale filter")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<ProjectionStateDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_projections(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<ProjectionStateDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
 /// Public router exposing health and resource definition stubs.
 pub fn router() -> Router {
     Router::new()
@@ -703,8 +1016,29 @@ pub fn router() -> Router {
                 .delete(delete_role_binding),
         )
         .route("/auth/explain", post(explain_auth))
-        .route("/devices/{id}", get(get_device))
-        .route("/cameras/{id}", get(get_camera))
+        .route("/devices", post(create_device).get(list_devices))
+        .route(
+            "/devices/{id}",
+            get(get_device).patch(update_device).delete(delete_device),
+        )
+        .route("/devices/{id}/lifecycle", post(change_device_lifecycle))
+        .route("/cameras", post(create_camera).get(list_cameras))
+        .route(
+            "/cameras/{id}",
+            get(get_camera).patch(update_camera).delete(delete_camera),
+        )
+        .route("/tags", post(create_tag).get(list_tags))
+        .route("/tags/{id}", patch(update_tag).delete(delete_tag))
+        .route(
+            "/external-bindings",
+            post(create_external_binding).get(list_external_bindings),
+        )
+        .route("/external-bindings/{id}", delete(delete_external_binding))
+        .route(
+            "/external-bindings/{id}/resolve",
+            post(resolve_external_binding_conflict),
+        )
+        .route("/projections", get(list_projections))
         .route("/audit-records/{id}", get(get_audit_record))
         .route("/config-values/{id}", get(get_config_value))
         .route("/config-definitions/{key}", get(get_config_definition))

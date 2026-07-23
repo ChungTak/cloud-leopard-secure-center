@@ -15,7 +15,9 @@ interface NavItem {
     | 'organizations'
     | 'spatial'
     | 'roles'
-    | 'roleBindings';
+    | 'roleBindings'
+    | 'devices'
+    | 'cameras';
   permission?: string;
 }
 
@@ -38,6 +40,16 @@ const items: NavItem[] = [
     to: '/admin/role-bindings',
     labelKey: 'roleBindings',
     permission: 'tenant:role:read',
+  },
+  {
+    to: '/admin/devices',
+    labelKey: 'devices',
+    permission: 'tenant:device:read',
+  },
+  {
+    to: '/admin/cameras',
+    labelKey: 'cameras',
+    permission: 'tenant:camera:read',
   },
   {
     to: '/admin/settings',
