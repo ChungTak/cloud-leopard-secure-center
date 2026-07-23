@@ -18,6 +18,7 @@ members = [
     "crates/storage-postgres",
     "crates/message-api",
     "crates/message-local",
+    "crates/nats-adapter",
     "crates/http-api",
     "crates/observability",
 ]

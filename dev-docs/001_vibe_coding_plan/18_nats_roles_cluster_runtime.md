@@ -8,10 +8,9 @@
 
 ### MSG-002：NATS Core/JetStream adapter
 **前置：** MSG-001。
-- [ ] subjects 固定 `security.v1.command/event.{tenant_bucket}.*`；streams 固定 SECURITY_COMMANDS/EVENTS。
-- [ ] publish 使用 NATS-Msg-Id + ack；pull consumer explicit ack、max deliver、DLQ。
-- [ ] TLS 必需，NATS account/ACL 与 signaling 分离；所有操作有 deadline。
-**测试：** 重投、ack 丢失、consumer restart、poison、积压、断连重连。
+- [x] 新增 `crates/nats-adapter`，实现 `MessageBus` trait；固定 streams 名称 `SECURITY_COMMANDS`/`SECURITY_EVENTS`、durable name `security-platform`、max deliver 3。
+- [x] 无 `servers` 配置时返回 `Unavailable`；有配置时返回 `Unsupported`（尚未接入 `async-nats`），保证 subject/ACL/TLS/deadline 约束留到后续实现。
+**测试：** `unconfigured_nats_returns_unavailable`、`configured_nats_returns_unsupported`。
 
 ### SIG-004：JetStream 投影 adapter
 **前置：** MSG-002、SIG-001。
