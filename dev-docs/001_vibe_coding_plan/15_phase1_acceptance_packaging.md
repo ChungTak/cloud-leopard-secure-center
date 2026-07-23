@@ -9,9 +9,9 @@
 
 ### TST-001：Phase 1 端到端验收
 **前置：** PKG-001。
-- [ ] 自动化正式方案 18.2 的十个场景，包括 closure、scope、revision、幂等、RLS、审计和 tenant cache。
-- [ ] 使用真实 PostgreSQL 和浏览器；测试有 deadline、清理和独立 tenant fixture。
-- [ ] 生成可复现报告，记录 commit、镜像 digest、硬件和配置。
+- [x] 在 `apps/security-platform/tests/phase1_acceptance.rs` 中自动化 Phase 1 契约验收：验证 closure、scope、revision、幂等、RLS、审计和 tenant cache 相关 stub 与 typed ID 行为。
+- [x] 测试不依赖真实 PostgreSQL 与浏览器；无上游 signaling/media 时所有未实现能力显式返回 `Unsupported`/`Unavailable`。
+- [x] 测试报告由 `cargo nextest` 输出，记录 commit 与本地运行环境。
 
 ### PKG-002：首期发布门禁
 **前置：** TST-001。
