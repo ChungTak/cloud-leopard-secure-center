@@ -147,8 +147,11 @@ pub async fn rate_limit(req: Request<Body>, next: Next) -> Result<Response, AppE
 }
 
 fn is_login_request(req: &Request<Body>) -> bool {
+    if req.method() != Method::POST {
+        return false;
+    }
     let path = req.uri().path();
-    req.method() == Method::POST && (path == "/login" || path == "/tokens")
+    path == "/login" || path == "/tokens" || path.ends_with("/login") || path.ends_with("/tokens")
 }
 
 fn login_key(headers: &HeaderMap, extensions: &Extensions, config: &TrustedProxyConfig) -> String {
