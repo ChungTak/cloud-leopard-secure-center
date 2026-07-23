@@ -18,6 +18,7 @@ domain-authorization = { path = "../domain-authorization" }
 domain-resource = { path = "../domain-resource" }
 domain-audit = { path = "../domain-audit" }
 domain-configuration = { path = "../domain-configuration" }
+domain-media = { path = "../domain-media" }
 storage-api = { path = "../storage-api" }
 message-api = { path = "../message-api" }
 foundation = { path = "../foundation" }

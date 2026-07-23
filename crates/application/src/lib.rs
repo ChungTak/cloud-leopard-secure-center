@@ -6,6 +6,7 @@ pub mod authenticate;
 pub mod authorization;
 pub mod config;
 pub mod device;
+pub mod media;
 pub mod mfa;
 pub mod organization;
 pub mod role;
