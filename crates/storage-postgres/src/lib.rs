@@ -222,7 +222,13 @@ pub async fn clear_tenant_context(pool: &PgPool) -> Result<(), PlatformError> {
 }
 
 fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
+    match e {
+        sqlx::Error::Database(ref db) if db.is_unique_violation() => {
+            PlatformError::new(ErrorCode::Conflict, "resource already exists")
+        }
+        sqlx::Error::RowNotFound => PlatformError::new(ErrorCode::NotFound, "resource not found"),
+        other => PlatformError::new(ErrorCode::Unavailable, other.to_string()),
+    }
 }
 
 pub fn version() -> &'static str {
