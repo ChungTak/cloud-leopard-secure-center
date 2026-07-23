@@ -2,6 +2,9 @@
 
 use async_trait::async_trait;
 use domain_audit::audit_record::{AuditRecord, AuditRecordId};
+use domain_audit::retention::{
+    CleanupBatchResult, LegalHold, RetentionPolicy, RetentionTarget, TenantRetentionOverride,
+};
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::RoleBinding;
 use domain_configuration::{ConfigDefinition, ConfigScope, ConfigValue};
@@ -737,6 +740,73 @@ pub trait ConfigurationRepository: Send + Sync {
         module: Option<&str>,
         ctx: &RequestContext,
     ) -> Result<Option<String>, PlatformError>;
+}
+
+/// Repository contract for retention policies, legal holds, and cleanup jobs.
+#[async_trait]
+pub trait RetentionRepository: Send + Sync {
+    /// Persist a default retention policy.
+    async fn save_policy(&self, policy: &RetentionPolicy) -> Result<(), PlatformError>;
+
+    /// Load the default retention policy for a target, returning the built-in default if unset.
+    async fn get_policy(&self, target: RetentionTarget) -> Result<RetentionPolicy, PlatformError>;
+
+    /// Persist a tenant-specific override.
+    async fn set_tenant_override(
+        &self,
+        override_value: &TenantRetentionOverride,
+    ) -> Result<(), PlatformError>;
+
+    /// Load the effective retention period (tenant override wins, then default).
+    async fn get_effective_days(
+        &self,
+        target: RetentionTarget,
+        tenant_id: Option<TenantId>,
+    ) -> Result<u32, PlatformError>;
+
+    /// Place or refresh a legal hold on a resource.
+    async fn add_legal_hold(&self, hold: &LegalHold) -> Result<(), PlatformError>;
+
+    /// Remove a legal hold from a resource.
+    async fn remove_legal_hold(
+        &self,
+        resource_type: &str,
+        resource_id: &str,
+    ) -> Result<(), PlatformError>;
+
+    /// List partitions of `target` whose data is older than `cutoff`.
+    async fn list_partitions_to_clean(
+        &self,
+        target: RetentionTarget,
+        cutoff: UtcTimestamp,
+    ) -> Result<Vec<String>, PlatformError>;
+
+    /// Try to acquire a lease on a partition for a worker. Returns false if another worker holds it.
+    async fn acquire_lease(
+        &self,
+        target: RetentionTarget,
+        partition: &str,
+        worker_id: &str,
+        lease_until: UtcTimestamp,
+    ) -> Result<bool, PlatformError>;
+
+    /// Release a previously acquired lease.
+    async fn release_lease(
+        &self,
+        target: RetentionTarget,
+        partition: &str,
+        worker_id: &str,
+    ) -> Result<(), PlatformError>;
+
+    /// Run a single bounded cleanup batch for a partition, honoring legal holds.
+    /// Returns the number of rows deleted and whether the partition is finished.
+    async fn cleanup_batch(
+        &self,
+        target: RetentionTarget,
+        partition: &str,
+        cutoff: UtcTimestamp,
+        batch_size: u64,
+    ) -> Result<CleanupBatchResult, PlatformError>;
 }
 
 pub fn version() -> &'static str {
