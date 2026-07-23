@@ -151,7 +151,13 @@ fn is_login_request(req: &Request<Body>) -> bool {
         return false;
     }
     let path = req.uri().path();
-    path == "/login" || path == "/tokens" || path.ends_with("/login") || path.ends_with("/tokens")
+    // Rate limiting applies to login and token issuance, which may be mounted
+    // under a prefix such as `/api/v1`.
+    let base = path.strip_prefix("/api/v1").unwrap_or(path);
+    base == "/login"
+        || base.starts_with("/login/")
+        || base == "/tokens"
+        || base.starts_with("/tokens/")
 }
 
 fn login_key(headers: &HeaderMap, extensions: &Extensions, config: &TrustedProxyConfig) -> String {
