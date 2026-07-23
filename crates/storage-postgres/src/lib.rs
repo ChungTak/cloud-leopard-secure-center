@@ -248,7 +248,7 @@ fn db_error(e: sqlx::Error) -> PlatformError {
             PlatformError::new(ErrorCode::Conflict, "resource already exists")
         }
         sqlx::Error::RowNotFound => PlatformError::new(ErrorCode::NotFound, "resource not found"),
-        other => PlatformError::new(ErrorCode::Unavailable, other.to_string()),
+        _ => PlatformError::new(ErrorCode::Unavailable, "database unavailable"),
     }
 }
 
