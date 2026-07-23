@@ -13,9 +13,11 @@ use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
 use domain_resource::camera::Camera;
 use domain_resource::device::ManagedDevice;
+use domain_resource::external_binding::ExternalBinding;
+use domain_resource::tag::{ResourceType, Tag};
 use foundation::{
-    AreaId, BindingId, BuildingId, CameraId, DeviceId, FloorId, OrganizationId, PlatformError,
-    RequestContext, Revision, RoleId, SiteId, TenantId, UserId, uuid::Uuid,
+    AreaId, BindingId, BuildingId, CameraId, DeviceId, ExternalBindingId, FloorId, OrganizationId,
+    PlatformError, RequestContext, Revision, RoleId, SiteId, TagId, TenantId, UserId, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -539,6 +541,89 @@ pub trait CameraRepository: Send + Sync {
         device_id: DeviceId,
         ctx: &RequestContext,
     ) -> Result<Page<Camera>, PlatformError>;
+}
+
+/// Repository contract for the `Tag` aggregate.
+#[async_trait]
+pub trait TagRepository: Send + Sync {
+    async fn by_id(&self, id: TagId, ctx: &RequestContext) -> Result<Tag, PlatformError>;
+
+    async fn create(&self, tag: &Tag, ctx: &RequestContext) -> Result<(), PlatformError>;
+
+    async fn update(
+        &self,
+        tag: &Tag,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn delete(
+        &self,
+        id: TagId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn list_by_resource(
+        &self,
+        resource_type: ResourceType,
+        resource_id: Uuid,
+        ctx: &RequestContext,
+    ) -> Result<Page<Tag>, PlatformError>;
+}
+
+/// Repository contract for the `ExternalBinding` aggregate.
+#[async_trait]
+pub trait ExternalBindingRepository: Send + Sync {
+    async fn by_id(
+        &self,
+        id: ExternalBindingId,
+        ctx: &RequestContext,
+    ) -> Result<ExternalBinding, PlatformError>;
+
+    async fn create(
+        &self,
+        binding: &ExternalBinding,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn update(
+        &self,
+        binding: &ExternalBinding,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Activate a pending binding, or mark it conflict when another active binding
+    /// already owns the same external reference.
+    async fn activate(
+        &self,
+        id: ExternalBindingId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<ExternalBinding, PlatformError>;
+
+    /// Disable a binding without deleting it.
+    async fn disable(
+        &self,
+        id: ExternalBindingId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn list_by_resource(
+        &self,
+        resource_type: ResourceType,
+        resource_id: Uuid,
+        ctx: &RequestContext,
+    ) -> Result<Page<ExternalBinding>, PlatformError>;
+
+    async fn list_by_external_ref(
+        &self,
+        external_kind: &str,
+        external_ref: &str,
+        ctx: &RequestContext,
+    ) -> Result<Page<ExternalBinding>, PlatformError>;
 }
 
 pub fn version() -> &'static str {

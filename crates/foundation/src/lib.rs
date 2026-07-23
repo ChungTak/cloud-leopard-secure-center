@@ -73,6 +73,8 @@ id_newtype!(BindingId);
 id_newtype!(AuditId);
 id_newtype!(MessageId);
 id_newtype!(NodeId);
+id_newtype!(TagId);
+id_newtype!(ExternalBindingId);
 
 /// An opaque resource reference.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]

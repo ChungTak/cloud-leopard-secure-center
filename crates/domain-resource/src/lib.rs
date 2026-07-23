@@ -2,6 +2,10 @@
 
 pub mod camera;
 pub mod device;
+pub mod external_binding;
+pub mod tag;
+
+pub use tag::ResourceType;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
