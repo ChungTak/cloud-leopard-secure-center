@@ -19,6 +19,9 @@ import {
   RoleBindingsPage,
   DevicesPage,
   CamerasPage,
+  TagsPage,
+  ExternalBindingsPage,
+  ProjectionsPage,
 } from '../pages/index.ts';
 
 export const routes: RouteObject[] = [
@@ -126,6 +129,30 @@ export const routes: RouteObject[] = [
             handle: {
               breadcrumb: 'cameras' as const,
               permission: 'tenant:camera:read' as const,
+            },
+          },
+          {
+            path: 'tags',
+            element: <TagsPage />,
+            handle: {
+              breadcrumb: 'tags' as const,
+              permission: 'tenant:device:read' as const,
+            },
+          },
+          {
+            path: 'external-bindings',
+            element: <ExternalBindingsPage />,
+            handle: {
+              breadcrumb: 'externalBindings' as const,
+              permission: 'tenant:device:read' as const,
+            },
+          },
+          {
+            path: 'projections',
+            element: <ProjectionsPage />,
+            handle: {
+              breadcrumb: 'projections' as const,
+              permission: 'tenant:device:read' as const,
             },
           },
           { path: 'forbidden', element: <ForbiddenPage /> },

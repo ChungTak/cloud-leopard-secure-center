@@ -12,7 +12,9 @@ type ExternalBindingDto = components['schemas']['ExternalBindingDto'];
 
 function wrapper(client: QueryClient) {
   return function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
   };
 }
 
@@ -38,12 +40,9 @@ describe('external binding query', () => {
   });
 
   it('prefixes query key with tenant and filters', () => {
-    expect(externalBindingsQueryOptions('t1', { state: 'conflict' }).queryKey).toEqual([
-      'tenant',
-      't1',
-      'external-bindings',
-      { state: 'conflict' },
-    ]);
+    expect(
+      externalBindingsQueryOptions('t1', { state: 'conflict' }).queryKey,
+    ).toEqual(['tenant', 't1', 'external-bindings', { state: 'conflict' }]);
   });
 
   it('rolls back optimistic conflict resolve on 409', async () => {
@@ -66,16 +65,23 @@ describe('external binding query', () => {
     client.setQueryData(['tenant', 't1', 'external-bindings', {}], initial);
     vi.stubGlobal('fetch', mockFetch(409, { status: 409, title: 'Conflict' }));
 
-    const { result } = renderHook(() => useResolveExternalBindingConflict('t1'), {
-      wrapper: wrapper(client),
-    });
+    const { result } = renderHook(
+      () => useResolveExternalBindingConflict('t1'),
+      {
+        wrapper: wrapper(client),
+      },
+    );
 
     result.current.mutate({ id: 'b1', action: 'active', expectedRevision: 2 });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(
-      client.getQueryData<ExternalBindingDto[]>(['tenant', 't1', 'external-bindings', {}])?.[0]
-        .state,
+      client.getQueryData<ExternalBindingDto[]>([
+        'tenant',
+        't1',
+        'external-bindings',
+        {},
+      ])?.[0].state,
     ).toBe('conflict');
   });
 });

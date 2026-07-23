@@ -17,7 +17,10 @@ interface NavItem {
     | 'roles'
     | 'roleBindings'
     | 'devices'
-    | 'cameras';
+    | 'cameras'
+    | 'tags'
+    | 'externalBindings'
+    | 'projections';
   permission?: string;
 }
 
@@ -50,6 +53,17 @@ const items: NavItem[] = [
     to: '/admin/cameras',
     labelKey: 'cameras',
     permission: 'tenant:camera:read',
+  },
+  { to: '/admin/tags', labelKey: 'tags', permission: 'tenant:device:read' },
+  {
+    to: '/admin/external-bindings',
+    labelKey: 'externalBindings',
+    permission: 'tenant:device:read',
+  },
+  {
+    to: '/admin/projections',
+    labelKey: 'projections',
+    permission: 'tenant:device:read',
   },
   {
     to: '/admin/settings',
