@@ -13,7 +13,7 @@ use http_api::idempotency::IdempotencyState;
 use http_api::pagination::PaginationConfig;
 use http_api::rate_limit::RateLimitState;
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 fn main() -> ExitCode {
     let args: Vec<String> = env::args().collect();
@@ -96,7 +96,10 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .layer(Extension(pagination_config))
         .layer(Extension(idempotency_state));
     let app = if static_dir.is_dir() {
-        let serve = ServeDir::new(&static_dir).append_index_html_on_directories(true);
+        let index = static_dir.join("index.html");
+        let serve = ServeDir::new(&static_dir)
+            .append_index_html_on_directories(true)
+            .fallback(ServeFile::new(index));
         Router::new().nest("/api/v1", api).fallback_service(serve)
     } else {
         api
