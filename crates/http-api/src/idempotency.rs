@@ -113,13 +113,14 @@ fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
     let idempotency_key = req
         .headers()
         .get("idempotency-key")
-        .and_then(|value| value.to_str().ok())?;
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)?;
 
     let token_fingerprint = req
         .headers()
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
-        .map(fingerprint)
+        .map(|h| fingerprint(h.trim()))
         .unwrap_or_default();
 
     let client_ip = client_ip_hint(req);
