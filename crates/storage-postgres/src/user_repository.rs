@@ -8,9 +8,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::Row;
-use storage_api::{Page, UserRepository};
+use storage_api::{ListOptions, Page, UserRepository};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed user repository.
 #[derive(Debug, Clone)]
@@ -217,7 +217,11 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
-    async fn list(&self, ctx: &RequestContext) -> Result<Page<User>, PlatformError> {
+    async fn list(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<User>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -225,8 +229,10 @@ impl UserRepository for PostgresUserRepository {
              FROM iam.users
              WHERE deleted_at IS NULL
              ORDER BY username
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -238,10 +244,7 @@ impl UserRepository for PostgresUserRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

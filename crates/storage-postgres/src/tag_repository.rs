@@ -8,9 +8,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{Page, TagRepository};
+use storage_api::{ListOptions, Page, TagRepository};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed tag repository.
 #[derive(Debug, Clone)]
@@ -241,6 +241,7 @@ impl TagRepository for PostgresTagRepository {
         resource_type: ResourceType,
         resource_id: Uuid,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Tag>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -249,10 +250,13 @@ impl TagRepository for PostgresTagRepository {
                     revision, created_at, updated_at, actor
              FROM resource.tags
              WHERE resource_type = $1 AND resource_id = $2 AND deleted_at IS NULL
-             ORDER BY key",
+             ORDER BY key
+             LIMIT $3 OFFSET $4",
         )
         .bind(resource_type.as_str())
         .bind(resource_id)
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -264,10 +268,7 @@ impl TagRepository for PostgresTagRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

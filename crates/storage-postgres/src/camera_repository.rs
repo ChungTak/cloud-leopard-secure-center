@@ -9,9 +9,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{CameraRepository, Page};
+use storage_api::{CameraRepository, ListOptions, Page};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed camera repository.
 #[derive(Debug, Clone)]
@@ -228,6 +228,7 @@ impl CameraRepository for PostgresCameraRepository {
         &self,
         device_id: DeviceId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Camera>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -237,9 +238,11 @@ impl CameraRepository for PostgresCameraRepository {
              FROM resource.cameras
              WHERE device_id = $1 AND deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $2 OFFSET $3",
         )
         .bind(device_id.as_uuid())
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -251,10 +254,7 @@ impl CameraRepository for PostgresCameraRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

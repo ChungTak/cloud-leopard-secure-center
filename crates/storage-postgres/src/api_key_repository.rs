@@ -8,9 +8,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::Row;
-use storage_api::{ApiKeyRepository, Page};
+use storage_api::{ApiKeyRepository, ListOptions, Page};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed API key repository.
 #[derive(Debug, Clone)]
@@ -130,6 +130,7 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         &self,
         owner_id: UserId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<ApiKey>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -137,9 +138,12 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
             "SELECT id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at
              FROM iam.api_keys
              WHERE owner_id = $1
-             ORDER BY created_at DESC",
+             ORDER BY created_at DESC
+             LIMIT $2 OFFSET $3",
         )
         .bind(*owner_id.as_uuid())
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -150,10 +154,7 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
             .collect::<Result<Vec<_>, _>>()?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

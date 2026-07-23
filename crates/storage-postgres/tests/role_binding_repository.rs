@@ -6,7 +6,7 @@ use foundation::{
     BindingId, Clock, FakeClock, OrganizationId, RequestContext, Revision, RoleId, SiteId,
     SystemClock, TenantId, UserId, uuid::Uuid,
 };
-use storage_api::{RoleBindingRepository, RoleRepository, TenantRepository};
+use storage_api::{ListOptions, RoleBindingRepository, RoleRepository, TenantRepository};
 use storage_postgres::role_binding_repository::PostgresRoleBindingRepository;
 use storage_postgres::role_repository::PostgresRoleRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -264,7 +264,10 @@ async fn list_bindings_by_principal(pool: sqlx::PgPool) -> sqlx::Result<()> {
         .await,
     );
 
-    let page = ok_or_panic(repo.list_by_principal(principal, &ctx).await);
+    let page = ok_or_panic(
+        repo.list_by_principal(principal, &ctx, ListOptions::default())
+            .await,
+    );
     assert_eq!(page.items.len(), 2);
 
     Ok(())

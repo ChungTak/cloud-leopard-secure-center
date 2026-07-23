@@ -30,6 +30,8 @@ pub mod tenant_repository;
 pub mod unit_of_work;
 pub mod user_repository;
 
+pub use storage_api::ListOptions;
+
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 
@@ -37,7 +39,28 @@ use foundation::{ErrorCode, PlatformError, RequestContext};
 use sqlx::pool::PoolConnection;
 use sqlx::postgres::{PgConnection, PgPoolOptions};
 use sqlx::{PgPool, Postgres};
+use storage_api::{ListOptions as ListOptionsInner, Page};
 use tokio::sync::{Mutex, MutexGuard};
+
+/// Trim `items` to `options.limit` and produce a cursor for the next page when
+/// the query returned one extra row.
+pub(crate) fn paginate<T>(mut items: Vec<T>, options: ListOptionsInner) -> Page<T> {
+    let limit = options.limit.max(1) as usize;
+    let has_more = items.len() > limit;
+    if has_more {
+        items.truncate(limit);
+        let next_offset = options.offset.saturating_add(limit as u64);
+        Page {
+            items,
+            next_cursor: Some(next_offset.to_string()),
+        }
+    } else {
+        Page {
+            items,
+            next_cursor: None,
+        }
+    }
+}
 
 /// Run all SQLx migrations in `migrations/` against `database_url`.
 pub async fn run_migrations(database_url: &str) -> Result<(), PlatformError> {

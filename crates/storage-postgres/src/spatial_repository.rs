@@ -9,9 +9,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{Page, SpatialRepository};
+use storage_api::{ListOptions, Page, SpatialRepository};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed spatial repository.
 #[derive(Debug, Clone)]
@@ -197,7 +197,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         Ok(())
     }
 
-    async fn list_sites(&self, ctx: &RequestContext) -> Result<Page<Site>, PlatformError> {
+    async fn list_sites(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Site>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -206,8 +210,10 @@ impl SpatialRepository for PostgresSpatialRepository {
              FROM org.sites
              WHERE deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -217,10 +223,7 @@ impl SpatialRepository for PostgresSpatialRepository {
             .collect::<Result<Vec<_>, _>>()?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn building_by_id(
@@ -389,7 +392,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         Ok(())
     }
 
-    async fn list_buildings(&self, ctx: &RequestContext) -> Result<Page<Building>, PlatformError> {
+    async fn list_buildings(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Building>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -397,8 +404,10 @@ impl SpatialRepository for PostgresSpatialRepository {
              FROM org.buildings
              WHERE deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -408,10 +417,7 @@ impl SpatialRepository for PostgresSpatialRepository {
             .collect::<Result<Vec<_>, _>>()?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn floor_by_id(&self, id: FloorId, ctx: &RequestContext) -> Result<Floor, PlatformError> {
@@ -574,7 +580,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         Ok(())
     }
 
-    async fn list_floors(&self, ctx: &RequestContext) -> Result<Page<Floor>, PlatformError> {
+    async fn list_floors(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Floor>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -583,8 +593,10 @@ impl SpatialRepository for PostgresSpatialRepository {
              FROM org.floors
              WHERE deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -594,10 +606,7 @@ impl SpatialRepository for PostgresSpatialRepository {
             .collect::<Result<Vec<_>, _>>()?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn area_by_id(&self, id: AreaId, ctx: &RequestContext) -> Result<Area, PlatformError> {
@@ -850,7 +859,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         Ok(())
     }
 
-    async fn list_areas(&self, ctx: &RequestContext) -> Result<Page<Area>, PlatformError> {
+    async fn list_areas(
+        &self,
+        ctx: &RequestContext,
+        options: ListOptions,
+    ) -> Result<Page<Area>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
@@ -860,8 +873,10 @@ impl SpatialRepository for PostgresSpatialRepository {
              FROM org.areas
              WHERE deleted_at IS NULL
              ORDER BY code
-             LIMIT 100",
+             LIMIT $1 OFFSET $2",
         )
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -871,10 +886,7 @@ impl SpatialRepository for PostgresSpatialRepository {
             .collect::<Result<Vec<_>, _>>()?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 
     async fn areas_within_radius(
@@ -883,6 +895,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         longitude: f64,
         radius_meters: f64,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<Area>, PlatformError> {
         if radius_meters < 0.0 {
             return Err(PlatformError::invalid(
@@ -906,8 +919,7 @@ impl SpatialRepository for PostgresSpatialRepository {
              WHERE deleted_at IS NULL
                AND latitude IS NOT NULL
                AND longitude IS NOT NULL
-             ORDER BY code
-             LIMIT 100",
+             ORDER BY code",
         )
         .fetch_all(&mut *tx)
         .await
@@ -919,7 +931,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
 
-        let items = areas
+        let mut items: Vec<Area> = areas
             .into_iter()
             .filter(|a| {
                 if a.coordinate_system != "WGS84" {
@@ -930,10 +942,23 @@ impl SpatialRepository for PostgresSpatialRepository {
                 haversine_distance(latitude, longitude, lat, lon) <= radius_meters
             })
             .collect();
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+
+        let offset = options.offset as usize;
+        let limit = options.limit.max(1) as usize;
+        if offset >= items.len() {
+            return Ok(Page {
+                items: Vec::new(),
+                next_cursor: None,
+            });
+        }
+        let has_more = items.len() - offset > limit;
+        let next_cursor = if has_more {
+            Some((options.offset + limit as u64).to_string())
+        } else {
+            None
+        };
+        items = items.into_iter().skip(offset).take(limit).collect();
+        Ok(Page { items, next_cursor })
     }
 
     async fn is_area_descendant_of(

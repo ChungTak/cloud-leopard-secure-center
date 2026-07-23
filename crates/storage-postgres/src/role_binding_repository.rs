@@ -9,9 +9,9 @@ use foundation::{
     uuid::Uuid,
 };
 use sqlx::{PgPool, Row};
-use storage_api::{Page, RoleBindingRepository};
+use storage_api::{ListOptions, Page, RoleBindingRepository};
 
-use crate::begin_tenant_transaction;
+use crate::{begin_tenant_transaction, paginate};
 
 /// PostgreSQL-backed role binding repository.
 #[derive(Debug, Clone)]
@@ -253,6 +253,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         &self,
         principal_id: UserId,
         ctx: &RequestContext,
+        options: ListOptions,
     ) -> Result<Page<RoleBinding>, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
@@ -261,9 +262,12 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
                     valid_from, valid_until, revision, created_at, updated_at, actor
              FROM authz.role_bindings
              WHERE principal_id = $1 AND deleted_at IS NULL
-             ORDER BY valid_from DESC",
+             ORDER BY valid_from DESC
+             LIMIT $2 OFFSET $3",
         )
         .bind(principal_id.as_uuid())
+        .bind((options.limit as i64) + 1)
+        .bind(options.offset as i64)
         .fetch_all(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -280,10 +284,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(Page {
-            items,
-            next_cursor: None,
-        })
+        Ok(paginate(items, options))
     }
 }
 

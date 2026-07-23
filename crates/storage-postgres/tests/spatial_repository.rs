@@ -4,7 +4,7 @@ use foundation::{
     AreaId, BuildingId, FloorId, RequestContext, Revision, SiteId, SystemClock, TenantId,
     uuid::Uuid,
 };
-use storage_api::{SpatialRepository, TenantRepository};
+use storage_api::{ListOptions, SpatialRepository, TenantRepository};
 use storage_postgres::spatial_repository::PostgresSpatialRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
 
@@ -673,7 +673,10 @@ async fn area_range_query_returns_only_nearby(pool: sqlx::PgPool) -> sqlx::Resul
     ok_or_panic(far.set_coordinates("WGS84", Some(10.0), Some(0.0), None, &SystemClock, None));
     ok_or_panic(repo.create_area(&far, &ctx).await);
 
-    let page = ok_or_panic(repo.areas_within_radius(0.0, 0.0, 1000.0, &ctx).await);
+    let page = ok_or_panic(
+        repo.areas_within_radius(0.0, 0.0, 1000.0, &ctx, ListOptions::default())
+            .await,
+    );
     let codes: Vec<&str> = page.items.iter().map(|a| a.code.as_str()).collect();
     assert_eq!(codes, vec!["near"]);
 

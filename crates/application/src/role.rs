@@ -8,7 +8,7 @@ use domain_authorization::role_binding::ResourceRef;
 use foundation::{
     Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid,
 };
-use storage_api::{AuditWriter, Page, RoleRepository};
+use storage_api::{AuditWriter, ListOptions, Page, RoleRepository};
 
 use crate::authorization::AuthorizationPort;
 use crate::usecase::{self, WriteRequest, WriteResponse};
@@ -364,7 +364,7 @@ where
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let page = self.repo.list(ctx).await?;
+        let page = self.repo.list(ctx, ListOptions::default()).await?;
         Ok(Page {
             items: page.items.iter().map(RoleDto::from).collect(),
             next_cursor: page.next_cursor,

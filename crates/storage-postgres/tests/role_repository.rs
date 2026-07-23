@@ -2,7 +2,7 @@ use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_organization::tenant::Tenant;
 use foundation::{RequestContext, Revision, RoleId, SystemClock, TenantId, uuid::Uuid};
-use storage_api::{RoleRepository, TenantRepository};
+use storage_api::{ListOptions, RoleRepository, TenantRepository};
 use storage_postgres::role_repository::PostgresRoleRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
 
@@ -289,10 +289,10 @@ async fn roles_are_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result<()> {
             .await,
     );
 
-    let page_a = ok_or_panic(repo.list(&ctx_a).await);
+    let page_a = ok_or_panic(repo.list(&ctx_a, ListOptions::default()).await);
     assert_eq!(page_a.items.len(), 1);
 
-    let page_b = ok_or_panic(repo.list(&ctx_b).await);
+    let page_b = ok_or_panic(repo.list(&ctx_b, ListOptions::default()).await);
     assert!(page_b.items.is_empty());
 
     Ok(())

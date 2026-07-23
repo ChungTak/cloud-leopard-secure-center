@@ -14,7 +14,7 @@ use foundation::{
     RequestContext, Revision, StandardIdGenerator, TenantId, UserId, UtcTimestamp,
 };
 use std::sync::{Arc, Mutex};
-use storage_api::{AuditWriter, Page, TenantRepository, UserRepository};
+use storage_api::{AuditWriter, ListOptions, Page, TenantRepository, UserRepository};
 
 fn fake_clock() -> FakeClock {
     FakeClock::from_millis(1_000_000_000_000)
@@ -126,7 +126,11 @@ impl TenantRepository for FakeTenantRepo {
         Ok(())
     }
 
-    async fn list(&self, _ctx: &RequestContext) -> Result<Page<Tenant>, PlatformError> {
+    async fn list(
+        &self,
+        _ctx: &RequestContext,
+        _options: ListOptions,
+    ) -> Result<Page<Tenant>, PlatformError> {
         let tenants = self.tenants.lock().unwrap_or_else(|e| panic!("{e:?}"));
         Ok(Page {
             items: tenants.clone(),
@@ -217,6 +221,7 @@ impl UserRepository for FakeUserRepo {
     async fn list(
         &self,
         _ctx: &RequestContext,
+        _options: ListOptions,
     ) -> Result<Page<domain_identity::user::User>, PlatformError> {
         let users = self.users.lock().unwrap_or_else(|e| panic!("{e:?}"));
         Ok(Page {
