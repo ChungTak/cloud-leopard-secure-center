@@ -1,5 +1,6 @@
 //! Telemetry, metrics, tracing, security controls, and operational health primitives.
 
+pub mod health;
 pub mod security;
 pub mod telemetry;
 
