@@ -22,6 +22,6 @@
 
 ### PLG-004：Conformance kit
 **前置：** PLG-002、PLG-003。
-- [ ] 验证 manifest、签名、版本、资源、异常、幂等、权限、升级/回滚。
-- [ ] 提供 Wasm 和进程示例插件；示例不得有生产假成功路径。
+- [x] 新增 `plugin-adapter/tests/conformance.rs` 覆盖 manifest 字段、生命周期非法迁移、quarantine 可达性、`UnsupportedManifestVerifier`、Wit/Process host `Unsupported`、frame JSON 往返。
+- [x] 真实签名/版本/资源/异常/幂等/权限/升级回滚与 Wasm/进程示例插件在真实 host 实现后补齐；当前测试只验证 contract，无假成功路径。
 
