@@ -94,6 +94,16 @@ impl TokenService {
 
         self.verify_header(header_b64)?;
 
+        // Verify the signature before decoding or validating claims so that
+        // an attacker cannot probe claim validation with a forged token.
+        let signature = Base64UrlUnpadded::decode_vec(sig_b64)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        let message = format!("{}.{}", header_b64, claims_b64);
+        let mut mac = new_mac(&self.secret)?;
+        mac.update(message.as_bytes());
+        mac.verify_slice(&signature)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+
         let claims_bytes = Base64UrlUnpadded::decode_vec(claims_b64)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         let claims: AccessTokenClaims = serde_json::from_slice(&claims_bytes)
@@ -108,14 +118,6 @@ impl TokenService {
 
         claims.validate(&self.issuer, &self.audience, now)?;
         self.validate_nbf_and_jti(&claims, now)?;
-
-        let signature = Base64UrlUnpadded::decode_vec(sig_b64)
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
-        let message = format!("{}.{}", header_b64, claims_b64);
-        let mut mac = new_mac(&self.secret)?;
-        mac.update(message.as_bytes());
-        mac.verify_slice(&signature)
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
 
         Ok(claims)
     }

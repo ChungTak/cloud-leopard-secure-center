@@ -72,9 +72,7 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     {
         secret.into_bytes()
     } else {
-        eprintln!(
-            "warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret"
-        );
+        eprintln!("warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret");
         let mut buf = [0u8; 32];
         SystemRandom
             .fill_bytes(&mut buf)
@@ -116,6 +114,10 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     let listener = TcpListener::bind(addr).await?;
     println!("security-platform listening on {addr}");
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

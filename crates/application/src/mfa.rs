@@ -3,9 +3,7 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use domain_identity::assurance::AssuranceLevel;
 use domain_identity::mfa::MfaFactor;
-use foundation::{
-    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId,
-};
+use foundation::{Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId};
 use storage_api::MfaRepository;
 
 /// Resolves an MFA secret reference to the actual secret bytes.

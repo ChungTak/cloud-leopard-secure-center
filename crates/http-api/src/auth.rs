@@ -36,16 +36,13 @@ pub fn extract_bearer(headers: &axum::http::HeaderMap) -> Result<String, AppErro
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .ok_or(AppError::Unauthenticated)?;
-    let mut parts = header.splitn(2, char::is_whitespace);
+    let mut parts = header.split_whitespace();
     let scheme = parts.next().ok_or(AppError::Unauthenticated)?;
     if !scheme.eq_ignore_ascii_case("bearer") {
         return Err(AppError::Unauthenticated);
     }
-    let token = parts
-        .next()
-        .map(str::trim_start)
-        .ok_or(AppError::Unauthenticated)?;
-    if token.is_empty() {
+    let token = parts.next().ok_or(AppError::Unauthenticated)?;
+    if parts.next().is_some() || token.is_empty() {
         return Err(AppError::Unauthenticated);
     }
     Ok(token.to_string())

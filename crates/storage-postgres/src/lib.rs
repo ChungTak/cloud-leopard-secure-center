@@ -34,6 +34,7 @@ pub use storage_api::ListOptions;
 
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use foundation::{ErrorCode, PlatformError, RequestContext};
 use sqlx::pool::PoolConnection;
@@ -96,6 +97,7 @@ tokio::task_local! {
 pub struct ManagedTransaction {
     inner: Arc<Mutex<PoolConnection<Postgres>>>,
     owned: bool,
+    finalized: Arc<AtomicBool>,
 }
 
 impl ManagedTransaction {
@@ -121,6 +123,7 @@ impl ManagedTransaction {
         }
         let mut guard = self.inner.lock().await;
         sqlx::query("COMMIT").execute(&mut **guard).await?;
+        self.finalized.store(true, Ordering::SeqCst);
         Ok(())
     }
 
@@ -132,7 +135,23 @@ impl ManagedTransaction {
         }
         let mut guard = self.inner.lock().await;
         sqlx::query("ROLLBACK").execute(&mut **guard).await?;
+        self.finalized.store(true, Ordering::SeqCst);
         Ok(())
+    }
+}
+
+impl Drop for ManagedTransaction {
+    fn drop(&mut self) {
+        if !self.owned || self.finalized.load(Ordering::SeqCst) {
+            return;
+        }
+        // The transaction was not explicitly finalized; roll it back
+        // asynchronously before the connection is returned to the pool.
+        let inner = self.inner.clone();
+        tokio::spawn(async move {
+            let mut guard = inner.lock().await;
+            let _ = sqlx::query("ROLLBACK").execute(&mut **guard).await;
+        });
     }
 }
 
@@ -169,6 +188,7 @@ pub async fn begin_tenant_transaction(
         return Ok(ManagedTransaction {
             inner: conn,
             owned: false,
+            finalized: Arc::new(AtomicBool::new(true)),
         });
     }
 
@@ -182,6 +202,7 @@ pub async fn begin_tenant_transaction(
     Ok(ManagedTransaction {
         inner: Arc::new(Mutex::new(conn)),
         owned: true,
+        finalized: Arc::new(AtomicBool::new(false)),
     })
 }
 
