@@ -9,9 +9,9 @@
 
 ### WEB-002：Typed API client 与服务器状态
 **前置：** API-001。
-- [ ] 从锁定 OpenAPI 生成 client，生成物禁止手改。
-- [ ] TanStack Query 管服务器状态；query key 必含 tenant；Zustand 仅存 UI/session 偏好。
-- [ ] 统一处理 problem+json、401 refresh single-flight、403、409/412 和 429 Retry-After。
+- [x] 从锁定 OpenAPI 生成 client，生成物禁止手改。
+- [x] TanStack Query 管服务器状态；query key 必含 tenant；Zustand 仅存 UI/session 偏好。
+- [x] 统一处理 problem+json、401 refresh single-flight、403、409/412 和 429 Retry-After。
 **测试：** tenant 切换清 cache、并发 refresh、取消旧请求、错误映射。
 
 ### WEB-003：路由和权限壳
