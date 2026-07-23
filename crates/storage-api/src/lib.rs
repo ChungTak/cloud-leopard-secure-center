@@ -815,6 +815,17 @@ pub trait RetentionRepository: Send + Sync {
         cutoff: UtcTimestamp,
         batch_size: u64,
     ) -> Result<CleanupBatchResult, PlatformError>;
+
+    /// Drop an empty partition after writing an audit record and confirming a
+    /// recoverable backup exists. Real partition detachment and backup
+    /// orchestration are deferred; without `backup_confirmed` the call returns
+    /// `Invalid`, and with confirmation it returns `Unsupported`.
+    async fn drop_partition(
+        &self,
+        target: RetentionTarget,
+        partition: &str,
+        backup_confirmed: bool,
+    ) -> Result<(), PlatformError>;
 }
 
 /// Idempotency record stored for a write operation.
