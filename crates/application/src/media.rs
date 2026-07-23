@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_authorization::role_binding::ResourceRef;
 use domain_media::{
     CreateEntitlementRequest as DomainCreateRequest, MediaAction, MediaError, MediaErrorKind,
-    MediaPort, PlaybackEntitlement,
+    MediaPort, PlaybackEntitlement, PlayerPolicy,
 };
 use foundation::{
     CameraId, Deadline, EntitlementId, PlatformError, RequestContext, TenantId, UserId,
@@ -21,6 +21,9 @@ pub struct PlaybackEntitlementDto {
     pub camera_id: CameraId,
     pub actions: Vec<MediaAction>,
     pub session_id: Option<String>,
+    pub main_source: Option<String>,
+    pub sub_source: Option<String>,
+    pub player_policy: PlayerPolicy,
     pub expires_at: String,
     pub revoked_at: Option<String>,
 }
@@ -32,7 +35,10 @@ impl From<&PlaybackEntitlement> for PlaybackEntitlementDto {
             tenant_id: e.tenant_id,
             camera_id: e.camera_id,
             actions: e.actions.clone(),
-            session_id: e.session_id.clone(),
+            session_id: e.session.as_ref().map(|s| s.session_id.clone()),
+            main_source: e.main_source.clone(),
+            sub_source: e.sub_source.clone(),
+            player_policy: e.player_policy.clone(),
             expires_at: e.expires_at.to_rfc3339(),
             revoked_at: e.revoked_at.map(|t| t.to_rfc3339()),
         }
@@ -45,6 +51,7 @@ pub struct CreateEntitlementRequest {
     pub tenant_id: TenantId,
     pub camera_id: CameraId,
     pub actions: Vec<MediaAction>,
+    pub protocol: String,
 }
 
 /// Port for media entitlement use cases.
@@ -89,14 +96,18 @@ impl<M, A> MediaService<M, A> {
 
     fn build_request(
         tenant_id: TenantId,
+        principal_id: UserId,
         camera_id: CameraId,
         actions: Vec<MediaAction>,
+        protocol: String,
         ctx: &RequestContext,
     ) -> DomainCreateRequest {
         DomainCreateRequest {
             tenant_id,
+            principal_id,
             camera_id,
             actions,
+            protocol,
             deadline: ctx.deadline.unwrap_or_else(|| {
                 Deadline::new(UtcTimestamp::from(
                     chrono::Utc::now() + chrono::Duration::seconds(30),
@@ -131,8 +142,10 @@ where
             .port
             .create_entitlement(Self::build_request(
                 request.tenant_id,
+                actor,
                 request.camera_id,
                 request.actions,
+                request.protocol,
                 ctx,
             ))
             .await

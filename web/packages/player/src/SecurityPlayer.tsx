@@ -16,10 +16,15 @@ export interface SecurityPlayerError {
 export interface SecurityPlayerProps {
   source: StreamSource;
   token: string;
+  /** Opaque token refresh URL; the component schedules refresh before expiry. */
+  tokenRefreshUrl?: string;
   /** Start with the sub-stream if available. */
   startWithSubStream?: boolean;
+  onLoad?: () => void;
+  onDestroy?: () => void;
   onError?: (error: SecurityPlayerError) => void;
   onFirstFrame?: () => void;
+  onTokenExpired?: () => void;
   onDiagnostics?: (diagnostics: Record<string, unknown>) => void;
 }
 
@@ -39,9 +44,13 @@ interface PlayerState {
 export function SecurityPlayer({
   source,
   token,
+  tokenRefreshUrl,
   startWithSubStream = false,
+  onLoad,
+  onDestroy,
   onError,
   onFirstFrame,
+  onTokenExpired,
   onDiagnostics,
 }: SecurityPlayerProps): React.ReactElement {
   const [state, setState] = React.useState<PlayerState>(() => ({
@@ -69,12 +78,34 @@ export function SecurityPlayer({
 
     setState({ loading: false, activeUrl, error: unsupportedError });
     onError?.(unsupportedError);
+    onLoad?.();
+
+    // Token refresh is a stub until a real media engine is available.
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+    if (tokenRefreshUrl) {
+      refreshTimer = setTimeout(() => {
+        onTokenExpired?.();
+      }, 60_000);
+    }
 
     return () => {
+      if (refreshTimer) {
+        clearTimeout(refreshTimer);
+      }
       playerRef.current?.stop();
       playerRef.current = null;
+      onDestroy?.();
     };
-  }, [source.mainUrl, source.subUrl, startWithSubStream, onError]);
+  }, [
+    source.mainUrl,
+    source.subUrl,
+    startWithSubStream,
+    tokenRefreshUrl,
+    onError,
+    onLoad,
+    onDestroy,
+    onTokenExpired,
+  ]);
 
   React.useEffect(() => {
     if (state.error || state.loading) {

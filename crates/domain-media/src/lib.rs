@@ -47,6 +47,76 @@ pub enum MediaAction {
     Ptz,
 }
 
+/// A token-scoped media session identifier that does not expose the upstream URL.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MediaSession {
+    pub tenant_id: TenantId,
+    pub principal_id: Option<foundation::UserId>,
+    pub camera_id: CameraId,
+    pub session_id: String,
+    pub protocol: String,
+}
+
+impl MediaSession {
+    pub fn new(
+        tenant_id: TenantId,
+        principal_id: Option<foundation::UserId>,
+        camera_id: CameraId,
+        session_id: impl Into<String>,
+        protocol: impl Into<String>,
+    ) -> Self {
+        Self {
+            tenant_id,
+            principal_id,
+            camera_id,
+            session_id: session_id.into(),
+            protocol: protocol.into(),
+        }
+    }
+}
+
+/// Token binding for a media session. The token is opaque and the URL is not
+/// logged or serialized to clients.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MediaToken {
+    pub tenant_id: TenantId,
+    pub principal_id: Option<foundation::UserId>,
+    pub camera_id: CameraId,
+    pub session_id: String,
+    pub protocol: String,
+    pub expires_at: UtcTimestamp,
+}
+
+impl MediaToken {
+    pub fn new(
+        tenant_id: TenantId,
+        principal_id: Option<foundation::UserId>,
+        camera_id: CameraId,
+        session_id: impl Into<String>,
+        protocol: impl Into<String>,
+        expires_at: UtcTimestamp,
+    ) -> Self {
+        Self {
+            tenant_id,
+            principal_id,
+            camera_id,
+            session_id: session_id.into(),
+            protocol: protocol.into(),
+            expires_at,
+        }
+    }
+}
+
+/// Player policy delivered to the client with an entitlement.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct PlayerPolicy {
+    pub autoplay: bool,
+    pub controls: bool,
+    pub muted: bool,
+    pub allowed_actions: Vec<MediaAction>,
+}
+
 /// A playback entitlement granted to a principal for a camera.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaybackEntitlement {
@@ -55,7 +125,11 @@ pub struct PlaybackEntitlement {
     pub camera_id: CameraId,
     pub actions: Vec<MediaAction>,
     pub operation_id: OperationId,
-    pub session_id: Option<String>,
+    pub session: Option<MediaSession>,
+    pub main_source: Option<String>,
+    pub sub_source: Option<String>,
+    pub player_policy: PlayerPolicy,
+    pub token: MediaToken,
     pub expires_at: UtcTimestamp,
     pub revoked_at: Option<UtcTimestamp>,
 }
@@ -64,8 +138,10 @@ pub struct PlaybackEntitlement {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CreateEntitlementRequest {
     pub tenant_id: TenantId,
+    pub principal_id: foundation::UserId,
     pub camera_id: CameraId,
     pub actions: Vec<MediaAction>,
+    pub protocol: String,
     pub deadline: Deadline,
 }
 
@@ -138,7 +214,7 @@ mod tests {
 
     use super::*;
     use foundation::{
-        CameraId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp,
+        CameraId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId, UtcTimestamp,
     };
 
     #[test]
@@ -147,8 +223,10 @@ mod tests {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let request = CreateEntitlementRequest {
             tenant_id: TenantId::generate(&generator),
+            principal_id: UserId::generate(&generator),
             camera_id: CameraId::generate(&generator),
             actions: vec![MediaAction::Live],
+            protocol: "webrtc".to_string(),
             deadline: Deadline::new(UtcTimestamp::from(
                 foundation::chrono::Utc::now() + foundation::chrono::Duration::seconds(30),
             )),
