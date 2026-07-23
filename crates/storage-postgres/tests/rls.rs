@@ -36,7 +36,7 @@ async fn begin_tx<'a>(
 async fn tenants_table_is_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let tenant_id = parse_uuid("018e1234-5678-7abc-8def-0123456789ab");
     sqlx::query(
-        "INSERT INTO iam.tenants (id, name, status, revision) VALUES ($1, 'test', 'active', 1)",
+        "INSERT INTO org.tenants (id, code, name, status, revision) VALUES ($1, 'test-code', 'test', 'active', 1)",
     )
     .bind(tenant_id)
     .execute(&pool)
@@ -44,7 +44,7 @@ async fn tenants_table_is_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result
 
     let context = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let mut tx = begin_tx(&pool, &context).await;
-    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM iam.tenants")
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 1);
@@ -52,7 +52,7 @@ async fn tenants_table_is_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result
 
     let other = ctx_for("018f1234-5678-7abc-8def-0123456789ab");
     let mut tx = begin_tx(&pool, &other).await;
-    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM iam.tenants")
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);
@@ -60,7 +60,7 @@ async fn tenants_table_is_isolated_by_tenant(pool: sqlx::PgPool) -> sqlx::Result
 
     let empty = RequestContext::default();
     let mut tx = begin_tx(&pool, &empty).await;
-    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM iam.tenants")
+    let row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM org.tenants")
         .fetch_one(&mut *tx)
         .await?;
     assert_eq!(row.0, 0);

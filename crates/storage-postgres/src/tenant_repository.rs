@@ -1,7 +1,7 @@
 //! PostgreSQL implementation of the `TenantRepository` port.
 
 use async_trait::async_trait;
-use domain_identity::tenant::{Tenant, TenantStatus};
+use domain_organization::tenant::{Tenant, TenantStatus};
 use foundation::{
     ErrorCode, PlatformError, RequestContext, Revision, TenantId, UserId, UtcTimestamp,
     chrono::{DateTime, Utc},
@@ -30,8 +30,8 @@ impl TenantRepository for PostgresTenantRepository {
     async fn by_id(&self, id: TenantId, ctx: &RequestContext) -> Result<Tenant, PlatformError> {
         let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
         let row = sqlx::query(
-            "SELECT id, name, status, revision, created_at, updated_at, actor
-             FROM iam.tenants
+            "SELECT id, code, name, locale, timezone, status, revision, created_at, updated_at, actor
+             FROM org.tenants
              WHERE id = $1 AND deleted_at IS NULL",
         )
         .bind(id.as_uuid())
@@ -49,12 +49,15 @@ impl TenantRepository for PostgresTenantRepository {
     async fn create(&self, tenant: &Tenant, ctx: &RequestContext) -> Result<(), PlatformError> {
         let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
         sqlx::query(
-            "INSERT INTO iam.tenants
-             (id, name, status, revision, created_at, updated_at, actor, deleted_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, NULL)",
+            "INSERT INTO org.tenants
+             (id, code, name, locale, timezone, status, revision, created_at, updated_at, actor, deleted_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL)",
         )
         .bind(tenant.id.as_uuid())
+        .bind(&tenant.code)
         .bind(&tenant.name)
+        .bind(&tenant.locale)
+        .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
         .bind(tenant.revision.value() as i64)
         .bind(utc_to_db(tenant.created_at))
@@ -76,7 +79,7 @@ impl TenantRepository for PostgresTenantRepository {
         let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
 
         let current: Option<(i64,)> =
-            sqlx::query_as("SELECT revision FROM iam.tenants WHERE id = $1 AND deleted_at IS NULL")
+            sqlx::query_as("SELECT revision FROM org.tenants WHERE id = $1 AND deleted_at IS NULL")
                 .bind(tenant.id.as_uuid())
                 .fetch_optional(&mut *tx)
                 .await
@@ -99,11 +102,13 @@ impl TenantRepository for PostgresTenantRepository {
         }
 
         let rows = sqlx::query(
-            "UPDATE iam.tenants
-             SET name = $1, status = $2, revision = $3, updated_at = $4, actor = $5
-             WHERE id = $6 AND revision = $7 AND deleted_at IS NULL",
+            "UPDATE org.tenants
+             SET name = $1, locale = $2, timezone = $3, status = $4, revision = $5, updated_at = $6, actor = $7
+             WHERE id = $8 AND revision = $9 AND deleted_at IS NULL",
         )
         .bind(&tenant.name)
+        .bind(&tenant.locale)
+        .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
         .bind(tenant.revision.value() as i64)
         .bind(utc_to_db(tenant.updated_at))
@@ -135,7 +140,7 @@ impl TenantRepository for PostgresTenantRepository {
         let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
 
         let current: Option<(i64,)> =
-            sqlx::query_as("SELECT revision FROM iam.tenants WHERE id = $1 AND deleted_at IS NULL")
+            sqlx::query_as("SELECT revision FROM org.tenants WHERE id = $1 AND deleted_at IS NULL")
                 .bind(id.as_uuid())
                 .fetch_optional(&mut *tx)
                 .await
@@ -159,7 +164,7 @@ impl TenantRepository for PostgresTenantRepository {
 
         let now = Utc::now();
         let rows = sqlx::query(
-            "UPDATE iam.tenants
+            "UPDATE org.tenants
              SET deleted_at = $1, revision = $2
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
@@ -186,10 +191,10 @@ impl TenantRepository for PostgresTenantRepository {
     async fn list(&self, ctx: &RequestContext) -> Result<Page<Tenant>, PlatformError> {
         let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
         let rows = sqlx::query(
-            "SELECT id, name, status, revision, created_at, updated_at, actor
-             FROM iam.tenants
+            "SELECT id, code, name, locale, timezone, status, revision, created_at, updated_at, actor
+             FROM org.tenants
              WHERE deleted_at IS NULL
-             ORDER BY id
+             ORDER BY code
              LIMIT 100",
         )
         .fetch_all(&mut *tx)
@@ -211,24 +216,30 @@ impl TenantRepository for PostgresTenantRepository {
 
 fn row_to_tenant(row: sqlx::postgres::PgRow) -> Result<Tenant, PlatformError> {
     let id: Uuid = row.try_get("id").map_err(db_error)?;
+    let code: String = row.try_get("code").map_err(db_error)?;
     let name: String = row.try_get("name").map_err(db_error)?;
+    let locale: String = row.try_get("locale").map_err(db_error)?;
+    let timezone: String = row.try_get("timezone").map_err(db_error)?;
     let status: String = row.try_get("status").map_err(db_error)?;
     let revision: i64 = row.try_get("revision").map_err(db_error)?;
     let created_at: DateTime<Utc> = row.try_get("created_at").map_err(db_error)?;
     let updated_at: DateTime<Utc> = row.try_get("updated_at").map_err(db_error)?;
     let actor: Option<Uuid> = row.try_get("actor").map_err(db_error)?;
 
-    Ok(Tenant {
-        id: TenantId::parse_str(&id.to_string())?,
+    Tenant::from_parts(
+        TenantId::parse_str(&id.to_string())?,
+        code,
         name,
-        status: TenantStatus::parse(&status)?,
-        revision: Revision::new(revision as u64),
-        created_at: created_at.into(),
-        updated_at: updated_at.into(),
-        actor: actor
+        locale,
+        timezone,
+        TenantStatus::parse(&status)?,
+        Revision::new(revision as u64),
+        created_at.into(),
+        updated_at.into(),
+        actor
             .map(|a| UserId::parse_str(&a.to_string()))
             .transpose()?,
-    })
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

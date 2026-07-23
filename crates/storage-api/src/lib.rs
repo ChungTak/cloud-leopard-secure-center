@@ -5,8 +5,8 @@ use domain_identity::api_key::ApiKey;
 use domain_identity::credential::Credential;
 use domain_identity::mfa::MfaFactor;
 use domain_identity::session::RefreshToken;
-use domain_identity::tenant::Tenant;
 use domain_identity::user::User;
+use domain_organization::tenant::Tenant;
 use foundation::{PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid};
 
 /// Page of results returned by a repository list query.

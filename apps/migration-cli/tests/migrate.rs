@@ -26,16 +26,16 @@ async fn schemas_and_roles_are_created(pool: Pool<Postgres>) -> sqlx::Result<()>
 async fn common_authoritative_table_pattern_exists(pool: Pool<Postgres>) -> sqlx::Result<()> {
     let row: (i64,) = sqlx::query_as(
         "SELECT COUNT(*) FROM information_schema.columns
-         WHERE table_schema = 'iam' AND table_name = 'tenants'",
+         WHERE table_schema = 'org' AND table_name = 'tenants'",
     )
     .fetch_one(&pool)
     .await?;
-    assert!(row.0 >= 9);
+    assert!(row.0 >= 12);
 
     let check: (bool,) = sqlx::query_as(
         "SELECT EXISTS (
             SELECT 1 FROM information_schema.table_constraints
-            WHERE table_schema = 'iam' AND table_name = 'tenants' AND constraint_type = 'CHECK'
+            WHERE table_schema = 'org' AND table_name = 'tenants' AND constraint_type = 'CHECK'
         )",
     )
     .fetch_one(&pool)

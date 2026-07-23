@@ -7,7 +7,6 @@ pub mod credential;
 pub mod mfa;
 pub mod password;
 pub mod session;
-pub mod tenant;
 pub mod token;
 pub mod totp;
 pub mod user;

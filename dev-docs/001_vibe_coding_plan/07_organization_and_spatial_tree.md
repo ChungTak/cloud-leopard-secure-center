@@ -2,8 +2,8 @@
 
 ### ORG-001：Tenant 聚合
 **前置：** DB-003。
-- [ ] 实现 code 不可变、Active/Suspended/Closed 状态和默认 locale/timezone。
-- [ ] 建立 `org.tenants`；平台级创建与状态操作必须走受审计管理上下文。
+- [x] 实现 code 不可变、Active/Suspended/Closed 状态和默认 locale/timezone。
+- [x] 建立 `org.tenants`；平台级创建与状态操作必须走受审计管理上下文。
 **测试：** code 唯一、终态、revision、Suspended 禁止新会话。
 
 ### ORG-002：组织树与 closure
