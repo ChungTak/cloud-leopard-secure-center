@@ -16,7 +16,7 @@
 
 ### SIG-003：全量 reconciliation
 **前置：** SIG-002。
-- [ ] 分页拉取 device/channel，写 shadow projection；每页有 cursor/checksum/limit。
+- [x] `SignalingReconciler` skeleton with paginated `ReconciliationCursor`；上游未实现，显式返回 `Unsupported`。
 - [ ] 完整校验后原子切换；上游缺失先标 missing，保留窗口后清理。
 - [ ] 增量事件在 rebuild 期间有界缓存或从明确 checkpoint 重放。
 **测试：** 百万级模拟分页、中断恢复、切换失败、事件与 rebuild 竞争。
