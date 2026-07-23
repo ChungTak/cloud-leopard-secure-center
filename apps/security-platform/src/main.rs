@@ -41,8 +41,13 @@ fn main() -> ExitCode {
 async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let port: u16 = env::var("CLSC_HTTP_PORT")
         .ok()
-        .and_then(|v| v.parse().ok())
+        .map(|v| v.parse())
+        .transpose()
+        .map_err(|_| "CLSC_HTTP_PORT must be a valid u16")?
         .unwrap_or(8080);
+    if port == 0 {
+        return Err("CLSC_HTTP_PORT must be non-zero".into());
+    }
     let static_dir: PathBuf = env::var("CLSC_STATIC_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/var/www/static"));
