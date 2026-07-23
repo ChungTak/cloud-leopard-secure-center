@@ -107,7 +107,7 @@ fn test_app(
         .route("/client-ip", get(client_ip_handler))
         .route("/login", post(login_handler));
 
-    http_api::middleware::with_middleware(router)
+    http_api::middleware::with_middleware(router, None)
         .layer(Extension(authenticator))
         .layer(Extension(rate_limit))
         .layer(Extension(proxy_config))

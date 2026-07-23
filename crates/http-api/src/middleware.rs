@@ -14,7 +14,7 @@ use foundation::{IdGenerator, MessageId, RequestContext, SystemClock, SystemRand
 use std::time::Duration;
 use tower::{ServiceBuilder, timeout::TimeoutLayer};
 use tower_http::{
-    cors::CorsLayer,
+    cors::{AllowOrigin, Any, CorsLayer},
     limit::RequestBodyLimitLayer,
     normalize_path::NormalizePathLayer,
     request_id::{MakeRequestId, PropagateRequestIdLayer, RequestId, SetRequestIdLayer},
@@ -30,9 +30,16 @@ const BODY_LIMIT: usize = 1024 * 1024;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Builds a `Router` with the standard middleware stack applied.
-pub fn with_middleware(router: Router) -> Router {
+///
+/// `cors_allowed_origins` controls the CORS policy:
+/// - `None` uses the permissive test policy.
+/// - `Some(vec![])` denies all cross-origin requests.
+/// - `Some(origins)` allows the listed origins only.
+pub fn with_middleware(router: Router, cors_allowed_origins: Option<Vec<String>>) -> Router {
     let request_id_header = HeaderName::from_static("x-request-id");
     let trace_id_header = HeaderName::from_static("x-trace-id");
+
+    let cors = cors_layer(cors_allowed_origins);
 
     let router = router.layer(
         ServiceBuilder::new()
@@ -58,7 +65,7 @@ pub fn with_middleware(router: Router) -> Router {
                 HeaderValue::from_static("strict-origin-when-cross-origin"),
             ))
             .layer(TraceLayer::new_for_http())
-            .layer(CorsLayer::permissive())
+            .layer(cors)
             // Generate and propagate request ids back to the client.
             .layer(SetRequestIdLayer::new(
                 request_id_header.clone(),
@@ -159,4 +166,21 @@ fn is_problem_json(headers: &axum::http::HeaderMap) -> bool {
         .get(header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .is_some_and(|value| value.starts_with("application/problem+json"))
+}
+
+fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
+    match cors_allowed_origins {
+        None => CorsLayer::permissive(),
+        Some(origins) if origins.is_empty() => CorsLayer::new(),
+        Some(origins) => {
+            let allowed: Vec<HeaderValue> = origins
+                .iter()
+                .filter_map(|o| o.parse::<HeaderValue>().ok())
+                .collect();
+            CorsLayer::new()
+                .allow_origin(AllowOrigin::list(allowed))
+                .allow_methods(Any)
+                .allow_headers(Any)
+        }
+    }
 }

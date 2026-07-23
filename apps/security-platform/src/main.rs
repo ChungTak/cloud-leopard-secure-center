@@ -54,8 +54,15 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         },
     ));
     let proxy_config = TrustedProxyConfig::default();
+    let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
+        .ok()
+        .map(|v| {
+            let origins: Vec<String> = v.split(',').map(|s| s.trim().to_string()).collect();
+            if origins.is_empty() { vec![] } else { origins }
+        })
+        .or_else(|| Some(vec![]));
 
-    let api = http_api::middleware::with_middleware(http_api::routes::router())
+    let api = http_api::middleware::with_middleware(http_api::routes::router(), cors_allowed_origins)
         .layer(Extension(rate_limit_state))
         .layer(Extension(proxy_config));
     let app = if static_dir.is_dir() {

@@ -28,7 +28,7 @@ fn test_app() -> Router {
             window_seconds: 60,
         },
     ));
-    http_api::middleware::with_middleware(router)
+    http_api::middleware::with_middleware(router, None)
         .layer(Extension(rate_limit))
         .layer(Extension(TrustedProxyConfig::default()))
 }
