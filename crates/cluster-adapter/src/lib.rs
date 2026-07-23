@@ -7,6 +7,8 @@
 
 use foundation::{NodeId, TenantId, UtcTimestamp};
 
+pub mod assembly;
+
 /// Role a binary can run as. `All` starts all supported roles in a single process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
