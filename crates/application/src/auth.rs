@@ -96,7 +96,11 @@ impl Authenticator for TokenAuthenticator {
             ..Default::default()
         };
 
-        let user = self.users.by_id(claims.sub, &ctx).await?;
+        let user = self
+            .users
+            .by_id(claims.sub, &ctx)
+            .await
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         self.user_is_valid(&user)?;
 
         let verified = self.token_service.verify_access_token(
