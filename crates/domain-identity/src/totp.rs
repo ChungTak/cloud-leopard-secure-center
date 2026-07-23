@@ -3,6 +3,7 @@
 use foundation::{PlatformError, UtcTimestamp};
 use hmac::{Hmac, KeyInit, Mac};
 use sha1::Sha1;
+use subtle::ConstantTimeEq;
 
 type HmacSha1 = Hmac<Sha1>;
 
@@ -45,21 +46,11 @@ pub fn verify(secret: &[u8], code: &str, now: UtcTimestamp) -> Result<Option<u64
         }
         let candidate = candidate as u64;
         let expected = code_for_step(secret, candidate)?;
-        if constant_time_eq(&expected, code) {
+        if expected.as_bytes().ct_eq(code.as_bytes()).into() {
             return Ok(Some(candidate));
         }
     }
     Ok(None)
-}
-
-fn constant_time_eq(a: &str, b: &str) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    a.bytes()
-        .zip(b.bytes())
-        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
-        == 0
 }
 
 fn time_step(now: UtcTimestamp) -> u64 {
