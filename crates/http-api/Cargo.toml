@@ -13,6 +13,12 @@ workspace = true
 
 [dependencies]
 application = { path = "../application" }
+domain-audit = { path = "../domain-audit" }
+domain-authorization = { path = "../domain-authorization" }
+domain-configuration = { path = "../domain-configuration" }
+domain-identity = { path = "../domain-identity" }
+domain-organization = { path = "../domain-organization" }
+domain-resource = { path = "../domain-resource" }
 foundation = { path = "../foundation" }
 async-trait = "=0.1.89"
 axum = { version = "=0.8.9", default-features = false, features = ["tokio", "http1", "json", "query", "form"] }

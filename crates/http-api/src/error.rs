@@ -1,10 +1,10 @@
 //! HTTP error handling and RFC 9457 Problem Details.
 
 use axum::{
+    Json,
     extract::rejection::JsonRejection,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use foundation::PlatformError;
 use serde::Serialize;
@@ -91,7 +91,11 @@ impl AppError {
         match self {
             Self::BadRequest { field, message } => format!("{field}: {message}"),
             Self::UnprocessableEntity(message) => message.clone(),
-            _ => self.status_code().canonical_reason().unwrap_or("Error").to_string(),
+            _ => self
+                .status_code()
+                .canonical_reason()
+                .unwrap_or("Error")
+                .to_string(),
         }
     }
 }
@@ -108,10 +112,7 @@ impl IntoResponse for AppError {
 impl From<PlatformError> for AppError {
     fn from(value: PlatformError) -> Self {
         match value {
-            PlatformError::Invalid { field, message } => Self::BadRequest {
-                field,
-                message,
-            },
+            PlatformError::Invalid { field, message } => Self::BadRequest { field, message },
             PlatformError::Unauthenticated => Self::Unauthenticated,
             PlatformError::Denied => Self::Denied,
             PlatformError::NotFound => Self::NotFound,
@@ -139,10 +140,7 @@ pub fn from_middleware_error(err: axum::BoxError) -> AppError {
     if err.is::<tower::timeout::error::Elapsed>() {
         return AppError::Timeout;
     }
-    if err
-        .downcast_ref::<std::convert::Infallible>()
-        .is_some()
-    {
+    if err.downcast_ref::<std::convert::Infallible>().is_some() {
         return AppError::Internal;
     }
     if err.to_string().to_lowercase().contains("length limit") {

@@ -1,18 +1,18 @@
 //! HTTP middleware: request/trace IDs, CORS, body limit, timeout, security headers.
 
 use axum::{
+    Router,
     body::Body,
     http::{
-        header::{self, HeaderName, HeaderValue},
         Request,
+        header::{self, HeaderName, HeaderValue},
     },
     middleware::Next,
     response::{IntoResponse, Response},
-    Router,
 };
 use foundation::{IdGenerator, MessageId, RequestContext, SystemClock, SystemRandom};
 use std::time::Duration;
-use tower::{timeout::TimeoutLayer, ServiceBuilder};
+use tower::{ServiceBuilder, timeout::TimeoutLayer};
 use tower_http::{
     cors::CorsLayer,
     limit::RequestBodyLimitLayer,
@@ -93,24 +93,23 @@ impl MakeRequestId for MakeUuidRequestId {
 
 /// Set a default request context extension using the generated request id.
 async fn set_request_context(mut req: Request<Body>, next: Next) -> Response {
-    if let Some(request_id) = req.extensions().get::<RequestId>().cloned() {
-        if let Ok(text) = request_id.header_value().to_str() {
-            if let Ok(message_id) = MessageId::parse_str(text) {
-                req.extensions_mut().insert(RequestContext {
-                    request_id: Some(message_id),
-                    ..RequestContext::default()
-                });
-            }
-        }
+    if let Some(request_id) = req.extensions().get::<RequestId>().cloned()
+        && let Ok(text) = request_id.header_value().to_str()
+        && let Ok(message_id) = MessageId::parse_str(text)
+    {
+        req.extensions_mut().insert(RequestContext {
+            request_id: Some(message_id),
+            ..RequestContext::default()
+        });
     }
     next.run(req).await
 }
 
 /// Wrap a response so it carries the current request id header.
 pub fn response_with_context(response: &mut Response, ctx: &RequestContext) {
-    if let Some(request_id) = &ctx.request_id {
-        if let Ok(value) = HeaderValue::from_str(&request_id.to_hyphenated()) {
-            response.headers_mut().insert("x-request-id", value);
-        }
+    if let Some(request_id) = &ctx.request_id
+        && let Ok(value) = HeaderValue::from_str(&request_id.to_hyphenated())
+    {
+        response.headers_mut().insert("x-request-id", value);
     }
 }
