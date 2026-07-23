@@ -4,6 +4,7 @@ import AppNavigation from '../components/AppNavigation.tsx';
 import AppBreadcrumb from '../components/AppBreadcrumb.tsx';
 import ErrorBoundary from '../components/ErrorBoundary.tsx';
 import Suspended from '../components/Suspended.tsx';
+import PermissionGuard from '../components/PermissionGuard.tsx';
 
 export default function AdminLayout(): ReactNode {
   return (
@@ -13,7 +14,9 @@ export default function AdminLayout(): ReactNode {
         <AppBreadcrumb />
         <ErrorBoundary>
           <Suspended>
-            <Outlet />
+            <PermissionGuard>
+              <Outlet />
+            </PermissionGuard>
           </Suspended>
         </ErrorBoundary>
       </main>

@@ -2,18 +2,28 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useMediaQuery } from '../hooks/useMediaQuery.ts';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import Can from './Can.tsx';
 
 interface NavItem {
   to: string;
   labelKey: 'dashboard' | 'tenants' | 'users' | 'settings';
+  permission?: string;
 }
 
 const items: NavItem[] = [
   { to: '/admin/dashboard', labelKey: 'dashboard' },
-  { to: '/admin/tenants', labelKey: 'tenants' },
-  { to: '/admin/users', labelKey: 'users' },
-  { to: '/admin/settings', labelKey: 'settings' },
+  {
+    to: '/admin/tenants',
+    labelKey: 'tenants',
+    permission: 'platform:tenant:read',
+  },
+  { to: '/admin/users', labelKey: 'users', permission: 'tenant:user:read' },
+  {
+    to: '/admin/settings',
+    labelKey: 'settings',
+    permission: 'tenant:config:read',
+  },
 ];
 
 export default function AppNavigation(): ReactNode {
@@ -53,8 +63,8 @@ export default function AppNavigation(): ReactNode {
               listStyle: 'none',
             }}
           >
-            {items.map((item) => (
-              <li key={item.to}>
+            {items.map((item) => {
+              const link = (
                 <NavLink
                   to={item.to}
                   style={({ isActive }) => ({
@@ -65,8 +75,17 @@ export default function AppNavigation(): ReactNode {
                 >
                   {t(item.labelKey)}
                 </NavLink>
-              </li>
-            ))}
+              );
+              return (
+                <li key={item.to}>
+                  {item.permission ? (
+                    <Can permission={item.permission}>{link}</Can>
+                  ) : (
+                    link
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </nav>
       )}

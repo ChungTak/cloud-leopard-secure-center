@@ -41,6 +41,30 @@ export const routes: RouteObject[] = [
             element: <DashboardPage />,
             handle: { breadcrumb: 'dashboard' as const },
           },
+          {
+            path: 'tenants',
+            element: <DashboardPage />,
+            handle: {
+              breadcrumb: 'tenants' as const,
+              permission: 'platform:tenant:read' as const,
+            },
+          },
+          {
+            path: 'users',
+            element: <DashboardPage />,
+            handle: {
+              breadcrumb: 'users' as const,
+              permission: 'tenant:user:read' as const,
+            },
+          },
+          {
+            path: 'settings',
+            element: <DashboardPage />,
+            handle: {
+              breadcrumb: 'settings' as const,
+              permission: 'tenant:config:read' as const,
+            },
+          },
           { path: 'forbidden', element: <ForbiddenPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
