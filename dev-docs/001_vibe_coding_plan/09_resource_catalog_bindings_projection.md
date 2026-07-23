@@ -9,9 +9,9 @@
 
 ### RES-002：Tag 与 ExternalBinding
 **前置：** RES-001。
-- [ ] Tag key/value 规范化和数量限制；资源类型来自 registry。
-- [ ] ExternalBinding 状态 Pending/Active/Stale/Conflict/Disabled；外部 ref 有效时全局唯一。
-- [ ] 自动匹配只能创建 Pending，激活需可信规则或人工操作并审计。
+- [x] Tag key/value 规范化和数量限制；资源类型来自 registry。
+- [x] ExternalBinding 状态 Pending/Active/Stale/Conflict/Disabled；外部 ref 有效时全局唯一。
+- [x] 自动匹配只能创建 Pending，激活需可信规则或人工操作并审计。
 **测试：** 双绑定冲突、并发激活、上游 ID 不同类型、解绑后历史保留。
 
 ### RES-003：Signaling 投影表
