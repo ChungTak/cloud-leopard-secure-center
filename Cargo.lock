@@ -366,6 +366,7 @@ dependencies = [
 name = "domain-resource"
 version = "0.1.0"
 dependencies = [
+ "domain-organization",
  "foundation",
 ]
 
@@ -1392,6 +1393,7 @@ dependencies = [
  "domain-authorization",
  "domain-identity",
  "domain-organization",
+ "domain-resource",
  "foundation",
 ]
 
@@ -1403,6 +1405,7 @@ dependencies = [
  "domain-authorization",
  "domain-identity",
  "domain-organization",
+ "domain-resource",
  "foundation",
  "sqlx",
  "storage-api",

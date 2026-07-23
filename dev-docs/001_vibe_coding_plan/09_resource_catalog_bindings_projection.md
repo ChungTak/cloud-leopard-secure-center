@@ -2,9 +2,9 @@
 
 ### RES-001：ManagedDevice 与 Camera
 **前置：** ORG-003、AUTH-003、DB-003。
-- [ ] 实现 Draft/Active/Disabled/Retired，区分业务 lifecycle 与外部 online state。
-- [ ] 建立 managed_devices/cameras，组织和区域引用同租户；Camera sensitivity 独立建模。
-- [ ] serial 不是主键；设备退休不级联删除历史审计。
+- [x] 实现 Draft/Active/Disabled/Retired，区分业务 lifecycle 与外部 online state。
+- [x] 建立 managed_devices/cameras，组织和区域引用同租户；Camera sensitivity 独立建模。
+- [x] serial 不是主键；设备退休不级联删除历史审计。
 **测试：** 生命周期、引用、revision、查询 scope 和敏感资源授权。
 
 ### RES-002：Tag 与 ExternalBinding

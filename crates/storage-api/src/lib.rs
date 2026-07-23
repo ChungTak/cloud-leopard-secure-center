@@ -11,9 +11,11 @@ use domain_identity::user::User;
 use domain_organization::organization_unit::OrganizationUnit;
 use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
+use domain_resource::camera::Camera;
+use domain_resource::device::ManagedDevice;
 use foundation::{
-    AreaId, BindingId, BuildingId, FloorId, OrganizationId, PlatformError, RequestContext,
-    Revision, RoleId, SiteId, TenantId, UserId, uuid::Uuid,
+    AreaId, BindingId, BuildingId, CameraId, DeviceId, FloorId, OrganizationId, PlatformError,
+    RequestContext, Revision, RoleId, SiteId, TenantId, UserId, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -477,6 +479,66 @@ pub trait RoleBindingRepository: Send + Sync {
         principal_id: UserId,
         ctx: &RequestContext,
     ) -> Result<Page<RoleBinding>, PlatformError>;
+}
+
+/// Repository contract for the `ManagedDevice` aggregate.
+#[async_trait]
+pub trait DeviceRepository: Send + Sync {
+    async fn by_id(
+        &self,
+        id: DeviceId,
+        ctx: &RequestContext,
+    ) -> Result<ManagedDevice, PlatformError>;
+
+    async fn create(
+        &self,
+        device: &ManagedDevice,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn update(
+        &self,
+        device: &ManagedDevice,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn delete(
+        &self,
+        id: DeviceId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn list(&self, ctx: &RequestContext) -> Result<Page<ManagedDevice>, PlatformError>;
+}
+
+/// Repository contract for the `Camera` aggregate.
+#[async_trait]
+pub trait CameraRepository: Send + Sync {
+    async fn by_id(&self, id: CameraId, ctx: &RequestContext) -> Result<Camera, PlatformError>;
+
+    async fn create(&self, camera: &Camera, ctx: &RequestContext) -> Result<(), PlatformError>;
+
+    async fn update(
+        &self,
+        camera: &Camera,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn delete(
+        &self,
+        id: CameraId,
+        expected: Revision,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    async fn list_by_device(
+        &self,
+        device_id: DeviceId,
+        ctx: &RequestContext,
+    ) -> Result<Page<Camera>, PlatformError>;
 }
 
 pub fn version() -> &'static str {
