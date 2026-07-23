@@ -16,6 +16,9 @@ application = { path = "../../crates/application" }
 http-api = { path = "../../crates/http-api" }
 observability = { path = "../../crates/observability" }
 foundation = { path = "../../crates/foundation" }
+axum = "=0.8.9"
+tokio = { version = "=1.52.3", features = ["full"] }
+tower-http = { version = "=0.6.8", features = ["fs", "trace"] }
 
 [dev-dependencies]
 domain-authorization = { path = "../../crates/domain-authorization" }

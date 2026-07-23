@@ -2,9 +2,9 @@
 
 ### PKG-001：单机 Compose 与安装检查
 **前置：** API-003、WEB-007、APP-003。
-- [ ] 构建平台镜像和静态 Web 资源；非 root、只读 rootfs、healthcheck。
-- [ ] Compose 包含 platform/PostgreSQL/OTel，可使用外部数据库；secret 不写默认文件。
-- [ ] 安装前检查端口、磁盘、时钟、数据库版本、备份目录和证书。
+- [x] 构建平台镜像和静态 Web 资源；非 root、只读 rootfs、healthcheck。
+- [x] Compose 包含 platform/PostgreSQL/OTel，可使用外部数据库；secret 不写默认文件。
+- [x] 安装前检查端口、磁盘、时钟、数据库版本、备份目录和证书。
 **测试：** 全新离线安装、重启、错误配置、数据库暂不可用、升级前备份。
 
 ### TST-001：Phase 1 端到端验收
