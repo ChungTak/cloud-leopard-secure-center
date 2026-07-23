@@ -33,7 +33,7 @@ impl RecoveryCode {
 
     /// Check whether `raw` matches this recovery code without consuming it.
     pub fn matches(&self, raw: &str) -> bool {
-        hash_raw(raw) == self.hash
+        constant_time_eq(&hash_raw(raw), &self.hash)
     }
 }
 
@@ -73,6 +73,13 @@ impl MfaFactor {
         random: &dyn RandomSource,
         clock: &dyn foundation::Clock,
     ) -> Result<(Self, Vec<String>), PlatformError> {
+        const MAX_RECOVERY_CODES: usize = 32;
+        if recovery_code_count > MAX_RECOVERY_CODES {
+            return Err(PlatformError::invalid(
+                "recovery_code_count",
+                format!("must be at most {MAX_RECOVERY_CODES}"),
+            ));
+        }
         let mut raw_codes = Vec::with_capacity(recovery_code_count);
         let mut recovery_codes = Vec::with_capacity(recovery_code_count);
         for _ in 0..recovery_code_count {
@@ -189,4 +196,14 @@ fn hash_raw(raw: &str) -> String {
 fn time_step(now: UtcTimestamp) -> u64 {
     let seconds = (now.timestamp_millis() / 1000) as u64;
     seconds / 30
+}
+
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes()
+        .zip(b.bytes())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }

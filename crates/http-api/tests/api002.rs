@@ -331,7 +331,8 @@ async fn trusted_proxy_uses_forwarded_for() {
         Ok(v) => v,
         Err(e) => panic!("body is not valid JSON: {e}"),
     };
-    assert_eq!(payload["ip"], "1.2.3.4");
+    // With a trusted proxy the rightmost untrusted address is used.
+    assert_eq!(payload["ip"], "5.6.7.8");
 }
 
 #[tokio::test]

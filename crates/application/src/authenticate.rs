@@ -60,7 +60,7 @@ pub async fn authenticate(
 
     match hasher.verify(password, &credential.value) {
         Ok(true) => {
-            if hasher.needs_rehash(&credential.value).unwrap_or(true)
+            if hasher.needs_rehash(&credential.value).unwrap_or(false)
                 && let Ok(new_hash) = hasher.hash(password)
             {
                 let mut credential = credential;

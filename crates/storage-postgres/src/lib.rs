@@ -186,9 +186,10 @@ async fn set_tenant_context(
     // Ensure RLS policies are evaluated even when connected as a superuser
     // (e.g. in local development or tests). In production the app role is
     // already clsc_app, so this is a no-op.
-    let _ = sqlx::query("SET LOCAL ROLE clsc_app")
+    sqlx::query("SET LOCAL ROLE clsc_app")
         .execute(&mut *conn)
-        .await;
+        .await
+        .map_err(db_error)?;
 
     Ok(())
 }

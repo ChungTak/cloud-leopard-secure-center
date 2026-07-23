@@ -261,8 +261,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
                     valid_from, valid_until, revision, created_at, updated_at, actor
              FROM authz.role_bindings
              WHERE principal_id = $1 AND deleted_at IS NULL
-             ORDER BY valid_from DESC
-             LIMIT 1000",
+             ORDER BY valid_from DESC",
         )
         .bind(principal_id.as_uuid())
         .fetch_all(&mut *tx)
@@ -418,10 +417,7 @@ fn row_to_binding(row: sqlx::postgres::PgRow) -> Result<RoleBinding, PlatformErr
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
-    match DateTime::from_timestamp_millis(ts.timestamp_millis()) {
-        Some(dt) => dt,
-        None => panic!("timestamp from database is invalid"),
-    }
+    ts.into()
 }
 
 fn db_error(e: sqlx::Error) -> PlatformError {

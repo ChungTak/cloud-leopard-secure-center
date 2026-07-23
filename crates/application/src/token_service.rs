@@ -21,7 +21,8 @@ pub struct TokenService {
 }
 
 impl TokenService {
-    /// Create a token service. `secret` must not be empty.
+    /// Create a token service. `secret` must not be empty and `access_ttl_seconds`
+    /// must be positive.
     pub fn new(
         secret: impl AsRef<[u8]>,
         issuer: impl Into<String>,
@@ -31,6 +32,12 @@ impl TokenService {
         let secret = secret.as_ref().to_vec();
         if secret.is_empty() {
             return Err(PlatformError::new(ErrorCode::Invalid, "empty token secret"));
+        }
+        if access_ttl_seconds <= 0 {
+            return Err(PlatformError::new(
+                ErrorCode::Invalid,
+                "access token ttl must be positive",
+            ));
         }
         Ok(Self {
             secret,
@@ -50,6 +57,9 @@ impl TokenService {
         jti: impl Into<String>,
     ) -> Result<String, PlatformError> {
         let iat = now.timestamp_millis() / 1000;
+        let exp = iat.checked_add(self.access_ttl_seconds).ok_or_else(|| {
+            PlatformError::new(ErrorCode::Invalid, "token expiration overflow")
+        })?;
         let claims = AccessTokenClaims {
             sub: user_id,
             tenant_id,
@@ -57,7 +67,7 @@ impl TokenService {
             aud: self.audience.clone(),
             iss: self.issuer.clone(),
             nbf: iat,
-            exp: iat + self.access_ttl_seconds,
+            exp,
             jti: jti.into(),
         };
         self.sign(&claims)

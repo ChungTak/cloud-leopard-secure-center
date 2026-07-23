@@ -13,7 +13,7 @@ use domain_signaling::{
     UnsupportedSignalingPort,
 };
 use foundation::{
-    CameraId, Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId,
+    CameraId, Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId,
     UtcTimestamp,
 };
 use signaling_adapter::RestSignalingAdapter;
@@ -32,6 +32,11 @@ fn device() -> DeviceId {
 fn camera() -> CameraId {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     CameraId::generate(&generator)
+}
+
+fn principal() -> UserId {
+    let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+    UserId::generate(&generator)
 }
 
 fn deadline() -> Deadline {
@@ -99,8 +104,10 @@ async fn unsupported_media_create_entitlement() {
     match port
         .create_entitlement(CreateEntitlementRequest {
             tenant_id: tenant(),
+            principal_id: principal(),
             camera_id: camera(),
             actions: vec![MediaAction::Live],
+            protocol: "webrtc".to_string(),
             deadline: deadline(),
         })
         .await
@@ -180,8 +187,10 @@ async fn no_stub_returns_placeholder_success() {
             UnsupportedMediaPort
                 .create_entitlement(CreateEntitlementRequest {
                     tenant_id: tenant(),
+                    principal_id: principal(),
                     camera_id: camera(),
                     actions: vec![MediaAction::Live],
+                    protocol: "webrtc".to_string(),
                     deadline: deadline(),
                 })
                 .await

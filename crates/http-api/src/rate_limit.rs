@@ -62,7 +62,10 @@ impl RateLimitState {
         let now = Instant::now();
 
         if let Some(bucket) = buckets.get_mut(key) {
-            if now.duration_since(bucket.window_start) > window {
+            if now
+                .checked_duration_since(bucket.window_start)
+                .is_some_and(|d| d > window)
+            {
                 bucket.window_start = now;
                 bucket.count = 1;
                 return true;
@@ -81,7 +84,28 @@ impl RateLimitState {
                 count: 1,
             },
         );
+        Self::prune(&mut buckets, window, now);
         true
+    }
+
+    fn prune(buckets: &mut HashMap<String, Bucket>, window: Duration, now: Instant) {
+        const MAX_KEYS: usize = 10_000;
+
+        // Remove expired buckets first.
+        buckets.retain(|_, bucket| {
+            now.checked_duration_since(bucket.window_start)
+                .is_some_and(|d| d <= window)
+        });
+
+        if buckets.len() <= MAX_KEYS {
+            return;
+        }
+
+        // Fall back to removing the oldest buckets by window start.
+        let mut items: Vec<(String, Bucket)> = buckets.drain().collect();
+        items.sort_by_key(|a| a.1.window_start);
+        let keep = items.len().saturating_sub(MAX_KEYS);
+        buckets.extend(items.into_iter().skip(keep));
     }
 }
 

@@ -35,6 +35,11 @@ macro_rules! id_newtype {
                     .map_err(|e| PlatformError::invalid(stringify!($name), e.to_string()))
             }
 
+            /// Create an identifier from an existing UUID.
+            pub const fn from_uuid(uuid: Uuid) -> Self {
+                Self(uuid)
+            }
+
             /// Access the underlying UUID.
             pub const fn as_uuid(&self) -> &Uuid {
                 &self.0
@@ -232,16 +237,15 @@ impl FakeClock {
 
     /// Advance the clock by the given number of milliseconds.
     pub const fn advance(&mut self, millis: i64) {
-        self.millis += millis;
+        self.millis = self.millis.saturating_add(millis);
     }
 }
 
 impl Clock for FakeClock {
     fn now(&self) -> UtcTimestamp {
-        let Some(naive) = DateTime::from_timestamp_millis(self.millis) else {
-            panic!("invalid fake timestamp");
-        };
-        UtcTimestamp(naive)
+        let dt = DateTime::from_timestamp_millis(self.millis)
+            .unwrap_or(DateTime::<Utc>::MIN_UTC);
+        UtcTimestamp(dt)
     }
 }
 

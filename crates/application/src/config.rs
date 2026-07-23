@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_audit::audit_record::ActionRisk;
 use domain_authorization::role_binding::ResourceRef;
 use domain_configuration::{ConfigDefinition, ConfigScope, ConfigValue, ConfigValueId};
-use foundation::{Clock, PlatformError, RequestContext, Revision, TenantId};
+use foundation::{Clock, PlatformError, RequestContext, Revision, TenantId, uuid::Uuid};
 use storage_api::{AuditWriter, ConfigurationRepository};
 
 use crate::authorization::AuthorizationPort;
@@ -144,8 +144,7 @@ where
 
         usecase::audit_write(
             &self.audit,
-            foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-                .unwrap_or_else(|e| panic!("{e:?}")),
+            TenantId::from_uuid(Uuid::nil()),
             "user",
             actor.to_hyphenated(),
             "config.definition.save",

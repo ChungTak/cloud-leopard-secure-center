@@ -14,7 +14,7 @@
 use async_trait::async_trait;
 use domain_audit::audit_record::{ActionRisk, AuditDetails, AuditRecord, AuditResult};
 use domain_authorization::role_binding::ResourceRef;
-use foundation::{Clock, ErrorCode, PlatformError, RequestContext, Revision, UserId};
+use foundation::{Clock, ErrorCode, PlatformError, RequestContext, Revision, TenantId, UserId, uuid::Uuid};
 
 pub use crate::authorization::{
     AuthorizationPort, AuthorizationRequest, AuthorizationResponse, Decision,
@@ -109,8 +109,7 @@ pub trait UseCase: Send + Sync {
 pub fn platform_authorization(principal: UserId, action: &'static str) -> AuthorizationRequest {
     AuthorizationRequest {
         principal,
-        tenant: foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-            .unwrap_or_else(|e| panic!("{e:?}")),
+        tenant: TenantId::from_uuid(Uuid::nil()),
         action: action.to_string(),
         resource: ResourceRef::User(principal),
         context: None,

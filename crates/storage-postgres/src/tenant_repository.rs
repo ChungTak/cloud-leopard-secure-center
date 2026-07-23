@@ -253,10 +253,7 @@ fn row_to_tenant(row: sqlx::postgres::PgRow) -> Result<Tenant, PlatformError> {
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
-    match DateTime::from_timestamp_millis(ts.timestamp_millis()) {
-        Some(dt) => dt,
-        None => panic!("timestamp from database is invalid"),
-    }
+    ts.into()
 }
 
 fn db_error(e: sqlx::Error) -> PlatformError {

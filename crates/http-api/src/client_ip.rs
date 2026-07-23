@@ -69,20 +69,35 @@ pub fn resolve_client_ip(
 
     let forwarded = headers
         .get("x-forwarded-for")
-        .and_then(|value| value.to_str().ok())
-        .and_then(parse_first_ip);
+        .and_then(|value| value.to_str().ok());
 
-    match (direct, forwarded, config.has_proxies()) {
-        (Some(peer), Some(client), true) if config.is_trusted(peer) => Some(client),
-        (Some(peer), _, false) => Some(peer),
-        (Some(peer), _, true) => Some(peer),
-        (None, Some(client), true) => Some(client),
-        _ => None,
+    // Without a direct peer we cannot validate any proxy chain.
+    let peer = direct?;
+
+    if !config.has_proxies() {
+        return Some(peer);
     }
+
+    if !config.is_trusted(peer) {
+        // Peer is not a trusted proxy; ignore X-Forwarded-For to prevent spoofing.
+        return Some(peer);
+    }
+
+    let forwarded_ips: Vec<IpAddr> = forwarded
+        .map(parse_forwarded_ips)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|ip| !config.is_trusted(*ip))
+        .collect();
+
+    // Walk from right (closest to the server) to left (original client).
+    forwarded_ips.into_iter().next_back().or(Some(peer))
 }
 
-fn parse_first_ip(text: &str) -> Option<IpAddr> {
-    text.split(',').next()?.trim().parse().ok()
+fn parse_forwarded_ips(text: &str) -> Vec<IpAddr> {
+    text.split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect()
 }
 
 /// Build an HTTP 400 response for requests with a malformed forwarded-for header.

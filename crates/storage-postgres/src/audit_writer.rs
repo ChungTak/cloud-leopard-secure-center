@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use domain_audit::audit_record::{AuditDetails, AuditRecord, AuditRecordId};
-use foundation::{ErrorCode, PlatformError, RequestContext, UtcTimestamp, chrono::DateTime};
+use foundation::{ErrorCode, PlatformError, RequestContext, UtcTimestamp, chrono::{DateTime, Utc}};
 use sqlx::PgPool;
 use storage_api::AuditWriter;
 
@@ -86,11 +86,8 @@ fn details_to_json(details: &AuditDetails) -> Result<serde_json::Value, Platform
         .map_err(|e| PlatformError::invalid("details", format!("invalid audit details JSON: {e}")))
 }
 
-fn timestamp_to_db(ts: UtcTimestamp) -> DateTime<foundation::chrono::Utc> {
-    match DateTime::from_timestamp_millis(ts.timestamp_millis()) {
-        Some(dt) => dt,
-        None => panic!("timestamp from database is invalid"),
-    }
+fn timestamp_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
+    ts.into()
 }
 
 fn db_error(e: sqlx::Error) -> PlatformError {
