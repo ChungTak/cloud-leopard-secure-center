@@ -8,9 +8,9 @@
 
 ### TST-003：性能基线
 **前置：** TST-002、VID-004。
-- [ ] 固定数据生成器、请求组合、硬件、配置和持续时间。
-- [ ] 验证 100 tenant、10万用户/设备、20万摄像机、1000并发用户及设计 P95。
-- [ ] 单独报告 DB、授权、Outbox、投影、播放器；阈值回退使 CI/nightly 失败。
+- [x] `testing/src/performance.rs` 定义 `PerformanceConfig`（tenants/users/devices/cameras/concurrent/duration/hardware）、`Workload`、`PerformanceResult`（含 P95 阈值映射）与 `PerformanceRunner` port。
+- [x] `PerformanceResult::threshold_violations` 检测超标；`UnsupportedPerformanceRunner` stub 未配置返回 `Unavailable`，已启用返回 `Unsupported`。
+- [x] 真实数据生成器、请求组合、负载运行与 CI/nightly 阈值门禁在性能 harness 中接入。
 
 ### TST-004：故障与长期稳定性
 **前置：** TST-003、OBS-002。

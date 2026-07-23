@@ -5,6 +5,7 @@
 
 pub mod contract_suite;
 pub mod fixtures;
+pub mod performance;
 
 /// Return the crate version.
 pub fn version() -> &'static str {
