@@ -16,9 +16,9 @@
 
 ### RES-003：Signaling 投影表
 **前置：** RES-002。
-- [ ] 建立 device/channel projection、checkpoint、failure 表；写权限仅 projection worker。
-- [ ] API 总是返回 observed_at/source_event_id/stale；投影不能覆盖平台资产字段。
-- [ ] 支持 shadow rebuild 和原子切换读视图。
+- [x] 建立 device/channel projection、checkpoint、failure 表；写权限仅 projection worker。
+- [x] API 总是返回 observed_at/source_event_id/stale；投影不能覆盖平台资产字段。
+- [x] 支持 shadow rebuild 和原子切换读视图。
 **测试：** 重复/乱序/缺口/重建、同序列不同 payload quarantine、过期标记。
 
 ## 完成条件

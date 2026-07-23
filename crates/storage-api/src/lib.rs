@@ -14,10 +14,14 @@ use domain_organization::tenant::Tenant;
 use domain_resource::camera::Camera;
 use domain_resource::device::ManagedDevice;
 use domain_resource::external_binding::ExternalBinding;
+use domain_resource::projection::{
+    ChannelEvent, ChannelProjection, DeviceEvent, DeviceProjection, ProjectionFailure,
+};
 use domain_resource::tag::{ResourceType, Tag};
 use foundation::{
     AreaId, BindingId, BuildingId, CameraId, DeviceId, ExternalBindingId, FloorId, OrganizationId,
-    PlatformError, RequestContext, Revision, RoleId, SiteId, TagId, TenantId, UserId, uuid::Uuid,
+    PlatformError, RequestContext, Revision, RoleId, SiteId, TagId, TenantId, UserId, UtcTimestamp,
+    uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -624,6 +628,63 @@ pub trait ExternalBindingRepository: Send + Sync {
         external_ref: &str,
         ctx: &RequestContext,
     ) -> Result<Page<ExternalBinding>, PlatformError>;
+}
+
+/// Repository contract for signaling projection read models.
+#[async_trait]
+pub trait ProjectionRepository: Send + Sync {
+    /// Apply a device event, handling duplicates, out-of-order, and mismatched payloads.
+    async fn apply_device_event(
+        &self,
+        event: DeviceEvent,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Get the current device projection from the active read view.
+    async fn get_device(
+        &self,
+        external_ref: &str,
+        ctx: &RequestContext,
+    ) -> Result<DeviceProjection, PlatformError>;
+
+    /// Apply a channel event.
+    async fn apply_channel_event(
+        &self,
+        event: ChannelEvent,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Get the current channel projection from the active read view.
+    async fn get_channel(
+        &self,
+        external_ref: &str,
+        ctx: &RequestContext,
+    ) -> Result<ChannelProjection, PlatformError>;
+
+    /// Rebuild the shadow tables from a complete ordered event stream and atomically
+    /// switch the read view to the rebuilt shadow.
+    async fn rebuild_shadow(
+        &self,
+        device_events: Vec<DeviceEvent>,
+        channel_events: Vec<ChannelEvent>,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Persist a worker checkpoint.
+    async fn checkpoint(
+        &self,
+        worker_id: &str,
+        last_event_id: &str,
+        observed_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Record a projection processing failure for later review.
+    async fn record_failure(
+        &self,
+        failure: ProjectionFailure,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
 }
 
 pub fn version() -> &'static str {
