@@ -7,6 +7,7 @@ use axum::{
 };
 
 use crate::{
+    auth::Auth,
     dto::{
         ApiKeyCreatedDto, AuditRecordDto, AuthExplainRequest, AuthExplainResponse, CameraDto,
         ChangeDeviceLifecycleRequest, ChangeUserStatusRequest, ConfigDefinitionDto, ConfigValueDto,
@@ -1147,10 +1148,15 @@ pub(crate) async fn list_projections(
     Err(AppError::NotImplemented)
 }
 
-/// Public router exposing health and resource definition stubs.
-pub fn router() -> Router {
+/// Public router exposing only the health endpoint; no authentication required.
+pub fn public_router() -> Router {
+    Router::new().route("/health", get(health))
+}
+
+/// Protected router for all resource endpoints. Every route requires a valid
+/// bearer token and supports idempotency keys for mutating requests.
+pub fn protected_router() -> Router {
     Router::new()
-        .route("/health", get(health))
         .route("/tenants/{id}", get(get_tenant))
         .route(
             "/organization-units",
@@ -1231,4 +1237,11 @@ pub fn router() -> Router {
         )
         .route("/config-definitions", get(list_config_definitions))
         .route("/config-definitions/{key}", get(get_config_definition))
+        .route_layer(axum::middleware::from_fn(crate::idempotency::idempotency))
+        .route_layer(axum::middleware::from_extractor::<Auth>())
+}
+
+/// Full API router combining public health checks and authenticated resource routes.
+pub fn router() -> Router {
+    public_router().merge(protected_router())
 }
