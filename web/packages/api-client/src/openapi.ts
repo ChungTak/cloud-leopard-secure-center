@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Explain an authorization decision. */
+        post: operations["explain_auth"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cameras/{id}": {
         parameters: {
             query?: never;
@@ -160,6 +177,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/role-bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List role bindings. */
+        get: operations["list_role_bindings"];
+        put?: never;
+        /** Create a role binding. */
+        post: operations["create_role_binding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/role-bindings/{id}": {
         parameters: {
             query?: never;
@@ -171,6 +206,26 @@ export interface paths {
         get: operations["get_role_binding"];
         put?: never;
         post?: never;
+        /** Delete a role binding. */
+        delete: operations["delete_role_binding"];
+        options?: never;
+        head?: never;
+        /** Update a role binding. */
+        patch: operations["update_role_binding"];
+        trace?: never;
+    };
+    "/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List roles. */
+        get: operations["list_roles"];
+        put?: never;
+        /** Create a role. */
+        post: operations["create_role"];
         delete?: never;
         options?: never;
         head?: never;
@@ -188,6 +243,25 @@ export interface paths {
         get: operations["get_role"];
         put?: never;
         post?: never;
+        /** Delete a role. */
+        delete: operations["delete_role"];
+        options?: never;
+        head?: never;
+        /** Update a role. */
+        patch: operations["update_role"];
+        trace?: never;
+    };
+    "/service-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a service account. */
+        post: operations["create_service_account"];
         delete?: never;
         options?: never;
         head?: never;
@@ -265,6 +339,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List users. */
+        get: operations["list_users"];
+        put?: never;
+        /** Create a user. */
+        post: operations["create_user"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}": {
         parameters: {
             query?: never;
@@ -279,6 +371,58 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
+        /** Update a user. */
+        patch: operations["update_user"];
+        trace?: never;
+    };
+    "/users/{id}/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Manage a user's MFA. */
+        post: operations["manage_user_mfa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set a user's password. */
+        post: operations["set_user_password"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Change a user's status. */
+        post: operations["change_user_status"];
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -286,6 +430,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Response containing a newly created API key (shown once). */
+        ApiKeyCreatedDto: {
+            expiresAt?: string | null;
+            id: string;
+            key: string;
+            name: string;
+            scopes: string[];
+            tenantId: string;
+        };
         /** @description Stable API representation of audit record details. */
         AuditDetailsDto: {
             schema: string;
@@ -310,6 +463,18 @@ export interface components {
             tenantId: string;
             traceId?: string | null;
         };
+        /** @description Request to preview an authorization decision. */
+        AuthExplainRequest: {
+            action: string;
+            principalId: string;
+            resourceId: string;
+            resourceType: string;
+        };
+        /** @description Authorization explanation. */
+        AuthExplainResponse: {
+            decision: string;
+            reason: string;
+        };
         /** @description Stable API representation of a camera. */
         CameraDto: {
             actor?: string | null;
@@ -325,6 +490,12 @@ export interface components {
             sensitivity: string;
             tenantId: string;
             updatedAt: string;
+        };
+        /** @description Request to change a user status. */
+        ChangeUserStatusRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            status: string;
         };
         /** @description Stable API representation of a configuration definition. */
         ConfigDefinitionDto: {
@@ -365,12 +536,34 @@ export interface components {
             name: string;
             parentId?: string | null;
         };
+        /** @description Request to create a role binding. */
+        CreateRoleBindingRequest: {
+            principalId: string;
+            roleId: string;
+            scope: components["schemas"]["RoleBindingScopeDto"];
+            validFrom: string;
+            validUntil?: string | null;
+        };
+        /** @description Request to create a role. */
+        CreateRoleRequest: {
+            name: string;
+            permissions: string[];
+        };
+        /** @description Request to create a service account. */
+        CreateServiceAccountRequest: {
+            name: string;
+        };
         /** @description Request to create a spatial node. */
         CreateSpatialNodeRequest: {
             code: string;
             name: string;
             nodeType: components["schemas"]["SpatialNodeType"];
             parentId?: string | null;
+        };
+        /** @description Request to create a user. */
+        CreateUserRequest: {
+            displayName: string;
+            username: string;
         };
         /** @description Stable API representation of a managed device. */
         DeviceDto: {
@@ -393,6 +586,12 @@ export interface components {
         HealthDto: {
             component: string;
             status: string;
+        };
+        /** @description Request to enable or disable MFA. */
+        ManageMfaRequest: {
+            enabled: boolean;
+            /** Format: int64 */
+            expectedRevision: number;
         };
         /** @description Request to move an organization unit. */
         MoveOrganizationUnitRequest: {
@@ -478,6 +677,12 @@ export interface components {
             tenantId?: string | null;
             updatedAt: string;
         };
+        /** @description Request to set a user's password. */
+        SetPasswordRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            password: string;
+        };
         /** @description Stable API representation of a spatial node. */
         SpatialNodeDto: {
             actor?: string | null;
@@ -517,11 +722,33 @@ export interface components {
             expectedRevision: number;
             name: string;
         };
+        /** @description Request to update a role binding. */
+        UpdateRoleBindingRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            roleId: string;
+            scope: components["schemas"]["RoleBindingScopeDto"];
+            validFrom: string;
+            validUntil?: string | null;
+        };
+        /** @description Request to update a role. */
+        UpdateRoleRequest: {
+            /** Format: int64 */
+            expectedRevision: number;
+            name: string;
+            permissions: string[];
+        };
         /** @description Request to update a spatial node. */
         UpdateSpatialNodeRequest: {
             /** Format: int64 */
             expectedRevision: number;
             name: string;
+        };
+        /** @description Request to update a user. */
+        UpdateUserRequest: {
+            displayName: string;
+            /** Format: int64 */
+            expectedRevision: number;
         };
         /** @description Stable API representation of a user. */
         UserDto: {
@@ -566,6 +793,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditRecordDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    explain_auth: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AuthExplainRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthExplainResponse"];
                 };
             };
             /** @description Not implemented */
@@ -956,6 +1216,75 @@ export interface operations {
             };
         };
     };
+    list_role_bindings: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                search?: string;
+                /** @description Principal filter */
+                principalId?: string;
+                /** @description Role filter */
+                roleId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleBindingDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_role_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleBindingDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_role_binding: {
         parameters: {
             query?: never;
@@ -987,6 +1316,153 @@ export interface operations {
             };
         };
     };
+    delete_role_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_role_binding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleBindingDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    list_roles: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_role: {
         parameters: {
             query?: never;
@@ -1005,6 +1481,121 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RoleDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    delete_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_service_account: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateServiceAccountRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyCreatedDto"];
                 };
             };
             /** @description Not implemented */
@@ -1284,6 +1875,73 @@ export interface operations {
             };
         };
     };
+    list_users: {
+        parameters: {
+            query?: {
+                /** @description Search term */
+                search?: string;
+                /** @description User status */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"][];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    create_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
     get_user: {
         parameters: {
             query?: never;
@@ -1302,6 +1960,207 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    update_user: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    manage_user_mfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManageMfaRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    set_user_password: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description No content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Not implemented */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+        };
+    };
+    change_user_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangeUserStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserDto"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
+                };
+            };
+            /** @description Precondition failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProblemDetailsDto"];
                 };
             };
             /** @description Not implemented */

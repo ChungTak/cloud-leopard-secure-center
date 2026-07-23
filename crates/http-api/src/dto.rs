@@ -167,6 +167,122 @@ pub struct MoveSpatialNodeRequest {
     pub expected_revision: u64,
 }
 
+/// Request to create a user.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateUserRequest {
+    pub username: String,
+    pub display_name: String,
+}
+
+/// Request to update a user.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateUserRequest {
+    pub display_name: String,
+    pub expected_revision: u64,
+}
+
+/// Request to change a user status.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangeUserStatusRequest {
+    pub status: String,
+    pub expected_revision: u64,
+}
+
+/// Request to set a user's password.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SetPasswordRequest {
+    pub password: String,
+    pub expected_revision: u64,
+}
+
+/// Request to enable or disable MFA.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ManageMfaRequest {
+    pub enabled: bool,
+    pub expected_revision: u64,
+}
+
+/// Request to create a service account.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateServiceAccountRequest {
+    pub name: String,
+}
+
+/// Response containing a newly created API key (shown once).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiKeyCreatedDto {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub key: String,
+    pub scopes: Vec<String>,
+    pub expires_at: Option<String>,
+}
+
+/// Request to create a role.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRoleRequest {
+    pub name: String,
+    pub permissions: Vec<String>,
+}
+
+/// Request to update a role.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateRoleRequest {
+    pub name: String,
+    pub permissions: Vec<String>,
+    pub expected_revision: u64,
+}
+
+/// Request to create a role binding.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRoleBindingRequest {
+    pub principal_id: String,
+    pub role_id: String,
+    pub scope: RoleBindingScopeDto,
+    pub valid_from: String,
+    pub valid_until: Option<String>,
+}
+
+/// Request to update a role binding.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateRoleBindingRequest {
+    pub role_id: String,
+    pub scope: RoleBindingScopeDto,
+    pub valid_from: String,
+    pub valid_until: Option<String>,
+    pub expected_revision: u64,
+}
+
+/// Request to preview an authorization decision.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthExplainRequest {
+    pub principal_id: String,
+    pub action: String,
+    pub resource_type: String,
+    pub resource_id: String,
+}
+
+/// Authorization explanation.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthExplainResponse {
+    pub decision: String,
+    pub reason: String,
+}
+
 /// Stable API representation of a user.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

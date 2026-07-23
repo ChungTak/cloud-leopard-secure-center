@@ -8,11 +8,14 @@ use axum::{
 
 use crate::{
     dto::{
-        AuditRecordDto, CameraDto, ConfigDefinitionDto, ConfigValueDto,
-        CreateOrganizationUnitRequest, CreateSpatialNodeRequest, DeviceDto, HealthDto,
-        MoveOrganizationUnitRequest, MoveSpatialNodeRequest, OrganizationUnitDto,
-        ProblemDetailsDto, RoleBindingDto, RoleDto, SpatialNodeDto, TenantDto,
-        UpdateOrganizationUnitRequest, UpdateSpatialNodeRequest, UserDto,
+        ApiKeyCreatedDto, AuditRecordDto, AuthExplainRequest, AuthExplainResponse, CameraDto,
+        ChangeUserStatusRequest, ConfigDefinitionDto, ConfigValueDto,
+        CreateOrganizationUnitRequest, CreateRoleBindingRequest, CreateRoleRequest,
+        CreateServiceAccountRequest, CreateSpatialNodeRequest, CreateUserRequest, DeviceDto,
+        HealthDto, ManageMfaRequest, MoveOrganizationUnitRequest, MoveSpatialNodeRequest,
+        OrganizationUnitDto, ProblemDetailsDto, RoleBindingDto, RoleDto, SetPasswordRequest,
+        SpatialNodeDto, TenantDto, UpdateOrganizationUnitRequest, UpdateRoleBindingRequest,
+        UpdateRoleRequest, UpdateSpatialNodeRequest, UpdateUserRequest, UserDto,
     },
     error::AppError,
 };
@@ -372,6 +375,282 @@ pub(crate) async fn delete_spatial_node(Path(_id): Path<String>) -> Result<(), A
     Err(AppError::NotImplemented)
 }
 
+/// List users.
+#[utoipa::path(
+    get,
+    path = "/users",
+    params(
+        ("search" = Option<String>, Query, description = "Search term"),
+        ("status" = Option<String>, Query, description = "User status")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<UserDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_users(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<UserDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a user.
+#[utoipa::path(
+    post,
+    path = "/users",
+    request_body = CreateUserRequest,
+    responses(
+        (status = 201, description = "Created", body = UserDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_user(
+    Json(_body): Json<CreateUserRequest>,
+) -> Result<Json<UserDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a user.
+#[utoipa::path(
+    patch,
+    path = "/users/{id}",
+    request_body = UpdateUserRequest,
+    responses(
+        (status = 200, description = "OK", body = UserDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_user(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateUserRequest>,
+) -> Result<Json<UserDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Change a user's status.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/status",
+    request_body = ChangeUserStatusRequest,
+    responses(
+        (status = 200, description = "OK", body = UserDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn change_user_status(
+    Path(_id): Path<String>,
+    Json(_body): Json<ChangeUserStatusRequest>,
+) -> Result<Json<UserDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Set a user's password.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/password",
+    request_body = SetPasswordRequest,
+    responses(
+        (status = 204, description = "No content"),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn set_user_password(
+    Path(_id): Path<String>,
+    Json(_body): Json<SetPasswordRequest>,
+) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Manage a user's MFA.
+#[utoipa::path(
+    post,
+    path = "/users/{id}/mfa",
+    request_body = ManageMfaRequest,
+    responses(
+        (status = 200, description = "OK", body = UserDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn manage_user_mfa(
+    Path(_id): Path<String>,
+    Json(_body): Json<ManageMfaRequest>,
+) -> Result<Json<UserDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a service account.
+#[utoipa::path(
+    post,
+    path = "/service-accounts",
+    request_body = CreateServiceAccountRequest,
+    responses(
+        (status = 201, description = "Created", body = ApiKeyCreatedDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_service_account(
+    Json(_body): Json<CreateServiceAccountRequest>,
+) -> Result<Json<ApiKeyCreatedDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List roles.
+#[utoipa::path(
+    get,
+    path = "/roles",
+    params(
+        ("search" = Option<String>, Query, description = "Search term")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<RoleDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_roles(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<RoleDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a role.
+#[utoipa::path(
+    post,
+    path = "/roles",
+    request_body = CreateRoleRequest,
+    responses(
+        (status = 201, description = "Created", body = RoleDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_role(
+    Json(_body): Json<CreateRoleRequest>,
+) -> Result<Json<RoleDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a role.
+#[utoipa::path(
+    patch,
+    path = "/roles/{id}",
+    request_body = UpdateRoleRequest,
+    responses(
+        (status = 200, description = "OK", body = RoleDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_role(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateRoleRequest>,
+) -> Result<Json<RoleDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete a role.
+#[utoipa::path(
+    delete,
+    path = "/roles/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_role(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List role bindings.
+#[utoipa::path(
+    get,
+    path = "/role-bindings",
+    params(
+        ("search" = Option<String>, Query, description = "Search term"),
+        ("principalId" = Option<String>, Query, description = "Principal filter"),
+        ("roleId" = Option<String>, Query, description = "Role filter")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<RoleBindingDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_role_bindings(
+    Query(_q): Query<ListQuery>,
+) -> Result<Json<Vec<RoleBindingDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Create a role binding.
+#[utoipa::path(
+    post,
+    path = "/role-bindings",
+    request_body = CreateRoleBindingRequest,
+    responses(
+        (status = 201, description = "Created", body = RoleBindingDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn create_role_binding(
+    Json(_body): Json<CreateRoleBindingRequest>,
+) -> Result<Json<RoleBindingDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Update a role binding.
+#[utoipa::path(
+    patch,
+    path = "/role-bindings/{id}",
+    request_body = UpdateRoleBindingRequest,
+    responses(
+        (status = 200, description = "OK", body = RoleBindingDto),
+        (status = 409, description = "Conflict", body = ProblemDetailsDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_role_binding(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateRoleBindingRequest>,
+) -> Result<Json<RoleBindingDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Delete a role binding.
+#[utoipa::path(
+    delete,
+    path = "/role-bindings/{id}",
+    responses(
+        (status = 204, description = "No content"),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn delete_role_binding(Path(_id): Path<String>) -> Result<(), AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// Explain an authorization decision.
+#[utoipa::path(
+    post,
+    path = "/auth/explain",
+    request_body = AuthExplainRequest,
+    responses(
+        (status = 200, description = "OK", body = AuthExplainResponse),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn explain_auth(
+    Json(_body): Json<AuthExplainRequest>,
+) -> Result<Json<AuthExplainResponse>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
 /// Public router exposing health and resource definition stubs.
 pub fn router() -> Router {
     Router::new()
@@ -402,9 +681,28 @@ pub fn router() -> Router {
                 .delete(delete_spatial_node),
         )
         .route("/spatial-nodes/{id}/move", post(move_spatial_node))
-        .route("/users/{id}", get(get_user))
-        .route("/roles/{id}", get(get_role))
-        .route("/role-bindings/{id}", get(get_role_binding))
+        .route("/service-accounts", post(create_service_account))
+        .route("/users", post(create_user).get(list_users))
+        .route("/users/{id}", get(get_user).patch(update_user))
+        .route("/users/{id}/status", post(change_user_status))
+        .route("/users/{id}/password", post(set_user_password))
+        .route("/users/{id}/mfa", post(manage_user_mfa))
+        .route("/roles", post(create_role).get(list_roles))
+        .route(
+            "/roles/{id}",
+            get(get_role).patch(update_role).delete(delete_role),
+        )
+        .route(
+            "/role-bindings",
+            post(create_role_binding).get(list_role_bindings),
+        )
+        .route(
+            "/role-bindings/{id}",
+            get(get_role_binding)
+                .patch(update_role_binding)
+                .delete(delete_role_binding),
+        )
+        .route("/auth/explain", post(explain_auth))
         .route("/devices/{id}", get(get_device))
         .route("/cameras/{id}", get(get_camera))
         .route("/audit-records/{id}", get(get_audit_record))
