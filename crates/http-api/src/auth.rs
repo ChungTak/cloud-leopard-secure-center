@@ -1,10 +1,12 @@
 //! HTTP authentication extractor and helpers.
 
 use application::auth::{AuthContext, Authenticator};
+use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
     http::{StatusCode, header, request::Parts},
 };
+use foundation::{ErrorCode, PlatformError};
 use std::sync::Arc;
 
 use crate::error::AppError;
@@ -36,16 +38,13 @@ pub fn extract_bearer(headers: &axum::http::HeaderMap) -> Result<String, AppErro
         .get(header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok())
         .ok_or(AppError::Unauthenticated)?;
-    let mut parts = header.splitn(2, char::is_whitespace);
+    let mut parts = header.split_whitespace();
     let scheme = parts.next().ok_or(AppError::Unauthenticated)?;
     if !scheme.eq_ignore_ascii_case("bearer") {
         return Err(AppError::Unauthenticated);
     }
-    let token = parts
-        .next()
-        .map(str::trim_start)
-        .ok_or(AppError::Unauthenticated)?;
-    if token.is_empty() {
+    let token = parts.next().ok_or(AppError::Unauthenticated)?;
+    if parts.next().is_some() || token.is_empty() {
         return Err(AppError::Unauthenticated);
     }
     Ok(token.to_string())
@@ -81,4 +80,22 @@ pub fn www_authenticate() -> (StatusCode, [(&'static str, &'static str); 1], ())
         [("WWW-Authenticate", "Bearer")],
         (),
     )
+}
+
+/// Fallback authenticator that rejects every token.
+///
+/// Useful as a safe default in binaries that have not yet wired a real
+/// `TokenAuthenticator`; it prevents `Auth`/`ApiRequestContext` from leaking
+/// an internal server error when a client sends an `Authorization` header.
+#[derive(Debug, Clone)]
+pub struct DenyAllAuthenticator;
+
+#[async_trait]
+impl Authenticator for DenyAllAuthenticator {
+    async fn authenticate(&self, _token: &str) -> Result<AuthContext, PlatformError> {
+        Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid token",
+        ))
+    }
 }

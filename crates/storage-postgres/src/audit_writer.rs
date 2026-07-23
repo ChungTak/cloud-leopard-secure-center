@@ -1,5 +1,6 @@
 //! PostgreSQL append-only audit writer.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_audit::audit_record::{AuditDetails, AuditRecord, AuditRecordId};
 use foundation::{
@@ -91,10 +92,6 @@ fn details_to_json(details: &AuditDetails) -> Result<serde_json::Value, Platform
 
 fn timestamp_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn missing_tenant() -> PlatformError {

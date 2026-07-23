@@ -1,5 +1,6 @@
 //! PostgreSQL configuration repository.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_configuration::{
     ConfigDefinition, ConfigScope, ConfigValue, ConfigValueId, resolve_config,
@@ -349,8 +350,4 @@ fn parse_scope(
             format!("unknown scope type: {scope_type}"),
         )),
     }
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

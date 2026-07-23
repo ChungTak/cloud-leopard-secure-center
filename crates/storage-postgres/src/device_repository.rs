@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{DeviceRepository, ListOptions, Page};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed managed device repository.
 #[derive(Debug, Clone)]
@@ -306,10 +306,6 @@ fn row_to_device(row: sqlx::postgres::PgRow) -> Result<ManagedDevice, PlatformEr
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn missing_tenant() -> PlatformError {

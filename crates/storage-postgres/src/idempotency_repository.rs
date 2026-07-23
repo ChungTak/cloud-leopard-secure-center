@@ -1,5 +1,6 @@
 //! PostgreSQL implementation of the `IdempotencyRepository` port.
 
+use crate::db_error;
 use async_trait::async_trait;
 use foundation::chrono::{DateTime, Utc};
 use foundation::uuid::Uuid;
@@ -181,8 +182,4 @@ fn row_to_record(row: sqlx::postgres::PgRow) -> Result<IdempotencyRecord, Platfo
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::invalid("storage", e.to_string())
 }

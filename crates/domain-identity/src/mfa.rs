@@ -121,8 +121,8 @@ impl MfaFactor {
         if Some(step) == self.last_used_step && Some(code.to_string()) == self.last_used_code {
             return Ok(false);
         }
-        if totp::verify(secret, code, now)? {
-            self.last_used_step = Some(step);
+        if let Some(matched_step) = totp::verify(secret, code, now)? {
+            self.last_used_step = Some(matched_step);
             self.last_used_code = Some(code.to_string());
             Ok(true)
         } else {

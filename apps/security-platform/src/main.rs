@@ -5,9 +5,11 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
+use application::auth::Authenticator;
 use axum::{Extension, Router};
 use foundation::config::RateLimitConfig;
 use foundation::{RandomSource, SystemRandom};
+use http_api::auth::DenyAllAuthenticator;
 use http_api::client_ip::TrustedProxyConfig;
 use http_api::idempotency::IdempotencyState;
 use http_api::pagination::PaginationConfig;
@@ -41,8 +43,13 @@ fn main() -> ExitCode {
 async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let port: u16 = env::var("CLSC_HTTP_PORT")
         .ok()
-        .and_then(|v| v.parse().ok())
+        .map(|v| v.parse())
+        .transpose()
+        .map_err(|_| "CLSC_HTTP_PORT must be a valid u16")?
         .unwrap_or(8080);
+    if port == 0 {
+        return Err("CLSC_HTTP_PORT must be non-zero".into());
+    }
     let static_dir: PathBuf = env::var("CLSC_STATIC_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/var/www/static"));
@@ -66,27 +73,30 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         })
         .unwrap_or_default();
 
-    let cursor_secret = env::var("CLSC_CURSOR_SECRET")
+    let cursor_secret = if let Some(secret) = env::var("CLSC_CURSOR_SECRET")
         .ok()
         .filter(|s| !s.is_empty())
-        .map(|s| s.into_bytes())
-        .unwrap_or_else(|| {
-            eprintln!(
-                "warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret"
-            );
-            let mut buf = [0u8; 32];
-            if let Err(e) = SystemRandom.fill_bytes(&mut buf) {
-                eprintln!("failed to generate pagination secret: {e}");
-            }
-            buf.to_vec()
-        });
+    {
+        secret.into_bytes()
+    } else {
+        eprintln!("warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret");
+        let mut buf = [0u8; 32];
+        SystemRandom
+            .fill_bytes(&mut buf)
+            .map_err(|e| format!("failed to generate pagination secret: {e}"))?;
+        buf.to_vec()
+    };
     let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret));
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
         .ok()
+        .filter(|s| !s.is_empty())
         .map(|v| {
-            let origins: Vec<String> = v.split(',').map(|s| s.trim().to_string()).collect();
-            if origins.is_empty() { vec![] } else { origins }
+            v.split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+                .collect::<Vec<_>>()
         })
         .or_else(|| Some(vec![]));
 
@@ -97,7 +107,10 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             .layer(Extension(rate_limit_state))
             .layer(Extension(proxy_config))
             .layer(Extension(pagination_config))
-            .layer(Extension(idempotency_state));
+            .layer(Extension(idempotency_state))
+            .layer(Extension::<Arc<dyn Authenticator>>(Arc::new(
+                DenyAllAuthenticator,
+            )));
     let app = if static_dir.is_dir() {
         let index = static_dir.join("index.html");
         let serve = ServeDir::new(&static_dir)
@@ -111,6 +124,10 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     let listener = TcpListener::bind(addr).await?;
     println!("security-platform listening on {addr}");
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }

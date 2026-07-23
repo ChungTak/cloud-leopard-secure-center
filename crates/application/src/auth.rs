@@ -1,8 +1,6 @@
 //! Authentication port and token-backed implementation.
 
 use async_trait::async_trait;
-use base64ct::{Base64UrlUnpadded, Encoding};
-use domain_identity::token::AccessTokenClaims;
 use domain_identity::user::{User, UserStatus};
 use foundation::{Clock, ErrorCode, PlatformError, RequestContext, TenantId, UserId};
 use std::sync::Arc;
@@ -59,21 +57,6 @@ impl TokenAuthenticator {
         }
     }
 
-    /// Parse claims without verifying the signature to locate the user.
-    fn parse_unverified_claims(&self, token: &str) -> Result<AccessTokenClaims, PlatformError> {
-        let parts: Vec<&str> = token.split('.').collect();
-        if parts.len() != 3 {
-            return Err(PlatformError::new(
-                ErrorCode::Unauthenticated,
-                "invalid token",
-            ));
-        }
-        let claims_bytes = Base64UrlUnpadded::decode_vec(parts[1])
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
-        serde_json::from_slice(&claims_bytes)
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))
-    }
-
     /// Determine whether the user referenced by the token is allowed to authenticate.
     fn user_is_valid(&self, user: &User) -> Result<(), PlatformError> {
         if user.status != UserStatus::Active {
@@ -89,7 +72,11 @@ impl TokenAuthenticator {
 #[async_trait]
 impl Authenticator for TokenAuthenticator {
     async fn authenticate(&self, token: &str) -> Result<AuthContext, PlatformError> {
-        let claims = self.parse_unverified_claims(token)?;
+        // Verify the token's signature and core claims before touching the user
+        // repository, so forged or expired tokens cannot be used to probe users.
+        let claims = self
+            .token_service
+            .verify_access_token_claims(token, self.clock.now())?;
 
         let ctx = RequestContext {
             tenant_id: Some(claims.tenant_id),
@@ -103,13 +90,13 @@ impl Authenticator for TokenAuthenticator {
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         self.user_is_valid(&user)?;
 
-        let verified = self.token_service.verify_access_token(
-            token,
-            self.clock.now(),
-            user.session_version,
-        )?;
-
-        if verified.tenant_id != user.tenant_id {
+        if claims.session_version != user.session_version {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        if claims.tenant_id != user.tenant_id {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -120,7 +107,7 @@ impl Authenticator for TokenAuthenticator {
             user_id: user.id,
             tenant_id: user.tenant_id,
             session_version: user.session_version,
-            jti: verified.jti,
+            jti: claims.jti,
         })
     }
 }
@@ -187,6 +174,7 @@ pub fn test_auth_context(user_id: UserId, tenant_id: TenantId) -> AuthContext {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use base64ct::Encoding;
     use foundation::{
         FakeClock, SystemClock, SystemIdGenerator, SystemRandom, UtcTimestamp, chrono::TimeZone,
     };

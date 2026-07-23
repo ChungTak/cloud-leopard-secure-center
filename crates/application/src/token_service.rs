@@ -73,12 +73,31 @@ impl TokenService {
         self.sign(&claims)
     }
 
-    /// Verify an access token and return its claims.
+    /// Verify an access token, including its session version.
     pub fn verify_access_token(
         &self,
         token: &str,
         now: UtcTimestamp,
         expected_session_version: u64,
+    ) -> Result<AccessTokenClaims, PlatformError> {
+        let claims = self.verify_access_token_claims(token, now)?;
+        if claims.session_version != expected_session_version {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        Ok(claims)
+    }
+
+    /// Verify an access token's signature, header, issuer, audience, expiration
+    /// and nbf/jti claims, returning the decoded claims. The caller is still
+    /// responsible for checking the session version against the stored user
+    /// record, so this can be used before fetching the user.
+    pub fn verify_access_token_claims(
+        &self,
+        token: &str,
+        now: UtcTimestamp,
     ) -> Result<AccessTokenClaims, PlatformError> {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 3 {
@@ -94,21 +113,8 @@ impl TokenService {
 
         self.verify_header(header_b64)?;
 
-        let claims_bytes = Base64UrlUnpadded::decode_vec(claims_b64)
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
-        let claims: AccessTokenClaims = serde_json::from_slice(&claims_bytes)
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
-
-        if claims.session_version != expected_session_version {
-            return Err(PlatformError::new(
-                ErrorCode::Unauthenticated,
-                "invalid token",
-            ));
-        }
-
-        claims.validate(&self.issuer, &self.audience, now)?;
-        self.validate_nbf_and_jti(&claims, now)?;
-
+        // Verify the signature before decoding or validating claims so that
+        // an attacker cannot probe claim validation with a forged token.
         let signature = Base64UrlUnpadded::decode_vec(sig_b64)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         let message = format!("{}.{}", header_b64, claims_b64);
@@ -116,6 +122,14 @@ impl TokenService {
         mac.update(message.as_bytes());
         mac.verify_slice(&signature)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+
+        let claims_bytes = Base64UrlUnpadded::decode_vec(claims_b64)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        let claims: AccessTokenClaims = serde_json::from_slice(&claims_bytes)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+
+        claims.validate(&self.issuer, &self.audience, now)?;
+        self.validate_nbf_and_jti(&claims, now)?;
 
         Ok(claims)
     }
@@ -174,9 +188,7 @@ impl TokenService {
         let raw = Base64UrlUnpadded::encode_string(&raw);
         let token_hash = hash_raw(&raw);
 
-        let mut id_bytes = [0u8; 16];
-        random.fill_bytes(&mut id_bytes)?;
-        let id = Uuid::from_bytes(id_bytes);
+        let id = foundation::generate_uuid(clock, random)?;
 
         let created_at = clock.now();
         let token = RefreshToken {

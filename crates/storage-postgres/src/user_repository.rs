@@ -10,7 +10,7 @@ use foundation::{
 use sqlx::Row;
 use storage_api::{ListOptions, Page, UserRepository};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed user repository.
 #[derive(Debug, Clone)]
@@ -96,7 +96,7 @@ impl UserRepository for PostgresUserRepository {
         .bind(user.actor.map(|a| *a.as_uuid()))
         .execute(&mut *tx)
         .await
-        .map_err(map_create_error)?;
+        .map_err(crate::db_error)?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
         Ok(())
@@ -281,17 +281,4 @@ fn row_to_user(row: sqlx::postgres::PgRow) -> Result<User, PlatformError> {
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
-}
-
-fn map_create_error(e: sqlx::Error) -> PlatformError {
-    if let sqlx::Error::Database(ref db) = e
-        && db.constraint().is_some()
-    {
-        return PlatformError::new(ErrorCode::Exists, "user already exists");
-    }
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

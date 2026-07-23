@@ -53,8 +53,11 @@ fn request_id_from_parts(parts: &Parts) -> Option<MessageId> {
 
 /// Parse the tenant id from the first `/tenants/<uuid>` segment, if any.
 fn tenant_from_path(path: &str) -> Option<TenantId> {
-    let prefix = "/tenants/";
-    let rest = path.strip_prefix(prefix)?;
-    let segment = rest.split('/').next()?;
-    TenantId::parse_str(segment).ok()
+    let mut segments = path.split('/');
+    while let Some(segment) = segments.next() {
+        if segment == "tenants" {
+            return segments.next().and_then(|s| TenantId::parse_str(s).ok());
+        }
+    }
+    None
 }

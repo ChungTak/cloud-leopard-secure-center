@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ListOptions, Page, SpatialRepository};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed spatial repository.
 #[derive(Debug, Clone)]
@@ -937,8 +937,9 @@ impl SpatialRepository for PostgresSpatialRepository {
                 if a.coordinate_system != "WGS84" {
                     return false;
                 }
-                let lat = a.latitude.unwrap_or(0.0);
-                let lon = a.longitude.unwrap_or(0.0);
+                let (Some(lat), Some(lon)) = (a.latitude, a.longitude) else {
+                    return false;
+                };
                 haversine_distance(latitude, longitude, lat, lon) <= radius_meters
             })
             .collect();
@@ -1204,10 +1205,6 @@ fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
 
 fn missing_tenant() -> PlatformError {
     PlatformError::new(ErrorCode::Unauthenticated, "missing tenant".to_string())
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {

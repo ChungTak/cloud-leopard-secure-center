@@ -98,12 +98,10 @@ async fn status_codes_return_problem_details_without_internal_source() {
 
         assert_eq!(problem["status"].as_u64(), Some(u64::from(expected)));
         assert!(problem["detail"].is_string());
-        assert!(
-            problem["type"]
-                .as_str()
-                .unwrap_or("")
-                .starts_with("https://"),
-            "problem type should be a public URI, not an internal source"
+        assert_eq!(
+            problem["type"].as_str(),
+            Some("about:blank"),
+            "problem type should use the RFC 9457 default URI"
         );
         assert!(
             body.windows("source".len())

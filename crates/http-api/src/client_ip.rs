@@ -16,9 +16,25 @@ pub struct TrustedProxyConfig {
 }
 
 impl TrustedProxyConfig {
-    /// Create a config from raw CIDR strings. Invalid entries are ignored.
+    /// Create a config from raw CIDR or single-IP strings. Invalid entries are ignored.
     pub fn parse(raw: &[String]) -> Self {
-        let networks = raw.iter().filter_map(|s| s.parse::<IpNet>().ok()).collect();
+        let networks = raw
+            .iter()
+            .filter_map(|s| {
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    return None;
+                }
+                if let Ok(net) = trimmed.parse::<IpNet>() {
+                    return Some(net);
+                }
+                if let Ok(addr) = trimmed.parse::<IpAddr>() {
+                    let prefix = if addr.is_ipv4() { 32 } else { 128 };
+                    return IpNet::new(addr, prefix).ok();
+                }
+                None
+            })
+            .collect();
         Self { networks }
     }
 

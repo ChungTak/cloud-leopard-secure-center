@@ -1,5 +1,6 @@
 //! PostgreSQL implementation of the signaling projection repository.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_resource::projection::{
     ChannelEvent, ChannelProjection, DeviceEvent, DeviceProjection, ProjectionFailure,
@@ -708,10 +709,6 @@ async fn record_failure_sql(
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn missing_tenant() -> PlatformError {

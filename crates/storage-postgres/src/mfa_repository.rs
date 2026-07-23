@@ -1,9 +1,10 @@
 //! PostgreSQL implementation of the `MfaRepository` port.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_identity::mfa::{MfaFactor, MfaFactorType};
 use foundation::{
-    ErrorCode, PlatformError, RequestContext, TenantId, UserId, UtcTimestamp,
+    PlatformError, RequestContext, TenantId, UserId, UtcTimestamp,
     chrono::{DateTime, Utc},
     uuid::Uuid,
 };
@@ -160,8 +161,4 @@ fn row_to_factor(row: sqlx::postgres::PgRow) -> Result<MfaFactor, PlatformError>
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

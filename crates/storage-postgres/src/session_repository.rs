@@ -1,5 +1,6 @@
 //! PostgreSQL implementation of the `SessionRepository` port.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_identity::session::RefreshToken;
 use foundation::{
@@ -185,8 +186,4 @@ fn row_to_refresh_token(row: sqlx::postgres::PgRow) -> Result<RefreshToken, Plat
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

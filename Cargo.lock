@@ -450,6 +450,7 @@ dependencies = [
  "serde",
  "sha1",
  "sha2 0.11.0",
+ "subtle",
  "thiserror",
 ]
 

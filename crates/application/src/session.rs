@@ -6,7 +6,7 @@ use domain_identity::credential::CredentialType;
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus};
 use foundation::{
-    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp, uuid::Uuid,
+    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp,
 };
 use storage_api::{CredentialRepository, SessionRepository, UserRepository};
 
@@ -37,7 +37,7 @@ pub async fn issue_token_pair(
         generate_jti(random)?,
     )?;
 
-    let family_id = new_uuid(random)?;
+    let family_id = foundation::generate_uuid(clock, random)?;
     let (refresh_token, stored) = token_service.generate_refresh_token(
         user.tenant_id,
         user.id,
@@ -229,10 +229,4 @@ fn generate_jti(random: &dyn RandomSource) -> Result<String, PlatformError> {
     let mut bytes = [0u8; 16];
     random.fill_bytes(&mut bytes)?;
     Ok(base64ct::Base64UrlUnpadded::encode_string(&bytes))
-}
-
-fn new_uuid(random: &dyn RandomSource) -> Result<Uuid, PlatformError> {
-    let mut bytes = [0u8; 16];
-    random.fill_bytes(&mut bytes)?;
-    Ok(Uuid::from_bytes(bytes))
 }
