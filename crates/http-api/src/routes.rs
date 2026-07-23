@@ -16,9 +16,9 @@ use crate::{
         DeviceDto, ExternalBindingDto, HealthDto, ManageMfaRequest, MoveOrganizationUnitRequest,
         MoveSpatialNodeRequest, OrganizationUnitDto, ProblemDetailsDto, ProjectionStateDto,
         ResolveExternalBindingConflictRequest, RoleBindingDto, RoleDto, SetPasswordRequest,
-        SpatialNodeDto, TagDto, TenantDto, UpdateCameraRequest, UpdateDeviceRequest,
-        UpdateOrganizationUnitRequest, UpdateRoleBindingRequest, UpdateRoleRequest,
-        UpdateSpatialNodeRequest, UpdateTagRequest, UpdateUserRequest, UserDto,
+        SpatialNodeDto, TagDto, TenantDto, UpdateCameraRequest, UpdateConfigValueRequest,
+        UpdateDeviceRequest, UpdateOrganizationUnitRequest, UpdateRoleBindingRequest,
+        UpdateRoleRequest, UpdateSpatialNodeRequest, UpdateTagRequest, UpdateUserRequest, UserDto,
     },
     error::AppError,
 };
@@ -133,6 +133,29 @@ pub(crate) async fn get_camera(Path(_id): Path<String>) -> Result<Json<CameraDto
     Err(AppError::NotImplemented)
 }
 
+/// List audit records.
+#[utoipa::path(
+    get,
+    path = "/audit-records",
+    params(
+        ("targetType" = Option<String>, Query, description = "Target type"),
+        ("targetId" = Option<String>, Query, description = "Target ID"),
+        ("action" = Option<String>, Query, description = "Action filter"),
+        ("from" = Option<String>, Query, description = "Start time (RFC 3339)"),
+        ("to" = Option<String>, Query, description = "End time (RFC 3339)"),
+        ("search" = Option<String>, Query, description = "Search term")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<AuditRecordDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_audit_records(
+    Query(_q): Query<AuditListQuery>,
+) -> Result<Json<Vec<AuditRecordDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
 /// Get an audit record by id.
 #[utoipa::path(
     get,
@@ -163,6 +186,43 @@ pub(crate) async fn get_config_value(
     Err(AppError::NotImplemented)
 }
 
+/// Update a configuration value.
+#[utoipa::path(
+    patch,
+    path = "/config-values/{id}",
+    request_body = UpdateConfigValueRequest,
+    responses(
+        (status = 200, description = "OK", body = ConfigValueDto),
+        (status = 412, description = "Precondition failed", body = ProblemDetailsDto),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn update_config_value(
+    Path(_id): Path<String>,
+    Json(_body): Json<UpdateConfigValueRequest>,
+) -> Result<Json<ConfigValueDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List configuration values.
+#[utoipa::path(
+    get,
+    path = "/config-values",
+    params(
+        ("module" = Option<String>, Query, description = "Module filter"),
+        ("search" = Option<String>, Query, description = "Search term")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<ConfigValueDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_config_values(
+    Query(_q): Query<ConfigValueListQuery>,
+) -> Result<Json<Vec<ConfigValueDto>>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
 /// Get a configuration definition by key.
 #[utoipa::path(
     get,
@@ -175,6 +235,25 @@ pub(crate) async fn get_config_value(
 pub(crate) async fn get_config_definition(
     Path(_id): Path<String>,
 ) -> Result<Json<ConfigDefinitionDto>, AppError> {
+    Err(AppError::NotImplemented)
+}
+
+/// List configuration definitions.
+#[utoipa::path(
+    get,
+    path = "/config-definitions",
+    params(
+        ("module" = Option<String>, Query, description = "Module filter"),
+        ("search" = Option<String>, Query, description = "Search term")
+    ),
+    responses(
+        (status = 200, description = "OK", body = Vec<ConfigDefinitionDto>),
+        (status = 501, description = "Not implemented", body = ProblemDetailsDto)
+    )
+)]
+pub(crate) async fn list_config_definitions(
+    Query(_q): Query<ConfigDefinitionListQuery>,
+) -> Result<Json<Vec<ConfigDefinitionDto>>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -252,6 +331,44 @@ pub(crate) struct ProjectionListQuery {
     pub device_id: Option<String>,
     #[serde(default)]
     pub is_stale: Option<bool>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct AuditListQuery {
+    #[serde(default)]
+    pub target_type: Option<String>,
+    #[serde(default)]
+    pub target_id: Option<String>,
+    #[serde(default)]
+    pub action: Option<String>,
+    #[serde(default)]
+    pub from: Option<String>,
+    #[serde(default)]
+    pub to: Option<String>,
+    #[serde(default)]
+    pub search: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct ConfigDefinitionListQuery {
+    #[serde(default)]
+    pub module: Option<String>,
+    #[serde(default)]
+    pub search: Option<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
+pub(crate) struct ConfigValueListQuery {
+    #[serde(default)]
+    pub module: Option<String>,
+    #[serde(default)]
+    pub search: Option<String>,
 }
 
 /// List organization units.
@@ -1105,7 +1222,13 @@ pub fn router() -> Router {
             post(resolve_external_binding_conflict),
         )
         .route("/projections", get(list_projections))
+        .route("/audit-records", get(list_audit_records))
         .route("/audit-records/{id}", get(get_audit_record))
-        .route("/config-values/{id}", get(get_config_value))
+        .route("/config-values", get(list_config_values))
+        .route(
+            "/config-values/{id}",
+            get(get_config_value).patch(update_config_value),
+        )
+        .route("/config-definitions", get(list_config_definitions))
         .route("/config-definitions/{key}", get(get_config_definition))
 }

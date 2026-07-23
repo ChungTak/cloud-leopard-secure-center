@@ -17,3 +17,5 @@ export const ExternalBindingsPage = lazy(
   () => import('./ExternalBindingsPage.tsx'),
 );
 export const ProjectionsPage = lazy(() => import('./ProjectionsPage.tsx'));
+export const AuditPage = lazy(() => import('./AuditPage.tsx'));
+export const ConfigPage = lazy(() => import('./ConfigPage.tsx'));
