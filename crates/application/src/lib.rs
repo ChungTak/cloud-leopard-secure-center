@@ -3,9 +3,16 @@
 pub mod api_key;
 pub mod authenticate;
 pub mod authorization;
+pub mod config;
+pub mod device;
 pub mod mfa;
+pub mod organization;
+pub mod role;
 pub mod session;
+pub mod tenant;
 pub mod token_service;
+pub mod usecase;
+pub mod user;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
