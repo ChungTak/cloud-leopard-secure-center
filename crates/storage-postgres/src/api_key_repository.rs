@@ -10,7 +10,7 @@ use foundation::{
 use sqlx::Row;
 use storage_api::{ApiKeyRepository, ListOptions, Page};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed API key repository.
 #[derive(Debug, Clone)]
@@ -189,8 +189,4 @@ fn row_to_api_key(row: sqlx::postgres::PgRow) -> Result<ApiKey, PlatformError> {
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

@@ -1,5 +1,6 @@
 //! PostgreSQL implementation of the `CredentialRepository` port.
 
+use crate::db_error;
 use async_trait::async_trait;
 use domain_identity::credential::{Credential, CredentialType};
 use foundation::{
@@ -200,8 +201,4 @@ fn row_to_credential(row: sqlx::postgres::PgRow) -> Result<Credential, PlatformE
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }

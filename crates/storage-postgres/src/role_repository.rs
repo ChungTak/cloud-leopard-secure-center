@@ -10,7 +10,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ListOptions, Page, RoleRepository};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed role repository.
 #[derive(Debug, Clone)]
@@ -331,10 +331,6 @@ fn row_to_role(row: sqlx::postgres::PgRow) -> Result<Role, PlatformError> {
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn missing_tenant() -> PlatformError {

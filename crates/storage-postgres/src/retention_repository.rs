@@ -1,3 +1,4 @@
+use crate::db_error;
 use async_trait::async_trait;
 use domain_audit::retention::{
     CleanupBatchResult, LegalHold, RetentionPolicy, RetentionTarget, TenantRetentionOverride,
@@ -5,17 +6,6 @@ use domain_audit::retention::{
 use foundation::{ErrorCode, PlatformError, TenantId, UtcTimestamp};
 use sqlx::{PgPool, Postgres, Row, Transaction};
 use storage_api::RetentionRepository;
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    use sqlx::Error;
-    match e {
-        Error::RowNotFound => PlatformError::new(ErrorCode::NotFound, "retention record not found"),
-        Error::Database(db) if db.constraint().is_some() => {
-            PlatformError::new(ErrorCode::Conflict, db.to_string())
-        }
-        _ => PlatformError::new(ErrorCode::Unavailable, e.to_string()),
-    }
-}
 
 fn built_in_default(target: RetentionTarget) -> Result<RetentionPolicy, PlatformError> {
     let days = match target {

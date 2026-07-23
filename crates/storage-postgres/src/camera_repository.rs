@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{CameraRepository, ListOptions, Page};
 
-use crate::{begin_tenant_transaction, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate};
 
 /// PostgreSQL-backed camera repository.
 #[derive(Debug, Clone)]
@@ -294,10 +294,6 @@ fn row_to_camera(row: sqlx::postgres::PgRow) -> Result<Camera, PlatformError> {
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 fn missing_tenant() -> PlatformError {

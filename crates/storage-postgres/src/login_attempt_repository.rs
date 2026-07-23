@@ -1,7 +1,8 @@
 //! PostgreSQL implementation of the `LoginAttemptRepository` port.
 
+use crate::db_error;
 use async_trait::async_trait;
-use foundation::{ErrorCode, PlatformError, RequestContext, TenantId};
+use foundation::{PlatformError, RequestContext, TenantId};
 use storage_api::LoginAttemptRepository;
 
 use crate::begin_tenant_transaction;
@@ -96,8 +97,4 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         tx_managed.commit().await.map_err(db_error)?;
         Ok(row.0)
     }
-}
-
-fn db_error(e: sqlx::Error) -> PlatformError {
-    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
