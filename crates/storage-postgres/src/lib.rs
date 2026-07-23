@@ -3,6 +3,7 @@
 pub mod api_key_repository;
 pub mod audit_writer;
 pub mod camera_repository;
+pub mod configuration_repository;
 pub mod credential_repository;
 pub mod device_repository;
 pub mod external_binding_repository;

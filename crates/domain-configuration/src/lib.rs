@@ -1,4 +1,10 @@
-//! Configuration aggregate (settings, secrets references).
+//! Configuration aggregate (definitions and scoped values).
+
+pub mod config_definition;
+pub mod config_value;
+
+pub use config_definition::{ConfigDefinition, ConfigValueType};
+pub use config_value::{ConfigScope, ConfigValue, ConfigValueId, resolve_config};
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

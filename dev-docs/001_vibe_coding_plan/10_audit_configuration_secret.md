@@ -9,9 +9,9 @@
 
 ### AUD-002：配置定义和值
 **前置：** FND-003、DB-003。
-- [ ] Definition 固定类型/schema/default/sensitive/dynamic；Value 按 platform/tenant/module scope 唯一。
-- [ ] 解析优先级明确；非法新值不替换旧快照。
-- [ ] sensitive definition 只允许 secret_ref，API 永不返回 resolved value。
+- [x] Definition 固定类型/schema/default/sensitive/dynamic；Value 按 platform/tenant/module scope 唯一。
+- [x] 解析优先级明确；非法新值不替换旧快照。
+- [x] sensitive definition 只允许 secret_ref，API 永不返回 resolved value。
 **测试：** schema、scope、revision、动态 reload、secret redaction。
 
 ### AUD-003：保留与清理
