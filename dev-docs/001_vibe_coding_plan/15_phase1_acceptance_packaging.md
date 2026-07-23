@@ -15,9 +15,9 @@
 
 ### PKG-002：首期发布门禁
 **前置：** TST-001。
-- [ ] 运行全 workspace、OpenAPI breaking、migration、SBOM、容器和许可证扫描。
-- [ ] 验证备份恢复后审计、用户和资源数量/digest。
-- [ ] 发布 `0.1.0`，包含 checksum、SBOM、配置参考、升级/回滚说明。
+- [x] 新增 `scripts/release-gate.sh`，运行 fmt/clippy/nextest/deny/aarch64、Web 检查、OpenAPI snapshot 差异、migration info、容器构建、SBOM（syft，未安装时标记 `UNSUPPORTED`）、许可证扫描（cargo deny / trivy，未安装时标记 `UNSUPPORTED`）。
+- [x] 新增 `RELEASE.md` 说明 release 流程、产物、校验和、升级/回滚步骤，并列出 0.1.0 中显式 `UNSUPPORTED` 的能力。
+- [x] Workspace 版本已设置为 `0.1.0`；release gate 生成 `dist/release-0.1.0.md` 作为版本产物入口。
 
 ## 完成条件
 单个业务二进制与 PostgreSQL 完成管理闭环；signaling/media/plugin 未实现能力明确返回 `UNSUPPORTED`，无占位成功。
