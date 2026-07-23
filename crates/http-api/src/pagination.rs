@@ -24,10 +24,12 @@ pub struct PaginationConfig {
 }
 
 impl PaginationConfig {
-    /// Create a pagination config. An empty secret disables cursor verification.
+    /// Create a pagination config. `max_page_size` is clamped to a positive
+    /// value no larger than `10_000`.
     pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Self {
+        const MAX_PAGE_SIZE: u32 = 10_000;
         Self {
-            max_page_size,
+            max_page_size: max_page_size.clamp(1, MAX_PAGE_SIZE),
             cursor_secret: cursor_secret.into(),
         }
     }
@@ -190,7 +192,11 @@ impl Pagination {
         if !has_more {
             return Ok(None);
         }
-        let cursor = Cursor::new(self.offset + u64::from(self.limit), self.limit, self.sort);
+        let next_offset = self
+            .offset
+            .checked_add(u64::from(self.limit))
+            .ok_or(AppError::Internal)?;
+        let cursor = Cursor::new(next_offset, self.limit, self.sort);
         cursor.encode(secret).map(Some)
     }
 }

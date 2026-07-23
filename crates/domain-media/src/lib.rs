@@ -209,6 +209,7 @@ impl MediaPort for UnsupportedMediaPort {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use futures::executor::block_on;
 
@@ -222,9 +223,9 @@ mod tests {
         let port = UnsupportedMediaPort;
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let request = CreateEntitlementRequest {
-            tenant_id: TenantId::generate(&generator),
-            principal_id: UserId::generate(&generator),
-            camera_id: CameraId::generate(&generator),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
+            principal_id: UserId::generate(&generator).expect("generate user id"),
+            camera_id: CameraId::generate(&generator).expect("generate camera id"),
             actions: vec![MediaAction::Live],
             protocol: "webrtc".to_string(),
             deadline: Deadline::new(UtcTimestamp::from(

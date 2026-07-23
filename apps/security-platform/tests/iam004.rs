@@ -45,7 +45,7 @@ async fn seed_user(pool: sqlx::PgPool) -> (User, PostgresUserRepository) {
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let mut user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
         "apikeyuser",
         "API Key User",

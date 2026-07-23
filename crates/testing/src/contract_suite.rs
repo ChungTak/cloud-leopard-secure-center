@@ -5,21 +5,19 @@
 //! Real PostgreSQL/NATS-backed runs are left to the test environment.
 
 use domain_signaling::{SignalingError, SignalingPort};
-use foundation::{Deadline, DeviceId, MessageId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp};
+use foundation::{
+    Deadline, DeviceId, MessageId, SystemClock, SystemIdGenerator, SystemRandom, TenantId,
+    UtcTimestamp,
+};
 use message_api::{Envelope, MessageBus};
 use signaling_adapter::jetstream::JetStreamSignalingConsumer;
 
 /// Run message bus contract checks against any `MessageBus` implementation.
 pub async fn run_message_bus_contract<B: MessageBus + Sync>(bus: &B) -> Result<(), String> {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let id = MessageId::generate(&generator);
-    let tenant = TenantId::generate(&generator);
-    let envelope = Envelope::event(
-        id,
-        tenant,
-        "security.v1.test".to_string(),
-        vec![1, 2, 3],
-    );
+    let id = MessageId::generate(&generator).map_err(|e| e.to_string())?;
+    let tenant = TenantId::generate(&generator).map_err(|e| e.to_string())?;
+    let envelope = Envelope::event(id, tenant, "security.v1.test".to_string(), vec![1, 2, 3]);
     let id = bus.publish(envelope).await.map_err(|e| e.to_string())?;
     if id.to_string().is_empty() {
         return Err("message id is empty".to_string());
@@ -28,12 +26,10 @@ pub async fn run_message_bus_contract<B: MessageBus + Sync>(bus: &B) -> Result<(
 }
 
 /// Run signaling contract checks against any `SignalingPort` implementation.
-pub async fn run_signaling_contract<S: SignalingPort + Sync>(
-    adapter: &S,
-) -> Result<(), String> {
+pub async fn run_signaling_contract<S: SignalingPort + Sync>(adapter: &S) -> Result<(), String> {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let tenant = TenantId::generate(&generator);
-    let device = DeviceId::generate(&generator);
+    let tenant = TenantId::generate(&generator).map_err(|e| e.to_string())?;
+    let device = DeviceId::generate(&generator).map_err(|e| e.to_string())?;
     let result = adapter
         .get_device(tenant, device, Deadline::new(UtcTimestamp::now()))
         .await;
@@ -55,7 +51,7 @@ mod tests {
     use domain_signaling::SignalingErrorKind;
 
     use super::*;
-    use crate::fixtures::{jetstream_consumer, nats_bus_with_servers, BusFixture};
+    use crate::fixtures::{BusFixture, jetstream_consumer, nats_bus_with_servers};
 
     fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
         match result {
@@ -92,8 +88,8 @@ mod tests {
     async fn rest_signaling_unavailable_without_base_url() {
         let adapter = signaling_adapter::RestSignalingAdapter::new(None);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let tenant = TenantId::generate(&generator);
-        let device = DeviceId::generate(&generator);
+        let tenant = ok_or_panic(TenantId::generate(&generator));
+        let device = ok_or_panic(DeviceId::generate(&generator));
         let result = adapter
             .get_device(tenant, device, Deadline::new(UtcTimestamp::now()))
             .await;

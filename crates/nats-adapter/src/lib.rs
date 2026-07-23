@@ -64,11 +64,11 @@ impl NatsMessageBus {
         )
     }
 
-    fn maybe_error(&self) -> Result<(), MessageError> {
+    fn error(&self) -> MessageError {
         if self.config.servers.is_some() {
-            Err(Self::unsupported())
+            Self::unsupported()
         } else {
-            Err(Self::unavailable())
+            Self::unavailable()
         }
     }
 }
@@ -76,23 +76,22 @@ impl NatsMessageBus {
 #[async_trait]
 impl MessageBus for NatsMessageBus {
     async fn publish(&self, _envelope: Envelope) -> Result<MessageId, MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 
-    async fn subscribe(&self, _topic_filter: &str) -> Result<BoxStream<'static, Envelope>, MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+    async fn subscribe(
+        &self,
+        _topic_filter: &str,
+    ) -> Result<BoxStream<'static, Envelope>, MessageError> {
+        Err(self.error())
     }
 
     async fn ack(&self, _message_id: MessageId) -> Result<(), MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 
     async fn nack(&self, _message_id: MessageId) -> Result<(), MessageError> {
-        self.maybe_error()?;
-        unreachable!("error always returned above")
+        Err(self.error())
     }
 }
 
@@ -103,13 +102,20 @@ mod tests {
 
     use super::*;
 
+    fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
+        match result {
+            Ok(v) => v,
+            Err(e) => panic!("{e}"),
+        }
+    }
+
     #[tokio::test]
     async fn unconfigured_nats_returns_unavailable() {
         let bus = NatsMessageBus::new(NatsMessageBusConfig::security_defaults());
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let envelope = Envelope::command(
-            MessageId::generate(&generator),
-            TenantId::generate(&generator),
+            ok_or_panic(MessageId::generate(&generator)),
+            ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
             b"{}".to_vec(),
         );
@@ -126,8 +132,8 @@ mod tests {
         let bus = NatsMessageBus::new(config);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let envelope = Envelope::command(
-            MessageId::generate(&generator),
-            TenantId::generate(&generator),
+            ok_or_panic(MessageId::generate(&generator)),
+            ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
             b"{}".to_vec(),
         );

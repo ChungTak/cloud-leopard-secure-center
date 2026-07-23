@@ -49,7 +49,7 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let hasher = Argon2idPasswordHasher::default();
 
     let mut user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
         "mike",
         "Mike",
@@ -94,7 +94,7 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
     let hasher = Argon2idPasswordHasher::default();
 
     let mut user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
         "mallory",
         "Mallory",
@@ -144,7 +144,7 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
     };
 
     let mut user = ok_or_panic(User::new(
-        UserId::generate(&id_gen),
+        ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
         "victim",
         "Victim",

@@ -96,7 +96,7 @@ struct MakeUuidRequestId;
 impl MakeRequestId for MakeUuidRequestId {
     fn make_request_id<B>(&mut self, _req: &Request<B>) -> Option<RequestId> {
         let generator = foundation::SystemIdGenerator::new(SystemClock, SystemRandom);
-        let id = generator.generate();
+        let id = generator.generate().ok()?;
         let value = HeaderValue::from_str(&id.to_string()).ok()?;
         Some(RequestId::new(value))
     }

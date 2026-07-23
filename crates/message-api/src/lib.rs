@@ -251,6 +251,7 @@ impl MessageBus for UnsupportedMessageBus {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -258,8 +259,8 @@ mod tests {
     fn command_and_event_envelopes_have_distinct_kinds() {
         let generator =
             foundation::SystemIdGenerator::new(foundation::SystemClock, foundation::SystemRandom);
-        let id = MessageId::generate(&generator);
-        let tenant_id = TenantId::generate(&generator);
+        let id = MessageId::generate(&generator).expect("generate message id");
+        let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
 
         let cmd = Envelope::command(id, tenant_id, "security.v1.command.0.test", b"{}".to_vec());
         let evt = Envelope::event(id, tenant_id, "security.v1.event.0.test", b"{}".to_vec());
@@ -273,8 +274,8 @@ mod tests {
     fn typed_command_envelope_round_trips_json_payload() {
         let generator =
             foundation::SystemIdGenerator::new(foundation::SystemClock, foundation::SystemRandom);
-        let id = MessageId::generate(&generator);
-        let tenant_id = TenantId::generate(&generator);
+        let id = MessageId::generate(&generator).expect("generate message id");
+        let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
 
         #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
         struct TestCommand {
@@ -298,8 +299,8 @@ mod tests {
         let bus = UnsupportedMessageBus;
         let generator =
             foundation::SystemIdGenerator::new(foundation::SystemClock, foundation::SystemRandom);
-        let id = MessageId::generate(&generator);
-        let tenant_id = TenantId::generate(&generator);
+        let id = MessageId::generate(&generator).expect("generate message id");
+        let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
         let envelope = Envelope::command(id, tenant_id, "test", b"x".to_vec());
 
         let mut runtime = futures::executor::LocalPool::new();

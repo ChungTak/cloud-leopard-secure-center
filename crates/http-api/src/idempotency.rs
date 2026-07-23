@@ -10,7 +10,11 @@ use axum::{
 use base64ct::Encoding;
 use http_body_util::BodyExt;
 use sha2::{Digest, Sha256};
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tokio::sync::Mutex;
 
 use crate::error::AppError;
@@ -33,9 +37,10 @@ struct IdempotencyKey {
 #[derive(Debug, Clone)]
 struct CachedResponse {
     status: StatusCode,
-    content_type: Option<axum::http::HeaderValue>,
+    headers: axum::http::HeaderMap,
     body: axum::body::Bytes,
     digest: String,
+    expires_at: Instant,
 }
 
 impl IdempotencyState {
@@ -48,8 +53,10 @@ impl IdempotencyState {
     }
 
     /// Clear expired entries. Called opportunistically on insert.
-    fn cleanup(&self) {
-        let _ = self.ttl;
+    async fn cleanup(&self) {
+        let now = Instant::now();
+        let mut store = self.inner.lock().await;
+        store.retain(|_, cached| cached.expires_at > now);
     }
 }
 
@@ -63,15 +70,15 @@ impl std::fmt::Debug for IdempotencyState {
 
 /// Middleware that caches write responses by `Idempotency-Key`.
 pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, AppError> {
-    let state = req
-        .extensions()
-        .get::<Arc<IdempotencyState>>()
-        .cloned()
-        .unwrap_or_else(|| Arc::new(IdempotencyState::new(Duration::from_secs(3600))));
+    let state = req.extensions().get::<Arc<IdempotencyState>>().cloned();
 
     let key = match idempotency_key(&req) {
         Some(key) => key,
         None => return Ok(next.run(req).await),
+    };
+
+    let Some(state) = state else {
+        return Err(AppError::Internal);
     };
 
     let (parts, body) = req.into_parts();
@@ -94,13 +101,11 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     }
 
     let response = next.run(req).await;
-    let cached = cache_response(response, digest).await?;
+    let cached = cache_response(response, digest, state.ttl).await?;
 
-    {
-        let mut store = state.inner.lock().await;
-        state.cleanup();
-        store.insert(key, cached.clone());
-    }
+    state.cleanup().await;
+    let mut store = state.inner.lock().await;
+    store.insert(key, cached.clone());
 
     Ok(build_response(&cached))
 }
@@ -151,24 +156,25 @@ async fn collect_body(body: Body) -> Result<axum::body::Bytes, AppError> {
     Ok(collected.to_bytes())
 }
 
-async fn cache_response(response: Response, digest: String) -> Result<CachedResponse, AppError> {
+async fn cache_response(
+    response: Response,
+    digest: String,
+    ttl: Duration,
+) -> Result<CachedResponse, AppError> {
     let (parts, body) = response.into_parts();
     let bytes = collect_body(body).await?;
     Ok(CachedResponse {
         status: parts.status,
-        content_type: parts.headers.get(header::CONTENT_TYPE).cloned(),
+        headers: parts.headers,
         body: bytes,
         digest,
+        expires_at: Instant::now() + ttl,
     })
 }
 
 fn build_response(cached: &CachedResponse) -> Response {
     let mut response = Response::new(Body::from(cached.body.clone()));
     *response.status_mut() = cached.status;
-    if let Some(content_type) = &cached.content_type {
-        response
-            .headers_mut()
-            .insert(header::CONTENT_TYPE, content_type.clone());
-    }
+    *response.headers_mut() = cached.headers.clone();
     response
 }

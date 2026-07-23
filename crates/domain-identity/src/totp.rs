@@ -31,7 +31,17 @@ pub fn current_code(secret: &[u8], now: UtcTimestamp) -> Result<String, Platform
 /// Verify a user-supplied TOTP `code` against `secret` at `now`.
 pub fn verify(secret: &[u8], code: &str, now: UtcTimestamp) -> Result<bool, PlatformError> {
     let expected = current_code(secret, now)?;
-    Ok(expected == code)
+    Ok(constant_time_eq(&expected, code))
+}
+
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    if a.len() != b.len() {
+        return false;
+    }
+    a.bytes()
+        .zip(b.bytes())
+        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
+        == 0
 }
 
 fn time_step(now: UtcTimestamp) -> u64 {

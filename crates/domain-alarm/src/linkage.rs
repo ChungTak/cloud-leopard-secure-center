@@ -107,14 +107,16 @@ impl LinkageWorkflow for UnsupportedLinkageWorkflow {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{AlarmId, SystemClock, SystemIdGenerator, SystemRandom, UtcTimestamp};
 
     use super::*;
 
     fn make_rule() -> AlarmLinkageRule {
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         AlarmLinkageRule {
-            tenant_id: TenantId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
             rule_id: "rule-1".to_string(),
             condition: LinkageCondition::SeverityAtLeast(crate::Severity::High),
             actions: vec![],
@@ -160,8 +162,8 @@ mod tests {
     fn make_sample_alarm() -> Alarm {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         Alarm {
-            id: AlarmId::generate(&generator),
-            tenant_id: TenantId::generate(&generator),
+            id: AlarmId::generate(&generator).expect("generate alarm id"),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
             state: crate::AlarmState::New,
             severity: crate::Severity::High,
             title: "motion".to_string(),

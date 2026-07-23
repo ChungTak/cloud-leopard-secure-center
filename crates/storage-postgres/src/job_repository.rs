@@ -33,7 +33,10 @@ impl JobRepository for PostgresJobRepository {
 
         let tenant_uuid = job.tenant_id.map(|id| *id.as_uuid());
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let job_id = job.job_id.unwrap_or_else(|| generator.generate());
+        let job_id = match job.job_id {
+            Some(id) => id,
+            None => generator.generate()?,
+        };
         let next_run = utc_to_db(job.next_run);
         let deadline = job.deadline.map(utc_to_db);
         let lease = job.lease_until.map(utc_to_db);
@@ -307,8 +310,5 @@ fn status_from_db(value: &str) -> Result<JobStatus, PlatformError> {
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
-    match DateTime::from_timestamp_millis(ts.timestamp_millis()) {
-        Some(dt) => dt,
-        None => panic!("timestamp from database is invalid"),
-    }
+    ts.into()
 }

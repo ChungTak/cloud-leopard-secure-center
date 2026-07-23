@@ -52,10 +52,11 @@ impl RetentionPolicy {
         days: u32,
         max_batch_size: u64,
     ) -> Result<Self, PlatformError> {
-        if days == 0 {
+        const MAX_RETENTION_DAYS: u32 = 365 * 50;
+        if days == 0 || days > MAX_RETENTION_DAYS {
             return Err(PlatformError::invalid(
                 "days",
-                "retention period must be at least one day",
+                "retention period must be between 1 and 18250 days",
             ));
         }
         if max_batch_size == 0 {
@@ -72,9 +73,16 @@ impl RetentionPolicy {
     }
 
     /// Compute the cutoff timestamp for data older than this policy.
-    pub fn cutoff(&self, now: UtcTimestamp) -> UtcTimestamp {
+    pub fn cutoff(&self, now: UtcTimestamp) -> Result<UtcTimestamp, PlatformError> {
         let dt: chrono::DateTime<chrono::Utc> = now.into();
-        (dt - chrono::Duration::days(i64::from(self.days))).into()
+        let Some(cutoff) = dt.checked_sub_signed(chrono::Duration::days(i64::from(self.days)))
+        else {
+            return Err(PlatformError::invalid(
+                "days",
+                "retention cutoff overflowed timestamp range",
+            ));
+        };
+        Ok(cutoff.into())
     }
 }
 

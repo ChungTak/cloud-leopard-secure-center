@@ -17,7 +17,7 @@ fn db_error(e: sqlx::Error) -> PlatformError {
     }
 }
 
-fn built_in_default(target: RetentionTarget) -> RetentionPolicy {
+fn built_in_default(target: RetentionTarget) -> Result<RetentionPolicy, PlatformError> {
     let days = match target {
         RetentionTarget::AuditRecords => 365,
         RetentionTarget::AuditEvents => 90,
@@ -25,7 +25,7 @@ fn built_in_default(target: RetentionTarget) -> RetentionPolicy {
         RetentionTarget::Outbox => 7,
         RetentionTarget::Inbox => 7,
     };
-    RetentionPolicy::new(target, days, 1000).unwrap_or_else(|e| panic!("{e:?}"))
+    RetentionPolicy::new(target, days, 1000)
 }
 
 fn parent_table(target: RetentionTarget) -> &'static str {
@@ -113,7 +113,7 @@ impl RetentionRepository for PostgresRetentionRepository {
                 })?;
                 RetentionPolicy::new(target, days_u32, 1000)
             }
-            None => Ok(built_in_default(target)),
+            None => built_in_default(target),
         }
     }
 

@@ -28,7 +28,8 @@ impl SignalingEventProcessor {
         P: ProjectionRepository,
         I: InboxRepository,
     {
-        let message_id = parse_or_generate_event_id(&event.last_event_id);
+        let message_id = parse_or_generate_event_id(&event.last_event_id)
+            .map_err(|e| SignalingError::new(SignalingErrorKind::UnknownOutcome, e.to_string()))?;
         let consumer_id = "signaling-sse".to_string();
         let received = inbox
             .receive(
@@ -157,11 +158,16 @@ impl Default for SignalingEventWorker {
     }
 }
 
-fn parse_or_generate_event_id(input: &str) -> foundation::uuid::Uuid {
-    foundation::uuid::Uuid::parse_str(input).unwrap_or_else(|_| {
-        let generator = foundation::SystemIdGenerator::new(SystemClock, SystemRandom);
-        foundation::MessageId::generate(&generator).into()
-    })
+fn parse_or_generate_event_id(
+    input: &str,
+) -> Result<foundation::uuid::Uuid, foundation::PlatformError> {
+    match foundation::uuid::Uuid::parse_str(input) {
+        Ok(uuid) => Ok(uuid),
+        Err(_) => {
+            let generator = foundation::SystemIdGenerator::new(SystemClock, SystemRandom);
+            Ok(foundation::MessageId::generate(&generator)?.into())
+        }
+    }
 }
 
 fn map_storage_error(e: foundation::PlatformError) -> SignalingError {
@@ -188,6 +194,13 @@ mod tests {
         match m.lock() {
             Ok(g) => g,
             Err(_) => panic!("mutex poisoned"),
+        }
+    }
+
+    fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
+        match result {
+            Ok(v) => v,
+            Err(e) => panic!("{e}"),
         }
     }
 
@@ -321,9 +334,9 @@ mod tests {
     fn event(payload: SignalingEventPayload) -> SignalingEvent {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         SignalingEvent {
-            last_event_id: foundation::MessageId::generate(&generator).to_string(),
-            tenant_id: TenantId::generate(&generator),
-            device_id: DeviceId::generate(&generator),
+            last_event_id: ok_or_panic(foundation::MessageId::generate(&generator)).to_string(),
+            tenant_id: ok_or_panic(TenantId::generate(&generator)),
+            device_id: ok_or_panic(DeviceId::generate(&generator)),
             observed_at: UtcTimestamp::from(chrono::Utc::now()),
             payload,
         }
@@ -386,9 +399,10 @@ mod tests {
         use domain_signaling::SignalingPort;
 
         let adapter = RestSignalingAdapter::new(None);
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let result = block_on(adapter.get_device(
-            TenantId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)),
-            DeviceId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)),
+            ok_or_panic(TenantId::generate(&generator)),
+            ok_or_panic(DeviceId::generate(&generator)),
             Deadline::new(UtcTimestamp::from(
                 chrono::Utc::now() + chrono::Duration::seconds(30),
             )),

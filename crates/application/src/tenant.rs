@@ -133,7 +133,7 @@ where
         let req = usecase::platform_authorization(actor, "platform:tenant:write");
         usecase::authorize_or_fail(&self.auth, req, ctx).await?;
 
-        let id = TenantId::generate(&self.id_gen);
+        let id = TenantId::generate(&self.id_gen)?;
         let tenant = Tenant::new(
             id,
             request.payload.code,

@@ -142,7 +142,7 @@ impl Alarm {
                 return Err(AlarmError::new(
                     AlarmErrorKind::Invalid,
                     "illegal alarm state transition",
-                ))
+                ));
             }
         };
         self.state = next;
@@ -207,11 +207,7 @@ impl AlarmRepository for UnsupportedAlarmRepository {
         ))
     }
 
-    async fn by_id(
-        &self,
-        _tenant_id: TenantId,
-        _id: AlarmId,
-    ) -> Result<Option<Alarm>, AlarmError> {
+    async fn by_id(&self, _tenant_id: TenantId, _id: AlarmId) -> Result<Option<Alarm>, AlarmError> {
         Err(AlarmError::new(
             AlarmErrorKind::Unsupported,
             "alarm repository is not enabled in this build",
@@ -231,6 +227,7 @@ impl AlarmRepository for UnsupportedAlarmRepository {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{DeviceId, SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -253,16 +250,18 @@ mod tests {
     fn make_event() -> AlarmEvent {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         AlarmEvent {
-            id: MessageId::generate(&generator),
-            tenant_id: TenantId::generate(&generator),
-            alarm_id: AlarmId::generate(&generator),
+            id: MessageId::generate(&generator).expect("generate message id"),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
+            alarm_id: AlarmId::generate(&generator).expect("generate alarm id"),
             dedup: Some(DedupKey {
                 value: "cam-1.motion".to_string(),
                 window_seconds: 60,
             }),
             severity: Severity::High,
             title: "motion detected".to_string(),
-            payload: serde_json::json!({"device_id": DeviceId::generate(&generator).to_string()}),
+            payload: serde_json::json!({"device_id": DeviceId::generate(&generator)
+                .expect("generate device id")
+                .to_string()}),
             evidence: vec![EvidenceRef {
                 object_key: "evidence/1.jpg".to_string(),
                 algorithm: "sha256".to_string(),
@@ -277,8 +276,8 @@ mod tests {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let event = make_event();
         let alarm = ok_or_panic(Alarm::new(
-            AlarmId::generate(&generator),
-            TenantId::generate(&generator),
+            AlarmId::generate(&generator).expect("generate alarm id"),
+            TenantId::generate(&generator).expect("generate tenant id"),
             &event,
             UtcTimestamp::now(),
         ));
@@ -290,8 +289,8 @@ mod tests {
     fn acknowledge_moves_to_acknowledged() {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let mut alarm = ok_or_panic(Alarm::new(
-            AlarmId::generate(&generator),
-            TenantId::generate(&generator),
+            AlarmId::generate(&generator).expect("generate alarm id"),
+            TenantId::generate(&generator).expect("generate tenant id"),
             &make_event(),
             UtcTimestamp::now(),
         ));
@@ -309,8 +308,8 @@ mod tests {
     fn close_from_new_is_illegal() {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let mut alarm = ok_or_panic(Alarm::new(
-            AlarmId::generate(&generator),
-            TenantId::generate(&generator),
+            AlarmId::generate(&generator).expect("generate alarm id"),
+            TenantId::generate(&generator).expect("generate tenant id"),
             &make_event(),
             UtcTimestamp::now(),
         ));
@@ -324,8 +323,8 @@ mod tests {
         let repo = UnsupportedAlarmRepository;
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let alarm = ok_or_panic(Alarm::new(
-            AlarmId::generate(&generator),
-            TenantId::generate(&generator),
+            AlarmId::generate(&generator).expect("generate alarm id"),
+            TenantId::generate(&generator).expect("generate tenant id"),
             &make_event(),
             UtcTimestamp::now(),
         ));

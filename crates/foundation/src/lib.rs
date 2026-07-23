@@ -24,8 +24,8 @@ macro_rules! id_newtype {
 
         impl $name {
             /// Generate a new identifier using the provided generator.
-            pub fn generate(generator: &dyn IdGenerator) -> Self {
-                Self(generator.generate())
+            pub fn generate(generator: &dyn IdGenerator) -> Result<Self, PlatformError> {
+                Ok(Self(generator.generate()?))
             }
 
             /// Parse a hyphenated UUID string into this identifier type.
@@ -33,6 +33,11 @@ macro_rules! id_newtype {
                 Uuid::parse_str(input)
                     .map(Self)
                     .map_err(|e| PlatformError::invalid(stringify!($name), e.to_string()))
+            }
+
+            /// Create an identifier from an existing UUID.
+            pub const fn from_uuid(uuid: Uuid) -> Self {
+                Self(uuid)
             }
 
             /// Access the underlying UUID.
@@ -232,23 +237,21 @@ impl FakeClock {
 
     /// Advance the clock by the given number of milliseconds.
     pub const fn advance(&mut self, millis: i64) {
-        self.millis += millis;
+        self.millis = self.millis.saturating_add(millis);
     }
 }
 
 impl Clock for FakeClock {
     fn now(&self) -> UtcTimestamp {
-        let Some(naive) = DateTime::from_timestamp_millis(self.millis) else {
-            panic!("invalid fake timestamp");
-        };
-        UtcTimestamp(naive)
+        let dt = DateTime::from_timestamp_millis(self.millis).unwrap_or(DateTime::<Utc>::MIN_UTC);
+        UtcTimestamp(dt)
     }
 }
 
 /// Source of random bytes; domain code must never read `/dev/urandom` directly.
 pub trait RandomSource: Send + Sync {
     /// Fill `buf` with random bytes.
-    fn fill_bytes(&self, buf: &mut [u8]);
+    fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), PlatformError>;
 }
 
 /// System random source.
@@ -256,10 +259,13 @@ pub trait RandomSource: Send + Sync {
 pub struct SystemRandom;
 
 impl RandomSource for SystemRandom {
-    fn fill_bytes(&self, buf: &mut [u8]) {
-        if let Err(e) = getrandom::fill(buf) {
-            panic!("system random source failed: {}", e);
-        }
+    fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), PlatformError> {
+        getrandom::fill(buf).map_err(|e| {
+            PlatformError::new(
+                ErrorCode::Unavailable,
+                format!("system random source failed: {e}"),
+            )
+        })
     }
 }
 
@@ -285,17 +291,18 @@ impl FakeRandom {
 }
 
 impl RandomSource for FakeRandom {
-    fn fill_bytes(&self, buf: &mut [u8]) {
+    fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), PlatformError> {
         for b in buf.iter_mut() {
             *b = self.next.fetch_add(1, Ordering::SeqCst);
         }
+        Ok(())
     }
 }
 
 /// Generates UUIDv7 identifiers.
 pub trait IdGenerator: Send + Sync {
     /// Generate a new UUID.
-    fn generate(&self) -> Uuid;
+    fn generate(&self) -> Result<Uuid, PlatformError>;
 }
 
 /// Standard UUIDv7 generator backed by an injected clock and random source.
@@ -312,17 +319,17 @@ impl<C, R> StandardIdGenerator<C, R> {
 }
 
 impl<C: Clock, R: RandomSource> IdGenerator for StandardIdGenerator<C, R> {
-    fn generate(&self) -> Uuid {
+    fn generate(&self) -> Result<Uuid, PlatformError> {
         let ts = self.clock.now().timestamp_millis() as u64;
         let mut rand = [0u8; 10];
-        self.random.fill_bytes(&mut rand);
+        self.random.fill_bytes(&mut rand)?;
         let mut bytes = [0u8; 16];
         bytes[0..6].copy_from_slice(&ts.to_be_bytes()[2..8]);
         bytes[6..8].copy_from_slice(&rand[0..2]);
         bytes[7] = (bytes[7] & 0x0F) | 0x70; // version 7
         bytes[8..16].copy_from_slice(&rand[2..10]);
         bytes[8] = (bytes[8] & 0x3F) | 0x80; // variant 10
-        Uuid::from_bytes(bytes)
+        Ok(Uuid::from_bytes(bytes))
     }
 }
 
@@ -561,18 +568,19 @@ mod tests {
     #[test]
     fn id_round_trip() -> Result<(), PlatformError> {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let id = TenantId::generate(&generator);
+        let id = TenantId::generate(&generator)?;
         let parsed = TenantId::parse_str(&id.to_hyphenated())?;
         assert_eq!(id, parsed);
         Ok(())
     }
 
     #[test]
-    fn different_id_types_are_incompatible() {
+    fn different_id_types_are_incompatible() -> Result<(), PlatformError> {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let tenant = TenantId::generate(&generator);
-        let user = UserId::generate(&generator);
+        let tenant = TenantId::generate(&generator)?;
+        let user = UserId::generate(&generator)?;
         assert_ne!(Uuid::from(tenant), Uuid::from(user));
+        Ok(())
     }
 
     #[test]
@@ -621,20 +629,22 @@ mod tests {
     }
 
     #[test]
-    fn fake_random_is_deterministic() {
+    fn fake_random_is_deterministic() -> Result<(), PlatformError> {
         let random = FakeRandom::new(0);
         let mut buf = [0u8; 4];
-        random.fill_bytes(&mut buf);
+        random.fill_bytes(&mut buf)?;
         assert_eq!(buf, [0, 1, 2, 3]);
+        Ok(())
     }
 
     #[test]
-    fn fake_id_generator_is_deterministic() {
+    fn fake_id_generator_is_deterministic() -> Result<(), PlatformError> {
         let clock = FakeClock::from_millis(1_720_000_000_000);
         let random = FakeRandom::new(1);
         let generator = StandardIdGenerator::new(clock, random);
-        let first = generator.generate();
-        let second = generator.generate();
+        let first = generator.generate()?;
+        let second = generator.generate()?;
         assert_ne!(first, second);
+        Ok(())
     }
 }

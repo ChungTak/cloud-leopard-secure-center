@@ -112,6 +112,7 @@ impl NotificationPort for UnsupportedNotificationPort {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -127,8 +128,9 @@ mod tests {
     fn make_notification() -> Notification {
         let mut vars = HashMap::new();
         vars.insert("alarm_title".to_string(), "motion".to_string());
+        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         Notification {
-            tenant_id: TenantId::generate(&SystemIdGenerator::new(SystemClock, SystemRandom)),
+            tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
             channel: NotificationChannel::Webhook,
             recipient: "https://example.com/hook".to_string(),
             template: "alarm".to_string(),

@@ -100,7 +100,9 @@ fn random_jitter_ms(max_jitter_ms: u64, random: &dyn RandomSource) -> u64 {
         return 0;
     }
     let mut buf = [0u8; 8];
-    random.fill_bytes(&mut buf);
+    if random.fill_bytes(&mut buf).is_err() {
+        return 0;
+    }
     let raw = u64::from_le_bytes(buf);
     raw % (max_jitter_ms + 1)
 }
@@ -113,10 +115,11 @@ mod tests {
     struct ZeroRandom;
 
     impl RandomSource for ZeroRandom {
-        fn fill_bytes(&self, buf: &mut [u8]) {
+        fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), crate::PlatformError> {
             for b in buf.iter_mut() {
                 *b = 0;
             }
+            Ok(())
         }
     }
 
@@ -124,18 +127,18 @@ mod tests {
     struct MaxRandom;
 
     impl RandomSource for MaxRandom {
-        fn fill_bytes(&self, buf: &mut [u8]) {
+        fn fill_bytes(&self, buf: &mut [u8]) -> Result<(), crate::PlatformError> {
             for b in buf.iter_mut() {
                 *b = 0xff;
             }
+            Ok(())
         }
     }
 
     fn ts(millis: i64) -> UtcTimestamp {
-        match chrono::DateTime::from_timestamp_millis(millis) {
-            Some(naive) => UtcTimestamp::from(naive),
-            None => panic!("invalid fake timestamp"),
-        }
+        chrono::DateTime::from_timestamp_millis(millis)
+            .map(UtcTimestamp::from)
+            .unwrap_or_else(|| UtcTimestamp::from(chrono::DateTime::<chrono::Utc>::MIN_UTC))
     }
 
     #[test]

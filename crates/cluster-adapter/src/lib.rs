@@ -160,11 +160,11 @@ impl ClusterRuntime {
         )
     }
 
-    fn check(&self, action: &str) -> Result<(), ClusterError> {
+    fn check(&self, action: &str) -> ClusterError {
         if self.config.nats_servers.is_some() {
-            Err(Self::unsupported(action))
+            Self::unsupported(action)
         } else {
-            Err(Self::unavailable())
+            Self::unavailable()
         }
     }
 }
@@ -176,18 +176,15 @@ impl RoleScheduler for ClusterRuntime {
         _descriptor: &NodeDescriptor,
         _role: Role,
     ) -> Result<NodeLease, ClusterError> {
-        self.check("claim_lease")?;
-        unreachable!("error always returned above")
+        Err(self.check("claim_lease"))
     }
 
     async fn release_lease(&self, _lease: &NodeLease) -> Result<(), ClusterError> {
-        self.check("release_lease")?;
-        unreachable!("error always returned above")
+        Err(self.check("release_lease"))
     }
 
     async fn drain(&self, _node_id: NodeId) -> Result<(), ClusterError> {
-        self.check("drain")?;
-        unreachable!("error always returned above")
+        Err(self.check("drain"))
     }
 
     async fn schedule_task(
@@ -197,12 +194,12 @@ impl RoleScheduler for ClusterRuntime {
         _task_id: &str,
         _expected_revision: u64,
     ) -> Result<u64, ClusterError> {
-        self.check("schedule_task")?;
-        unreachable!("error always returned above")
+        Err(self.check("schedule_task"))
     }
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use foundation::{SystemClock, SystemIdGenerator, SystemRandom};
 
@@ -212,7 +209,7 @@ mod tests {
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let now = UtcTimestamp::now();
         NodeDescriptor {
-            node_id: NodeId::generate(&generator),
+            node_id: NodeId::generate(&generator).expect("generate node id"),
             roles: vec![Role::Scheduler, Role::Api],
             capabilities: NodeCapabilities {
                 zone: Some("zone-a".to_string()),

@@ -5,7 +5,9 @@ use domain_audit::audit_record::ActionRisk;
 use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::ResourceRef;
-use foundation::{Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId};
+use foundation::{
+    Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid,
+};
 use storage_api::{AuditWriter, Page, RoleRepository};
 
 use crate::authorization::AuthorizationPort;
@@ -162,7 +164,7 @@ where
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let id = RoleId::generate(&self.id_gen);
+        let id = RoleId::generate(&self.id_gen)?;
         let permissions = parse_permissions(request.payload.permissions)?;
         let role = Role::new(
             id,
@@ -176,10 +178,7 @@ where
 
         self.repo.create(&role, ctx).await?;
 
-        let audit_tenant = tenant_id.unwrap_or_else(|| {
-            foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-                .unwrap_or_else(|e| panic!("{e:?}"))
-        });
+        let audit_tenant = tenant_id.unwrap_or(TenantId::from_uuid(Uuid::nil()));
         usecase::audit_write(
             &self.audit,
             audit_tenant,
@@ -223,10 +222,7 @@ where
 
         self.repo.update(&role, expected, ctx).await?;
 
-        let audit_tenant = tenant_id.unwrap_or_else(|| {
-            foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-                .unwrap_or_else(|e| panic!("{e:?}"))
-        });
+        let audit_tenant = tenant_id.unwrap_or(TenantId::from_uuid(Uuid::nil()));
         usecase::audit_write(
             &self.audit,
             audit_tenant,
@@ -275,10 +271,7 @@ where
 
         self.repo.update(&role, expected, ctx).await?;
 
-        let audit_tenant = tenant_id.unwrap_or_else(|| {
-            foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-                .unwrap_or_else(|e| panic!("{e:?}"))
-        });
+        let audit_tenant = tenant_id.unwrap_or(TenantId::from_uuid(Uuid::nil()));
         usecase::audit_write(
             &self.audit,
             audit_tenant,
@@ -325,10 +318,7 @@ where
 
         self.repo.update(&role, expected, ctx).await?;
 
-        let audit_tenant = tenant_id.unwrap_or_else(|| {
-            foundation::TenantId::parse_str("00000000-0000-0000-0000-000000000000")
-                .unwrap_or_else(|e| panic!("{e:?}"))
-        });
+        let audit_tenant = tenant_id.unwrap_or(TenantId::from_uuid(Uuid::nil()));
         usecase::audit_write(
             &self.audit,
             audit_tenant,

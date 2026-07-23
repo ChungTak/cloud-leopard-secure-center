@@ -46,16 +46,16 @@ pub async fn enroll_totp(
     ))?;
 
     let mut secret = vec![0u8; 32];
-    random.fill_bytes(&mut secret);
+    random.fill_bytes(&mut secret)?;
 
     let mut ref_bytes = [0u8; 16];
-    random.fill_bytes(&mut ref_bytes);
+    random.fill_bytes(&mut ref_bytes)?;
     let secret_ref = Base64UrlUnpadded::encode_string(&ref_bytes);
 
     resolver.store(&secret_ref, &secret)?;
 
     let mut id_bytes = [0u8; 16];
-    random.fill_bytes(&mut id_bytes);
+    random.fill_bytes(&mut id_bytes)?;
     let id = Uuid::from_bytes(id_bytes);
 
     let (factor, recovery_codes) = MfaFactor::new_totp(

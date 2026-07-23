@@ -72,8 +72,12 @@ pub struct EventBus {
 
 impl EventBus {
     /// Create an event bus that keeps the last `history_capacity` events in
-    /// addition to the live broadcast channel capacity.
+    /// addition to the live broadcast channel capacity. Capacities are clamped
+    /// to positive, bounded values.
     pub fn new(broadcast_capacity: usize, history_capacity: usize) -> Self {
+        const MAX_CAPACITY: usize = 100_000;
+        let broadcast_capacity = broadcast_capacity.clamp(1, MAX_CAPACITY);
+        let history_capacity = history_capacity.clamp(1, MAX_CAPACITY);
         let (sender, _) = broadcast::channel(broadcast_capacity);
         Self {
             sender,
