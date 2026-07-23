@@ -73,6 +73,9 @@ export default function OrganizationPage(): ReactNode {
   const remove = useDeleteOrganizationUnit(tenant ?? undefined);
 
   const treeData = buildTree(units);
+  const selectedUnit = selected
+    ? units.find((u) => u.id === selected)
+    : undefined;
 
   return (
     <section aria-labelledby="organization-heading">
@@ -108,7 +111,7 @@ export default function OrganizationPage(): ReactNode {
         onSelect={(key) => setSelected(key)}
         renderLabel={(label) => <span data-testid="org-label">{label}</span>}
       />
-      {selected && (
+      {selectedUnit && (
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <Can
             permission="tenant:organization:write"
@@ -116,9 +119,12 @@ export default function OrganizationPage(): ReactNode {
           >
             <Button
               onClick={() => {
-                if (!selected) return;
                 move.mutate(
-                  { id: selected, parentId: null, expectedRevision: 1 },
+                  {
+                    id: selectedUnit.id,
+                    parentId: null,
+                    expectedRevision: selectedUnit.revision,
+                  },
                   { onError: (err) => Toast.error(String(err)) },
                 );
               }}

@@ -81,6 +81,9 @@ export default function SpatialPage(): ReactNode {
   const remove = useDeleteSpatialNode(tenant ?? undefined);
 
   const treeData = buildTree(nodes);
+  const selectedNode = selected
+    ? nodes.find((n) => n.id === selected)
+    : undefined;
 
   return (
     <section aria-labelledby="spatial-heading">
@@ -113,14 +116,17 @@ export default function SpatialPage(): ReactNode {
           <span data-testid="spatial-label">{label}</span>
         )}
       />
-      {selected && (
+      {selectedNode && (
         <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
           <Can permission="tenant:site:write" capability="tenant:site:write">
             <Button
               onClick={() => {
-                if (!selected) return;
                 move.mutate(
-                  { id: selected, parentId: null, expectedRevision: 1 },
+                  {
+                    id: selectedNode.id,
+                    parentId: null,
+                    expectedRevision: selectedNode.revision,
+                  },
                   { onError: (err) => Toast.error(String(err)) },
                 );
               }}
