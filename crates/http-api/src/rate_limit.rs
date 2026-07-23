@@ -7,7 +7,6 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use base64ct::{Base64UrlUnpadded, Encoding};
 use foundation::config::RateLimitConfig;
 use std::{
     collections::HashMap,
@@ -159,24 +158,10 @@ fn login_key(headers: &HeaderMap, extensions: &Extensions, config: &TrustedProxy
 }
 
 fn api_key(headers: &HeaderMap, extensions: &Extensions, config: &TrustedProxyConfig) -> String {
-    if let Some(jti) = token_jti(headers) {
-        return format!("api:{jti}");
-    }
+    // Rate limiting runs before authentication, so we must not trust any
+    // client-controlled identifier extracted from the Authorization header.
+    // Use the resolved client IP (or a safe fallback) as the key.
     resolve_client_ip(headers, extensions, config)
         .map(|ip| format!("api:{ip}"))
         .unwrap_or_else(|| "api:unknown".to_string())
-}
-
-fn token_jti(headers: &HeaderMap) -> Option<String> {
-    let header = headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())?;
-    let token = header.strip_prefix("Bearer ")?;
-    let segments: Vec<&str> = token.split('.').collect();
-    if segments.len() != 3 {
-        return None;
-    }
-    let claims_bytes = Base64UrlUnpadded::decode_vec(segments[1]).ok()?;
-    let claims: serde_json::Value = serde_json::from_slice(&claims_bytes).ok()?;
-    claims.get("jti")?.as_str().map(String::from)
 }
