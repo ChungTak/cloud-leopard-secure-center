@@ -32,10 +32,10 @@ domain 禁止依赖 Tokio、Axum、Tonic、SQLx、NATS、HTTP/Proto DTO。applic
 
 **前置：** ARC-001、FND-003。
 
-- [ ] 定义 `Role = Api | Workflow | Projection | Scheduler | PluginHost | All`。
-- [ ] `all` 组合首期角色；未实现角色启动返回配置错误，不假 ready。
-- [ ] 固定启动顺序：config/secret → schema check → bus → repositories → workers → listeners → ready。
-- [ ] 固定关闭顺序反向执行，撤销 ready 后有界 drain。
+- [x] `cluster-adapter/src/lib.rs` 定义 `Role = Api | Workflow | Projection | Scheduler | PluginHost | All`，并实现 `Role::expand`：`All` 展开为 `[Api, Workflow, Projection, Scheduler, PluginHost]`。
+- [x] `cluster-adapter/src/assembly.rs` 定义 `LifecyclePhase` 与 `Lifecycle`；`All` 角色在单进程中由 `ClusterAssembler` 统一处理；未配置 NATS 时 `run`/`ready`/`shutdown` 返回 `Unavailable`，已配置时返回 `Unsupported`，不假 ready。
+- [x] `Lifecycle::startup()` 固定顺序 `config/secret → schema check → bus → repositories → workers → listeners → ready`。
+- [x] `Lifecycle::shutdown()` 固定反向顺序并在末尾执行 `Drain`；`validate_startup`/`validate_shutdown` 检测缺失/重复阶段与 drain 收尾。
 
 **测试：** 每个角色缺少必需依赖时启动失败；取消后无残留 task/listener。
 

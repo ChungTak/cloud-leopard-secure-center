@@ -22,6 +22,23 @@ pub enum Role {
     All,
 }
 
+impl Role {
+    /// Expand a role into the concrete roles that must be started.
+    /// `Role::All` expands to all supported roles except `All` itself.
+    pub fn expand(&self) -> Vec<Role> {
+        match self {
+            Role::All => vec![
+                Role::Api,
+                Role::Workflow,
+                Role::Projection,
+                Role::Scheduler,
+                Role::PluginHost,
+            ],
+            other => vec![*other],
+        }
+    }
+}
+
 /// Capabilities advertised by a node.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct NodeCapabilities {
@@ -211,7 +228,10 @@ mod tests {
     #[tokio::test]
     async fn unconfigured_cluster_returns_unavailable() {
         let runtime = ClusterRuntime::new(ClusterAdapterConfig::default());
-        match runtime.claim_lease(&sample_descriptor(), Role::Scheduler).await {
+        match runtime
+            .claim_lease(&sample_descriptor(), Role::Scheduler)
+            .await
+        {
             Ok(_) => panic!("expected unavailable"),
             Err(e) => assert_eq!(e.kind, ClusterErrorKind::Unavailable),
         }
@@ -223,7 +243,10 @@ mod tests {
             nats_servers: Some("nats://localhost:4222".to_string()),
         };
         let runtime = ClusterRuntime::new(config);
-        match runtime.claim_lease(&sample_descriptor(), Role::Scheduler).await {
+        match runtime
+            .claim_lease(&sample_descriptor(), Role::Scheduler)
+            .await
+        {
             Ok(_) => panic!("expected unsupported"),
             Err(e) => assert_eq!(e.kind, ClusterErrorKind::Unsupported),
         }
