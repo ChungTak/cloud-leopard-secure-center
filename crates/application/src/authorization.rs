@@ -3,7 +3,9 @@
 use async_trait::async_trait;
 use domain_authorization::permission::Permission;
 use domain_authorization::role_binding::{ResourceRef, RoleBinding, Scope};
-use foundation::{BindingId, Clock, PlatformError, RequestContext, TenantId, UserId, UtcTimestamp};
+use foundation::{
+    BindingId, Clock, ErrorCode, PlatformError, RequestContext, TenantId, UserId, UtcTimestamp,
+};
 use storage_api::{
     ListOptions, OrganizationUnitRepository, RoleBindingRepository, RoleRepository,
     SpatialRepository,
@@ -89,6 +91,40 @@ where
             clock,
         }
     }
+
+    /// Load every active role binding for `principal` by following the repository
+    /// cursor until exhaustion. Authorization must consider the complete binding
+    /// set; stopping at the first page would silently deny users with more than
+    /// the default page size of bindings.
+    async fn bindings_for_principal(
+        &self,
+        principal: UserId,
+        ctx: &RequestContext,
+    ) -> Result<Vec<RoleBinding>, PlatformError> {
+        let mut bindings = Vec::new();
+        let mut options = ListOptions {
+            offset: 0,
+            limit: ListOptions::MAX_LIMIT,
+        };
+        loop {
+            let page = self
+                .binding_repo
+                .list_by_principal(principal, ctx, options)
+                .await?;
+            let has_more = page.next_cursor.is_some();
+            bindings.extend(page.items);
+            let Some(cursor) = page.next_cursor else {
+                break;
+            };
+            options.offset = cursor.parse::<u64>().map_err(|_| {
+                PlatformError::new(ErrorCode::Internal, "invalid pagination cursor".to_string())
+            })?;
+            if !has_more {
+                break;
+            }
+        }
+        Ok(bindings)
+    }
 }
 
 #[async_trait]
@@ -115,17 +151,14 @@ where
             });
         }
 
-        let page = self
-            .binding_repo
-            .list_by_principal(req.principal, ctx, ListOptions::default())
-            .await?;
+        let bindings = self.bindings_for_principal(req.principal, ctx).await?;
 
         let mut allowed = Vec::new();
         let mut expired = false;
         let mut permission_missing = false;
         let mut scope_mismatch = false;
 
-        for binding in page.items {
+        for binding in bindings {
             match evaluate(&self, &req, &binding, now, ctx).await? {
                 Evaluation::Allow => allowed.push(binding.id),
                 Evaluation::Expired => expired = true,
