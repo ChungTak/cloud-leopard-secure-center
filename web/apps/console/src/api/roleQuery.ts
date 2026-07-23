@@ -2,6 +2,7 @@ import {
   useMutation,
   useQueryClient,
   queryOptions,
+  type QueryKey,
 } from '@tanstack/react-query';
 import { apiClient } from './client.ts';
 import { tenantQueryKey } from './tenantQuery.ts';
@@ -12,6 +13,10 @@ type RoleDto = components['schemas']['RoleDto'];
 type CreateRoleRequest = components['schemas']['CreateRoleRequest'];
 
 type UpdateRoleRequest = components['schemas']['UpdateRoleRequest'];
+
+function rolesPrefix(tenant: string | undefined): readonly unknown[] {
+  return tenantQueryKey(tenant, ['roles']);
+}
 
 export function roleQueryKey(
   tenant: string | undefined,
@@ -53,9 +58,7 @@ export function useCreateRole(tenant: string | undefined) {
       return data as RoleDto;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: roleQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: rolesPrefix(tenant) });
     },
   });
 }
@@ -83,27 +86,31 @@ export function useUpdateRole(tenant: string | undefined) {
       return data as RoleDto;
     },
     onMutate: async (payload) => {
-      if (!tenant) return { previous: [] as RoleDto[] };
-      await queryClient.cancelQueries({ queryKey: roleQueryKey(tenant) });
-      const previous =
-        queryClient.getQueryData<RoleDto[]>(roleQueryKey(tenant)) ?? [];
-      const next = previous.map((r) =>
-        r.id === payload.id
-          ? { ...r, name: payload.name, permissions: payload.permissions }
-          : r,
+      if (!tenant)
+        return { previous: [] as [QueryKey, RoleDto[] | undefined][] };
+      await queryClient.cancelQueries({ queryKey: rolesPrefix(tenant) });
+      const previous = queryClient.getQueriesData<RoleDto[]>({
+        queryKey: rolesPrefix(tenant),
+      });
+      queryClient.setQueriesData<RoleDto[]>(
+        { queryKey: rolesPrefix(tenant) },
+        (old) =>
+          old?.map((r) =>
+            r.id === payload.id
+              ? { ...r, name: payload.name, permissions: payload.permissions }
+              : r,
+          ) ?? old,
       );
-      queryClient.setQueryData(roleQueryKey(tenant), next);
       return { previous };
     },
     onError: (_err, _payload, context) => {
-      if (tenant && context?.previous) {
-        queryClient.setQueryData(roleQueryKey(tenant), context.previous);
+      if (!tenant || !context?.previous) return;
+      for (const [key, data] of context.previous) {
+        queryClient.setQueryData(key, data);
       }
     },
     onSettled: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: roleQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: rolesPrefix(tenant) });
     },
   });
 }
@@ -118,9 +125,7 @@ export function useDeleteRole(tenant: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: roleQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: rolesPrefix(tenant) });
     },
   });
 }

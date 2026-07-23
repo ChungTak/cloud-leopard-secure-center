@@ -2,6 +2,7 @@ import {
   useMutation,
   useQueryClient,
   queryOptions,
+  type QueryKey,
 } from '@tanstack/react-query';
 import { apiClient } from './client.ts';
 import { tenantQueryKey } from './tenantQuery.ts';
@@ -18,6 +19,10 @@ type ChangeUserStatusRequest = components['schemas']['ChangeUserStatusRequest'];
 type SetPasswordRequest = components['schemas']['SetPasswordRequest'];
 
 type ManageMfaRequest = components['schemas']['ManageMfaRequest'];
+
+function usersPrefix(tenant: string | undefined): readonly unknown[] {
+  return tenantQueryKey(tenant, ['users']);
+}
 
 export function userQueryKey(
   tenant: string | undefined,
@@ -59,9 +64,7 @@ export function useCreateUser(tenant: string | undefined) {
       return data as UserDto;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: userQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: usersPrefix(tenant) });
     },
   });
 }
@@ -87,25 +90,31 @@ export function useUpdateUser(tenant: string | undefined) {
       return data as UserDto;
     },
     onMutate: async (payload) => {
-      if (!tenant) return { previous: [] as UserDto[] };
-      await queryClient.cancelQueries({ queryKey: userQueryKey(tenant) });
-      const previous =
-        queryClient.getQueryData<UserDto[]>(userQueryKey(tenant)) ?? [];
-      const next = previous.map((u) =>
-        u.id === payload.id ? { ...u, displayName: payload.displayName } : u,
+      if (!tenant)
+        return { previous: [] as [QueryKey, UserDto[] | undefined][] };
+      await queryClient.cancelQueries({ queryKey: usersPrefix(tenant) });
+      const previous = queryClient.getQueriesData<UserDto[]>({
+        queryKey: usersPrefix(tenant),
+      });
+      queryClient.setQueriesData<UserDto[]>(
+        { queryKey: usersPrefix(tenant) },
+        (old) =>
+          old?.map((u) =>
+            u.id === payload.id
+              ? { ...u, displayName: payload.displayName }
+              : u,
+          ) ?? old,
       );
-      queryClient.setQueryData(userQueryKey(tenant), next);
       return { previous };
     },
     onError: (_err, _payload, context) => {
-      if (tenant && context?.previous) {
-        queryClient.setQueryData(userQueryKey(tenant), context.previous);
+      if (!tenant || !context?.previous) return;
+      for (const [key, data] of context.previous) {
+        queryClient.setQueryData(key, data);
       }
     },
     onSettled: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: userQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: usersPrefix(tenant) });
     },
   });
 }
@@ -131,9 +140,7 @@ export function useChangeUserStatus(tenant: string | undefined) {
       return data as UserDto;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: userQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: usersPrefix(tenant) });
     },
   });
 }
@@ -158,9 +165,7 @@ export function useSetUserPassword(tenant: string | undefined) {
       if (error) throw error;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: userQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: usersPrefix(tenant) });
     },
   });
 }
@@ -186,9 +191,7 @@ export function useManageUserMfa(tenant: string | undefined) {
       return data as UserDto;
     },
     onSuccess: () => {
-      if (tenant) {
-        queryClient.invalidateQueries({ queryKey: userQueryKey(tenant) });
-      }
+      queryClient.invalidateQueries({ queryKey: usersPrefix(tenant) });
     },
   });
 }
