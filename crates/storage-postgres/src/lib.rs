@@ -1,4 +1,9 @@
 //! PostgreSQL storage adapter.
+//
+// Explicit `&mut *tx` derefs are needed because `ManagedConnection` does not
+// implement `sqlx::Executor` and deref coercion cannot satisfy the generic
+// trait bound.
+#![allow(clippy::explicit_auto_deref)]
 
 pub mod api_key_repository;
 pub mod audit_writer;
@@ -7,9 +12,11 @@ pub mod configuration_repository;
 pub mod credential_repository;
 pub mod device_repository;
 pub mod external_binding_repository;
+pub mod idempotency_repository;
 pub mod login_attempt_repository;
 pub mod mfa_repository;
 pub mod organization_unit_repository;
+pub mod outbox_repository;
 pub mod projection_repository;
 pub mod retention_repository;
 pub mod role_binding_repository;
@@ -18,11 +25,17 @@ pub mod session_repository;
 pub mod spatial_repository;
 pub mod tag_repository;
 pub mod tenant_repository;
+pub mod unit_of_work;
 pub mod user_repository;
 
-use foundation::{PlatformError, RequestContext};
-use sqlx::postgres::PgPoolOptions;
-use sqlx::{PgPool, Postgres, Transaction};
+use std::ops::{Deref, DerefMut};
+use std::sync::Arc;
+
+use foundation::{ErrorCode, PlatformError, RequestContext};
+use sqlx::pool::PoolConnection;
+use sqlx::postgres::{PgConnection, PgPoolOptions};
+use sqlx::{PgPool, Postgres};
+use tokio::sync::{Mutex, MutexGuard};
 
 /// Run all SQLx migrations in `migrations/` against `database_url`.
 pub async fn run_migrations(database_url: &str) -> Result<(), PlatformError> {
@@ -41,37 +54,141 @@ pub async fn run_migrations(database_url: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
+// Task-local storage for the connection currently managed by an active
+// unit of work. Repository methods will reuse this connection (and its
+// transaction) instead of acquiring a new one when it is present.
+tokio::task_local! {
+    static CURRENT_TX: Arc<Mutex<Option<PoolConnection<Postgres>>>>;
+}
+
+/// A database connection that is either owned by the caller or borrowed from
+/// an active unit of work.
+#[derive(Clone)]
+pub struct ManagedTransaction {
+    inner: Arc<Mutex<Option<PoolConnection<Postgres>>>>,
+    owned: bool,
+}
+
+impl ManagedTransaction {
+    /// Acquire the underlying PostgreSQL connection for the duration of the
+    /// returned connection handle.
+    pub async fn lock(&self) -> ManagedConnection<'_> {
+        ManagedConnection {
+            guard: self.inner.lock().await,
+        }
+    }
+
+    /// Returns `true` if this transaction was started by the caller and must
+    /// be committed/rolled back explicitly.
+    pub const fn is_owned(&self) -> bool {
+        self.owned
+    }
+
+    /// Commit an owned transaction. Does nothing for connections borrowed from a
+    /// unit of work.
+    pub async fn commit(self) -> Result<(), sqlx::Error> {
+        if !self.owned {
+            return Ok(());
+        }
+        let mut guard = self.inner.lock().await;
+        if let Some(conn) = guard.as_mut() {
+            sqlx::query("COMMIT").execute(&mut **conn).await?;
+        }
+        Ok(())
+    }
+
+    /// Roll back an owned transaction. Does nothing for connections borrowed
+    /// from a unit of work.
+    pub async fn rollback(self) -> Result<(), sqlx::Error> {
+        if !self.owned {
+            return Ok(());
+        }
+        let mut guard = self.inner.lock().await;
+        if let Some(conn) = guard.as_mut() {
+            sqlx::query("ROLLBACK").execute(&mut **conn).await?;
+        }
+        Ok(())
+    }
+}
+
+/// RAII handle to a connection currently held by a [`ManagedTransaction`].
+pub struct ManagedConnection<'a> {
+    guard: MutexGuard<'a, Option<PoolConnection<Postgres>>>,
+}
+
+impl Deref for ManagedConnection<'_> {
+    type Target = PgConnection;
+
+    fn deref(&self) -> &Self::Target {
+        match self.guard.as_ref() {
+            Some(conn) => conn,
+            None => panic!("connection missing"),
+        }
+    }
+}
+
+impl DerefMut for ManagedConnection<'_> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self.guard.as_mut() {
+            Some(conn) => conn,
+            None => panic!("connection missing"),
+        }
+    }
+}
+
 /// Begin a PostgreSQL transaction and bind it to the tenant in `RequestContext`.
 ///
-/// The tenant binding is set with `SET LOCAL` so it is automatically cleared
-/// when the connection is returned to the pool.
-pub async fn begin_tenant_transaction<'a>(
+/// When called inside a [`storage_api::UnitOfWork`], the active connection is
+/// reused. Otherwise a new connection and transaction are started. Tenant
+/// binding is set with `SET LOCAL` so it is automatically cleared when the
+/// connection is returned to the pool.
+pub async fn begin_tenant_transaction(
     pool: &PgPool,
     context: &RequestContext,
-) -> Result<Transaction<'a, Postgres>, PlatformError> {
-    let mut tx = pool
-        .begin()
-        .await
-        .map_err(|e| PlatformError::invalid("storage", e.to_string()))?;
+) -> Result<ManagedTransaction, PlatformError> {
+    if let Ok(conn) = CURRENT_TX.try_with(|c| c.clone()) {
+        return Ok(ManagedTransaction {
+            inner: conn,
+            owned: false,
+        });
+    }
 
+    let mut conn = pool.acquire().await.map_err(db_error)?;
+    sqlx::query("BEGIN")
+        .execute(&mut *conn)
+        .await
+        .map_err(db_error)?;
+    set_tenant_context(&mut *conn, context).await?;
+
+    Ok(ManagedTransaction {
+        inner: Arc::new(Mutex::new(Some(conn))),
+        owned: true,
+    })
+}
+
+/// Run the tenant and role configuration required for RLS on `conn`.
+async fn set_tenant_context(
+    conn: &mut PgConnection,
+    context: &RequestContext,
+) -> Result<(), PlatformError> {
     let value = context
         .tenant_id
         .map(|id| id.to_hyphenated())
         .unwrap_or_default();
     sqlx::query("SELECT set_config('app.tenant_id', $1, true)")
         .bind(&value)
-        .execute(&mut *tx)
+        .execute(&mut *conn)
         .await
-        .map_err(|e| PlatformError::invalid("storage", e.to_string()))?;
+        .map_err(db_error)?;
 
     // Ensure RLS policies are evaluated even when connected as a superuser
     // (e.g. in local development or tests). In production the app role is
     // already clsc_app, so this is a no-op.
     let _ = sqlx::query("SET LOCAL ROLE clsc_app")
-        .execute(&mut *tx)
+        .execute(&mut *conn)
         .await;
 
-    Ok(tx)
+    Ok(())
 }
 
 /// Clear the tenant context for the current connection. Used when returning a
@@ -80,8 +197,12 @@ pub async fn clear_tenant_context(pool: &PgPool) -> Result<(), PlatformError> {
     sqlx::query("SELECT set_config('app.tenant_id', '', false)")
         .execute(pool)
         .await
-        .map_err(|e| PlatformError::invalid("storage", e.to_string()))?;
+        .map_err(db_error)?;
     Ok(())
+}
+
+fn db_error(e: sqlx::Error) -> PlatformError {
+    PlatformError::new(ErrorCode::Unavailable, e.to_string())
 }
 
 pub fn version() -> &'static str {
@@ -117,11 +238,12 @@ mod tests {
     #[sqlx::test(migrations = "../../migrations")]
     async fn tenant_context_is_set_in_transaction(pool: PgPool) -> sqlx::Result<()> {
         let context = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
-        let mut tx = match begin_tenant_transaction(&pool, &context).await {
+        let tx_managed = match begin_tenant_transaction(&pool, &context).await {
             Ok(tx) => tx,
             Err(e) => panic!("{e}"),
         };
 
+        let mut tx = tx_managed.lock().await;
         let row: (String,) = sqlx::query_as("SELECT current_setting('app.tenant_id', true)")
             .fetch_one(&mut *tx)
             .await?;
@@ -131,25 +253,28 @@ mod tests {
             panic!("missing tenant id in context");
         }
 
-        tx.rollback().await?;
+        drop(tx);
+        tx_managed.rollback().await?;
         Ok(())
     }
 
     #[sqlx::test(migrations = "../../migrations")]
     async fn tenant_context_is_cleared_when_empty(pool: PgPool) -> sqlx::Result<()> {
         let context = RequestContext::default();
-        let mut tx = match begin_tenant_transaction(&pool, &context).await {
+        let tx_managed = match begin_tenant_transaction(&pool, &context).await {
             Ok(tx) => tx,
             Err(e) => panic!("{e}"),
         };
 
+        let mut tx = tx_managed.lock().await;
         let row: (Option<String>,) =
             sqlx::query_as("SELECT nullif(current_setting('app.tenant_id', true), '')")
                 .fetch_one(&mut *tx)
                 .await?;
         assert!(row.0.is_none());
 
-        tx.rollback().await?;
+        drop(tx);
+        tx_managed.rollback().await?;
         Ok(())
     }
 }

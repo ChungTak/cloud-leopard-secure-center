@@ -38,13 +38,21 @@ pub struct Page<T> {
     pub next_cursor: Option<String>,
 }
 
-/// Unit of work boundary. Implementations wrap a transaction.
+/// Unit of work boundary. Implementations wrap a transaction around an
+/// arbitrary operation so that all repository calls inside the operation
+/// participate in the same atomic commit.
 #[async_trait]
 pub trait UnitOfWork: Send + Sync {
-    /// Commit the transaction.
-    async fn commit(self) -> Result<(), PlatformError>;
-    /// Rollback the transaction.
-    async fn rollback(self) -> Result<(), PlatformError>;
+    /// Execute `operation` inside a single transaction.
+    async fn execute<F, Fut, T>(
+        &self,
+        ctx: &RequestContext,
+        operation: F,
+    ) -> Result<T, PlatformError>
+    where
+        F: FnOnce() -> Fut + Send,
+        Fut: std::future::Future<Output = Result<T, PlatformError>> + Send,
+        T: Send;
 }
 
 /// Repository contract for the `Tenant` aggregate.
@@ -807,6 +815,96 @@ pub trait RetentionRepository: Send + Sync {
         cutoff: UtcTimestamp,
         batch_size: u64,
     ) -> Result<CleanupBatchResult, PlatformError>;
+}
+
+/// Idempotency record stored for a write operation.
+#[derive(Debug, Clone)]
+pub struct IdempotencyRecord {
+    pub tenant_id: Option<TenantId>,
+    pub principal_id: UserId,
+    pub endpoint_scope: String,
+    pub idempotency_key: String,
+    pub request_digest: String,
+    pub response_status: Option<i32>,
+    pub response_body: Option<String>,
+    pub expires_at: UtcTimestamp,
+}
+
+/// Result of checking an idempotency key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdempotencyStatus {
+    /// The key is new; the caller should execute the operation.
+    New,
+    /// The key exists with the same digest; the stored response can be replayed.
+    Stored,
+    /// The key exists with a different digest; this is a conflict.
+    Conflict,
+}
+
+/// An outbox message waiting to be published to the message bus.
+#[derive(Debug, Clone)]
+pub struct OutboxMessage {
+    pub message_id: Uuid,
+    pub tenant_id: Option<TenantId>,
+    pub aggregate_type: String,
+    pub aggregate_id: String,
+    pub aggregate_sequence: i64,
+    pub event_type: String,
+    pub payload: String,
+    pub occurred_at: UtcTimestamp,
+    pub available_at: UtcTimestamp,
+    pub attempts: i32,
+    pub published_at: Option<UtcTimestamp>,
+}
+
+/// Repository for idempotency records.
+#[async_trait]
+pub trait IdempotencyRepository: Send + Sync {
+    /// Find an existing idempotency record by its composite key.
+    async fn find(
+        &self,
+        tenant_id: Option<TenantId>,
+        principal_id: UserId,
+        endpoint_scope: &str,
+        idempotency_key: &str,
+        ctx: &RequestContext,
+    ) -> Result<Option<IdempotencyRecord>, PlatformError>;
+
+    /// Persist or update an idempotency record.
+    async fn save(
+        &self,
+        record: &IdempotencyRecord,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+}
+
+/// Repository for outbox messages.
+#[async_trait]
+pub trait OutboxRepository: Send + Sync {
+    /// Append a new outbox message.
+    async fn append(
+        &self,
+        message: &OutboxMessage,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
+
+    /// Claim a bounded batch of unpublished messages ordered by available_at.
+    /// Each claimed message is leased for `lease` before it can be claimed again,
+    /// giving the caller a window to publish and ack it.
+    async fn claim(
+        &self,
+        batch_size: u64,
+        lease: std::time::Duration,
+        ctx: &RequestContext,
+    ) -> Result<Vec<OutboxMessage>, PlatformError>;
+
+    /// Mark a message as published at the given timestamp.
+    async fn mark_published(
+        &self,
+        message_id: Uuid,
+        published_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<(), PlatformError>;
 }
 
 pub fn version() -> &'static str {

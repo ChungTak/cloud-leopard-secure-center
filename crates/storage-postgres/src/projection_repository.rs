@@ -43,13 +43,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         event.validate()?;
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid).await?;
 
         let device_view: (String,) = sqlx::query_as(
             "SELECT device_view FROM projection.active_view WHERE tenant_id = $1 FOR UPDATE",
@@ -62,12 +63,12 @@ impl ProjectionRepository for PostgresProjectionRepository {
         validate_table_name(&table)?;
 
         let existing =
-            fetch_device_projection_sql(&mut tx, &table, tenant_uuid, &event.external_ref).await?;
+            fetch_device_projection_sql(&mut *tx, &table, tenant_uuid, &event.external_ref).await?;
 
         match existing {
             None => {
                 let stale = !event.is_contiguous(None);
-                insert_device_projection(&mut tx, &table, tenant_uuid, &event, stale).await?;
+                insert_device_projection(&mut *tx, &table, tenant_uuid, &event, stale).await?;
             }
             Some(proj) => {
                 if event.sequence < proj.sequence {
@@ -81,7 +82,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                     }
                     // mismatched payload for same sequence
                     record_failure_sql(
-                        &mut tx,
+                        &mut *tx,
                         tenant_uuid,
                         &event.source_event_id,
                         &event.external_ref,
@@ -93,11 +94,12 @@ impl ProjectionRepository for PostgresProjectionRepository {
                 }
                 // newer sequence
                 let stale = !event.is_contiguous(Some(proj.sequence));
-                upsert_device_projection(&mut tx, &table, tenant_uuid, &event, stale).await?;
+                upsert_device_projection(&mut *tx, &table, tenant_uuid, &event, stale).await?;
             }
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -106,13 +108,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         external_ref: &str,
         ctx: &RequestContext,
     ) -> Result<DeviceProjection, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid).await?;
 
         let device_view: (String,) =
             sqlx::query_as("SELECT device_view FROM projection.active_view WHERE tenant_id = $1")
@@ -123,7 +126,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         let table = device_view.0;
         validate_table_name(&table)?;
 
-        let row = fetch_device_projection_sql(&mut tx, &table, tenant_uuid, external_ref).await?;
+        let row = fetch_device_projection_sql(&mut *tx, &table, tenant_uuid, external_ref).await?;
         let projection = match row {
             Some(proj) => {
                 let mut proj = proj;
@@ -140,7 +143,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
             }
         };
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(projection)
     }
 
@@ -150,13 +154,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         event.validate()?;
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid).await?;
 
         let channel_view: (String,) = sqlx::query_as(
             "SELECT channel_view FROM projection.active_view WHERE tenant_id = $1 FOR UPDATE",
@@ -169,12 +174,13 @@ impl ProjectionRepository for PostgresProjectionRepository {
         validate_table_name(&table)?;
 
         let existing =
-            fetch_channel_projection_sql(&mut tx, &table, tenant_uuid, &event.external_ref).await?;
+            fetch_channel_projection_sql(&mut *tx, &table, tenant_uuid, &event.external_ref)
+                .await?;
 
         match existing {
             None => {
                 let stale = !event.is_contiguous(None);
-                insert_channel_projection(&mut tx, &table, tenant_uuid, &event, stale).await?;
+                insert_channel_projection(&mut *tx, &table, tenant_uuid, &event, stale).await?;
             }
             Some(proj) => {
                 if event.sequence < proj.sequence {
@@ -185,7 +191,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                         return Ok(());
                     }
                     record_failure_sql(
-                        &mut tx,
+                        &mut *tx,
                         tenant_uuid,
                         &event.source_event_id,
                         &event.external_ref,
@@ -196,11 +202,12 @@ impl ProjectionRepository for PostgresProjectionRepository {
                     return Ok(());
                 }
                 let stale = !event.is_contiguous(Some(proj.sequence));
-                upsert_channel_projection(&mut tx, &table, tenant_uuid, &event, stale).await?;
+                upsert_channel_projection(&mut *tx, &table, tenant_uuid, &event, stale).await?;
             }
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -209,13 +216,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         external_ref: &str,
         ctx: &RequestContext,
     ) -> Result<ChannelProjection, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid).await?;
 
         let channel_view: (String,) =
             sqlx::query_as("SELECT channel_view FROM projection.active_view WHERE tenant_id = $1")
@@ -226,7 +234,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         let table = channel_view.0;
         validate_table_name(&table)?;
 
-        let row = fetch_channel_projection_sql(&mut tx, &table, tenant_uuid, external_ref).await?;
+        let row = fetch_channel_projection_sql(&mut *tx, &table, tenant_uuid, external_ref).await?;
         let projection = match row {
             Some(proj) => {
                 let mut proj = proj;
@@ -243,7 +251,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
             }
         };
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(projection)
     }
 
@@ -253,13 +262,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         channel_events: Vec<ChannelEvent>,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid).await?;
 
         let active_view: (String, String, i64) = sqlx::query_as(
             "SELECT device_view, channel_view, generation FROM projection.active_view
@@ -307,7 +317,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                 continue;
             }
             let stale = !event.is_contiguous(last);
-            insert_device_projection(&mut tx, device_shadow, tenant_uuid, &event, stale).await?;
+            insert_device_projection(&mut *tx, device_shadow, tenant_uuid, &event, stale).await?;
             device_last.insert(event.external_ref.clone(), event.sequence);
         }
 
@@ -331,7 +341,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                 continue;
             }
             let stale = !event.is_contiguous(last);
-            insert_channel_projection(&mut tx, channel_shadow, tenant_uuid, &event, stale).await?;
+            insert_channel_projection(&mut *tx, channel_shadow, tenant_uuid, &event, stale).await?;
             channel_last.insert(event.external_ref.clone(), event.sequence);
         }
 
@@ -349,7 +359,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -360,7 +371,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
         observed_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -383,7 +395,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -392,7 +405,8 @@ impl ProjectionRepository for PostgresProjectionRepository {
         failure: ProjectionFailure,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -422,13 +436,14 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 }
 
 async fn ensure_active_view(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: Uuid,
 ) -> Result<(), PlatformError> {
     sqlx::query(
@@ -438,7 +453,7 @@ async fn ensure_active_view(
     )
     .bind(tenant_uuid)
     .bind(Utc::now())
-    .execute(&mut **tx)
+    .execute(&mut *tx)
     .await
     .map_err(db_error)?;
     Ok(())
@@ -470,7 +485,7 @@ fn other_view(view: &str) -> Result<&'static str, PlatformError> {
 }
 
 async fn fetch_device_projection_sql(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     external_ref: &str,
@@ -483,7 +498,7 @@ async fn fetch_device_projection_sql(
     let row = sqlx::query(AssertSqlSafe(sql))
         .bind(tenant_uuid)
         .bind(external_ref)
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
 
@@ -491,7 +506,7 @@ async fn fetch_device_projection_sql(
 }
 
 async fn insert_device_projection(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     event: &DeviceEvent,
@@ -510,14 +525,14 @@ async fn insert_device_projection(
         .bind(utc_to_db(event.observed_at))
         .bind(&event.payload)
         .bind(stale)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     Ok(())
 }
 
 async fn upsert_device_projection(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     event: &DeviceEvent,
@@ -542,7 +557,7 @@ async fn upsert_device_projection(
         .bind(utc_to_db(event.observed_at))
         .bind(&event.payload)
         .bind(stale)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     Ok(())
@@ -566,7 +581,7 @@ fn row_to_device_projection(row: sqlx::postgres::PgRow) -> Result<DeviceProjecti
 }
 
 async fn fetch_channel_projection_sql(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     external_ref: &str,
@@ -579,7 +594,7 @@ async fn fetch_channel_projection_sql(
     let row = sqlx::query(AssertSqlSafe(sql))
         .bind(tenant_uuid)
         .bind(external_ref)
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
 
@@ -587,7 +602,7 @@ async fn fetch_channel_projection_sql(
 }
 
 async fn insert_channel_projection(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     event: &ChannelEvent,
@@ -606,14 +621,14 @@ async fn insert_channel_projection(
         .bind(utc_to_db(event.observed_at))
         .bind(&event.payload)
         .bind(stale)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     Ok(())
 }
 
 async fn upsert_channel_projection(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     table: &str,
     tenant_uuid: Uuid,
     event: &ChannelEvent,
@@ -638,7 +653,7 @@ async fn upsert_channel_projection(
         .bind(utc_to_db(event.observed_at))
         .bind(&event.payload)
         .bind(stale)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await
         .map_err(db_error)?;
     Ok(())
@@ -664,7 +679,7 @@ fn row_to_channel_projection(
 }
 
 async fn record_failure_sql(
-    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: Uuid,
     source_event_id: &str,
     external_ref: &str,
@@ -685,7 +700,7 @@ async fn record_failure_sql(
     .bind(reason)
     .bind(payload)
     .bind(Utc::now())
-    .execute(&mut **tx)
+    .execute(&mut *tx)
     .await
     .map_err(db_error)?;
     Ok(())

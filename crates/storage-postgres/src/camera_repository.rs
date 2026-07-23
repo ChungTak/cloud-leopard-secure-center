@@ -29,7 +29,8 @@ impl PostgresCameraRepository {
 #[async_trait]
 impl CameraRepository for PostgresCameraRepository {
     async fn by_id(&self, id: CameraId, ctx: &RequestContext) -> Result<Camera, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, device_id, area_id, code, name, sensitivity,
                     is_enabled, revision, created_at, updated_at, actor
@@ -50,12 +51,14 @@ impl CameraRepository for PostgresCameraRepository {
                 ));
             }
         };
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(camera)
     }
 
     async fn create(&self, camera: &Camera, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let tenant_uuid = ctx
             .tenant_id
             .map(|t| *t.as_uuid())
@@ -90,7 +93,8 @@ impl CameraRepository for PostgresCameraRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -100,7 +104,8 @@ impl CameraRepository for PostgresCameraRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.cameras WHERE id = $1 AND deleted_at IS NULL",
@@ -155,7 +160,8 @@ impl CameraRepository for PostgresCameraRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -165,7 +171,8 @@ impl CameraRepository for PostgresCameraRepository {
         expected: Revision,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let current: Option<i64> = sqlx::query_scalar(
             "SELECT revision FROM resource.cameras WHERE id = $1 AND deleted_at IS NULL",
@@ -212,7 +219,8 @@ impl CameraRepository for PostgresCameraRepository {
             ));
         }
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -221,7 +229,8 @@ impl CameraRepository for PostgresCameraRepository {
         device_id: DeviceId,
         ctx: &RequestContext,
     ) -> Result<Page<Camera>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, device_id, area_id, code, name, sensitivity,
                     is_enabled, revision, created_at, updated_at, actor
@@ -240,7 +249,8 @@ impl CameraRepository for PostgresCameraRepository {
             .map(row_to_camera)
             .collect::<Result<Vec<_>, _>>()?;
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,

@@ -22,6 +22,7 @@ domain-resource = { path = "../domain-resource" }
 foundation = { path = "../foundation" }
 async-trait = "=0.1.89"
 chrono = "=0.4.45"
+tokio = { version = "=1.52.3", default-features = false, features = ["sync", "rt"] }
 serde_json = "=1.0.151"
 sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "tls-none", "postgres", "migrate", "macros", "chrono", "uuid"] }
 

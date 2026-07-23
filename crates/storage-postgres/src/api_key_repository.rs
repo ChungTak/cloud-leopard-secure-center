@@ -28,7 +28,8 @@ impl PostgresApiKeyRepository {
 #[async_trait]
 impl ApiKeyRepository for PostgresApiKeyRepository {
     async fn create(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO iam.api_keys
              (id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at)
@@ -49,12 +50,14 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
     async fn by_id(&self, id: Uuid, ctx: &RequestContext) -> Result<ApiKey, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at
              FROM iam.api_keys
@@ -69,7 +72,8 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         })?;
 
         let api_key = row_to_api_key(row)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(api_key)
     }
 
@@ -78,7 +82,8 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         token_hash: &str,
         ctx: &RequestContext,
     ) -> Result<Option<ApiKey>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at
              FROM iam.api_keys
@@ -90,12 +95,14 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         .map_err(db_error)?;
 
         let api_key = row.map(row_to_api_key).transpose()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(api_key)
     }
 
     async fn update(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "UPDATE iam.api_keys
              SET name = $2, scopes = $3, allowed_sources = $4, token_hash = $5,
@@ -114,7 +121,8 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -123,7 +131,8 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         owner_id: UserId,
         ctx: &RequestContext,
     ) -> Result<Page<ApiKey>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let rows = sqlx::query(
             "SELECT id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at
              FROM iam.api_keys
@@ -139,7 +148,8 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
             .into_iter()
             .map(row_to_api_key)
             .collect::<Result<Vec<_>, _>>()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(Page {
             items,
             next_cursor: None,

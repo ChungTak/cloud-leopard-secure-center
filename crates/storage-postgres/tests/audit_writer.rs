@@ -92,25 +92,35 @@ async fn append_only_denies_update_and_delete(pool: sqlx::PgPool) -> sqlx::Resul
     let record = sample_record(tenant, &clock);
     let id = ok_or_panic(writer.write(&record, &ctx).await);
 
-    let mut tx = begin_tenant_transaction(&pool, &ctx)
+    let tx_managed = begin_tenant_transaction(&pool, &ctx)
         .await
         .unwrap_or_else(|e| panic!("{e:?}"));
+    let mut tx = tx_managed.lock().await;
     let update = sqlx::query("UPDATE audit.records SET action = 'x' WHERE id = $1")
         .bind(id.value())
         .execute(&mut *tx)
         .await;
     assert!(update.is_err());
-    tx.rollback().await.unwrap_or_else(|e| panic!("{e:?}"));
-
-    let mut tx = begin_tenant_transaction(&pool, &ctx)
+    drop(tx);
+    tx_managed
+        .rollback()
         .await
         .unwrap_or_else(|e| panic!("{e:?}"));
+
+    let tx_managed = begin_tenant_transaction(&pool, &ctx)
+        .await
+        .unwrap_or_else(|e| panic!("{e:?}"));
+    let mut tx = tx_managed.lock().await;
     let delete = sqlx::query("DELETE FROM audit.records WHERE id = $1")
         .bind(id.value())
         .execute(&mut *tx)
         .await;
     assert!(delete.is_err());
-    tx.rollback().await.unwrap_or_else(|e| panic!("{e:?}"));
+    drop(tx);
+    tx_managed
+        .rollback()
+        .await
+        .unwrap_or_else(|e| panic!("{e:?}"));
 
     // Record must still be present.
     let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM audit.records WHERE id = $1")

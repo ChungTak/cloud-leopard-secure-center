@@ -29,7 +29,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         success: bool,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO audit.login_attempts (tenant_id, identity, success, ip_address, created_at)
              VALUES ($1, $2, $3, $4, now())",
@@ -41,7 +42,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -52,7 +54,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         window_seconds: i64,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM audit.login_attempts
              WHERE tenant_id = $1 AND identity = $2 AND success = false
@@ -64,7 +67,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         .fetch_one(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(row.0)
     }
 
@@ -75,7 +79,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         window_seconds: i64,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM audit.login_attempts
              WHERE tenant_id = $1 AND ip_address = $2 AND success = false
@@ -87,7 +92,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         .fetch_one(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(row.0)
     }
 }

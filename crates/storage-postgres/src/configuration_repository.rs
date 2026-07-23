@@ -8,7 +8,7 @@ use foundation::{
     ErrorCode, IdGenerator, PlatformError, RequestContext, Revision, SystemClock,
     SystemIdGenerator, SystemRandom, TenantId,
 };
-use sqlx::{PgPool, Postgres, Row, Transaction};
+use sqlx::{PgPool, Row};
 use storage_api::ConfigurationRepository;
 
 use crate::begin_tenant_transaction;
@@ -29,7 +29,9 @@ impl PostgresConfigurationRepository {
 #[async_trait]
 impl ConfigurationRepository for PostgresConfigurationRepository {
     async fn save_definition(&self, definition: &ConfigDefinition) -> Result<(), PlatformError> {
-        let mut tx = self.pool.begin().await.map_err(db_error)?;
+        let ctx = RequestContext::default();
+        let tx_managed = begin_tenant_transaction(&self.pool, &ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         sqlx::query(
             "INSERT INTO config.definitions (config_key, value_type, schema, default_value, sensitive, dynamic)
@@ -51,7 +53,8 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
         .await
         .map_err(db_error)?;
 
-        tx.commit().await.map_err(db_error)
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)
     }
 
     async fn get_definition(
@@ -75,10 +78,11 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
         value: &ConfigValue,
         ctx: &RequestContext,
     ) -> Result<ConfigValue, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let definition = self
-            .get_definition_in_tx(&mut tx, &value.config_key)
+            .get_definition_in_tx(&mut *tx, &value.config_key)
             .await?
             .ok_or_else(|| {
                 PlatformError::new(
@@ -166,7 +170,8 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
             (row.get("config_value_id"), row.get("revision"))
         };
 
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
 
         Ok(ConfigValue {
             id: Some(ConfigValueId(id)),
@@ -184,7 +189,8 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
         scope: &ConfigScope,
         ctx: &RequestContext,
     ) -> Result<Option<ConfigValue>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let _tenant_id = scope.tenant_id().map(|t| *t.as_uuid());
         let scope_type = scope.scope_type();
@@ -219,7 +225,8 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
             None => return Ok(None),
         };
 
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
 
         let tenant_uuid = tenant_id.map(|t| *t.as_uuid());
         let rows = sqlx::query(
@@ -250,7 +257,7 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
 impl PostgresConfigurationRepository {
     async fn get_definition_in_tx(
         &self,
-        tx: &mut Transaction<'_, Postgres>,
+        tx: &mut sqlx::postgres::PgConnection,
         config_key: &str,
     ) -> Result<Option<ConfigDefinition>, PlatformError> {
         let row = sqlx::query(
@@ -258,7 +265,7 @@ impl PostgresConfigurationRepository {
              FROM config.definitions WHERE config_key = $1",
         )
         .bind(config_key)
-        .fetch_optional(&mut **tx)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
 

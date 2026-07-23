@@ -32,7 +32,8 @@ impl MfaRepository for PostgresMfaRepository {
         factor: &MfaFactor,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO iam.mfa_factors
              (id, tenant_id, user_id, factor_type, secret_ref, enabled, verified_at,
@@ -52,7 +53,8 @@ impl MfaRepository for PostgresMfaRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -61,7 +63,8 @@ impl MfaRepository for PostgresMfaRepository {
         factor: &MfaFactor,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         sqlx::query(
             "UPDATE iam.mfa_factors
              SET secret_ref = $2, enabled = $3, verified_at = $4,
@@ -80,7 +83,8 @@ impl MfaRepository for PostgresMfaRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(())
     }
 
@@ -89,7 +93,8 @@ impl MfaRepository for PostgresMfaRepository {
         user_id: UserId,
         ctx: &RequestContext,
     ) -> Result<Option<MfaFactor>, PlatformError> {
-        let mut tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
         let row = sqlx::query(
             "SELECT id, tenant_id, user_id, factor_type, secret_ref, enabled, verified_at,
                     recovery_code_hashes, recovery_code_used, created_at,
@@ -103,7 +108,8 @@ impl MfaRepository for PostgresMfaRepository {
         .map_err(db_error)?;
 
         let factor = row.map(row_to_factor).transpose()?;
-        tx.commit().await.map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
         Ok(factor)
     }
 }
