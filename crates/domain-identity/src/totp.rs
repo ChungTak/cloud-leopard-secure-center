@@ -37,11 +37,7 @@ fn code_for_step(secret: &[u8], step: u64) -> Result<String, PlatformError> {
 /// Returns the matched time step on success, or `None` if the code is invalid.
 /// The verifier accepts the current step and one step on either side to handle
 /// clock skew and boundary transitions.
-pub fn verify(
-    secret: &[u8],
-    code: &str,
-    now: UtcTimestamp,
-) -> Result<Option<u64>, PlatformError> {
+pub fn verify(secret: &[u8], code: &str, now: UtcTimestamp) -> Result<Option<u64>, PlatformError> {
     let step = time_step(now) as i64;
     for candidate in [step - 1, step, step + 1] {
         if candidate < 0 {
