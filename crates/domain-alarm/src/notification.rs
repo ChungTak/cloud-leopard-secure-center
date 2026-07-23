@@ -154,17 +154,27 @@ mod tests {
         assert_eq!(err_or_panic(result).kind, NotificationErrorKind::Invalid);
     }
 
-    #[tokio::test]
-    async fn disabled_port_returns_unavailable() {
-        let port = UnsupportedNotificationPort::new(false);
-        let result = port.send(&make_notification()).await;
-        assert_eq!(err_or_panic(result).kind, NotificationErrorKind::Unavailable);
+    #[test]
+    fn disabled_port_returns_unavailable() {
+        futures::executor::block_on(async {
+            let port = UnsupportedNotificationPort::new(false);
+            let result = port.send(&make_notification()).await;
+            assert_eq!(
+                err_or_panic(result).kind,
+                NotificationErrorKind::Unavailable
+            );
+        });
     }
 
-    #[tokio::test]
-    async fn enabled_port_returns_unsupported() {
-        let port = UnsupportedNotificationPort::new(true);
-        let result = port.send(&make_notification()).await;
-        assert_eq!(err_or_panic(result).kind, NotificationErrorKind::Unsupported);
+    #[test]
+    fn enabled_port_returns_unsupported() {
+        futures::executor::block_on(async {
+            let port = UnsupportedNotificationPort::new(true);
+            let result = port.send(&make_notification()).await;
+            assert_eq!(
+                err_or_panic(result).kind,
+                NotificationErrorKind::Unsupported
+            );
+        });
     }
 }
