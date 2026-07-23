@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use domain_audit::audit_record::{AuditRecord, AuditRecordId};
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::RoleBinding;
+use domain_configuration::{ConfigDefinition, ConfigScope, ConfigValue};
 use domain_identity::api_key::ApiKey;
 use domain_identity::credential::Credential;
 use domain_identity::mfa::MfaFactor;
@@ -698,6 +699,44 @@ pub trait AuditWriter: Send + Sync {
         record: &AuditRecord,
         ctx: &RequestContext,
     ) -> Result<AuditRecordId, PlatformError>;
+}
+
+/// Configuration repository port.
+#[async_trait]
+pub trait ConfigurationRepository: Send + Sync {
+    /// Persist a configuration definition.
+    async fn save_definition(&self, definition: &ConfigDefinition) -> Result<(), PlatformError>;
+
+    /// Load a configuration definition by key.
+    async fn get_definition(
+        &self,
+        config_key: &str,
+    ) -> Result<Option<ConfigDefinition>, PlatformError>;
+
+    /// Persist a scoped configuration value. Optimistically updates by `revision`.
+    async fn save_value(
+        &self,
+        value: &ConfigValue,
+        ctx: &RequestContext,
+    ) -> Result<ConfigValue, PlatformError>;
+
+    /// Load a configuration value for a key and scope.
+    async fn get_value(
+        &self,
+        config_key: &str,
+        scope: &ConfigScope,
+        ctx: &RequestContext,
+    ) -> Result<Option<ConfigValue>, PlatformError>;
+
+    /// Resolve the effective value for `config_key` given an optional tenant and module.
+    /// For sensitive definitions the returned string is the secret reference, not the secret.
+    async fn resolve(
+        &self,
+        config_key: &str,
+        tenant_id: Option<TenantId>,
+        module: Option<&str>,
+        ctx: &RequestContext,
+    ) -> Result<Option<String>, PlatformError>;
 }
 
 pub fn version() -> &'static str {
