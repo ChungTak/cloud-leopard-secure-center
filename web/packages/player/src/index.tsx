@@ -10,3 +10,9 @@ export {
   type LayoutSize,
   type MultiPlayerLayoutProps,
 } from './MultiPlayerLayout';
+export { loadSecurityPlayerWorker, type WorkerLoadResult } from './useSecurityPlayerWorker';
+export {
+  defaultPlayerSecurityPolicy,
+  securePlayerBrowserMatrix,
+  type PlayerSecurityPolicy,
+} from './playerConfig';
