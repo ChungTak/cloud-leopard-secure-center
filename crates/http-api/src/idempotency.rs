@@ -17,7 +17,10 @@ use std::{
 };
 use tokio::sync::Mutex;
 
-use crate::error::AppError;
+use crate::{
+    client_ip::{TrustedProxyConfig, resolve_client_ip},
+    error::AppError,
+};
 
 /// In-memory idempotency store keyed by request signature.
 #[derive(Clone)]
@@ -131,17 +134,14 @@ fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
 }
 
 fn client_ip_hint(req: &Request<Body>) -> String {
-    if let Some(value) = req
-        .headers()
-        .get("x-forwarded-for")
-        .and_then(|v| v.to_str().ok())
-    {
-        return value.to_string();
-    }
-    if let Some(value) = req.headers().get("x-real-ip").and_then(|v| v.to_str().ok()) {
-        return value.to_string();
-    }
-    String::new()
+    let config = req
+        .extensions()
+        .get::<TrustedProxyConfig>()
+        .cloned()
+        .unwrap_or_default();
+    resolve_client_ip(req.headers(), req.extensions(), &config)
+        .map(|ip| ip.to_string())
+        .unwrap_or_default()
 }
 
 fn is_write_method(method: &str) -> bool {
