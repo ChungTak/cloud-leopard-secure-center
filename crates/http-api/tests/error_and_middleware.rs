@@ -1,15 +1,16 @@
 //! Integration tests for HTTP middleware, RFC 9457 problem details and status codes.
 
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use axum::{
     Json, Router,
     body::{Body, Bytes},
-    extract::Path,
+    extract::{Extension, Path},
     http::Request,
     routing::{get, post},
 };
-use http_api::error::AppError;
+use foundation::config::RateLimitConfig;
+use http_api::{client_ip::TrustedProxyConfig, error::AppError, rate_limit::RateLimitState};
 use http_body_util::BodyExt;
 use tower::util::ServiceExt;
 
@@ -17,7 +18,19 @@ fn test_app() -> Router {
     let router = http_api::routes::router()
         .route("/errors/{code}", get(error_handler))
         .route("/echo", post(echo));
+    let rate_limit = Arc::new(RateLimitState::new(
+        RateLimitConfig {
+            requests: 1000,
+            window_seconds: 60,
+        },
+        RateLimitConfig {
+            requests: 1000,
+            window_seconds: 60,
+        },
+    ));
     http_api::middleware::with_middleware(router)
+        .layer(Extension(rate_limit))
+        .layer(Extension(TrustedProxyConfig::default()))
 }
 
 async fn echo(_body: Bytes) -> &'static str {

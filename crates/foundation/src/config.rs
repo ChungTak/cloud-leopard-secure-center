@@ -154,6 +154,9 @@ pub struct HttpConfig {
     pub host: String,
     /// Bind port.
     pub port: Port,
+    /// Trusted proxy CIDRs. Forwarded `X-Forwarded-For` is only accepted from these addresses.
+    #[serde(default)]
+    pub trusted_proxies: Vec<String>,
 }
 
 /// Storage settings.
@@ -167,6 +170,35 @@ pub struct StorageConfig {
     pub max_connections: u32,
 }
 
+/// Rate limit window configuration.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RateLimitConfig {
+    /// Maximum number of requests allowed in the window.
+    #[serde(default = "default_rate_limit_requests")]
+    pub requests: u32,
+    /// Window size in seconds.
+    #[serde(default = "default_rate_limit_window")]
+    pub window_seconds: u64,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self {
+            requests: default_rate_limit_requests(),
+            window_seconds: default_rate_limit_window(),
+        }
+    }
+}
+
+fn default_rate_limit_requests() -> u32 {
+    10
+}
+
+fn default_rate_limit_window() -> u64 {
+    60
+}
+
 /// Security settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -175,6 +207,15 @@ pub struct SecurityConfig {
     pub token_expiry_seconds: u64,
     /// Issuer string.
     pub issuer: String,
+    /// Token audience.
+    #[serde(default)]
+    pub audience: String,
+    /// Rate limit for pre-login endpoints.
+    #[serde(default)]
+    pub login_rate_limit: RateLimitConfig,
+    /// Rate limit for authenticated API endpoints.
+    #[serde(default)]
+    pub api_rate_limit: RateLimitConfig,
 }
 
 /// Observability settings.
@@ -225,6 +266,7 @@ impl AppConfig {
             http: HttpConfig {
                 host: "127.0.0.1".to_string(),
                 port: Port(8080),
+                trusted_proxies: Vec::new(),
             },
             storage: StorageConfig {
                 url: SecretValue::new("placeholder".to_string()),
@@ -233,6 +275,9 @@ impl AppConfig {
             security: SecurityConfig {
                 token_expiry_seconds: 3600,
                 issuer: "clsc".to_string(),
+                audience: "clsc-api".to_string(),
+                login_rate_limit: RateLimitConfig::default(),
+                api_rate_limit: RateLimitConfig::default(),
             },
             observability: ObservabilityConfig {
                 trace_collector: None,

@@ -56,6 +56,7 @@ impl TokenService {
             session_version,
             aud: self.audience.clone(),
             iss: self.issuer.clone(),
+            nbf: iat,
             exp: iat + self.access_ttl_seconds,
             jti: jti.into(),
         };
@@ -81,6 +82,8 @@ impl TokenService {
         let claims_b64 = parts[1];
         let sig_b64 = parts[2];
 
+        self.verify_header(header_b64)?;
+
         let claims_bytes = Base64UrlUnpadded::decode_vec(claims_b64)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
         let claims: AccessTokenClaims = serde_json::from_slice(&claims_bytes)
@@ -94,6 +97,7 @@ impl TokenService {
         }
 
         claims.validate(&self.issuer, &self.audience, now)?;
+        self.validate_nbf_and_jti(&claims, now)?;
 
         let signature = Base64UrlUnpadded::decode_vec(sig_b64)
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
@@ -104,6 +108,43 @@ impl TokenService {
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
 
         Ok(claims)
+    }
+
+    fn verify_header(&self, header_b64: &str) -> Result<(), PlatformError> {
+        let header_bytes = Base64UrlUnpadded::decode_vec(header_b64)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        let header: serde_json::Value = serde_json::from_slice(&header_bytes)
+            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        let alg = header.get("alg").and_then(|v| v.as_str()).unwrap_or("");
+        let typ = header.get("typ").and_then(|v| v.as_str()).unwrap_or("");
+        if alg != "HS256" || typ != "JWT" {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        Ok(())
+    }
+
+    fn validate_nbf_and_jti(
+        &self,
+        claims: &AccessTokenClaims,
+        now: UtcTimestamp,
+    ) -> Result<(), PlatformError> {
+        if claims.jti.is_empty() {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        let now_seconds = now.timestamp_millis() / 1000;
+        if now_seconds < claims.nbf {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        Ok(())
     }
 
     /// Generate a new raw refresh token and its stored representation.

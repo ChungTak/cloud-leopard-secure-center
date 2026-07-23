@@ -9,9 +9,9 @@
 
 ### API-002：认证与 tenant 边界
 **前置：** IAM-003、API-001。
-- [ ] 验证 token 算法、签名、iss/aud/exp/nbf/jti/session_version；path tenant 必须匹配 scope。
-- [ ] handler 构造 RequestContext，repository 不从 header 自行推断 tenant。
-- [ ] 登录前/后独立限流；可信代理配置外不接受转发 IP。
+- [x] 验证 token 算法、签名、iss/aud/exp/nbf/jti/session_version；path tenant 必须匹配 scope。
+- [x] handler 构造 RequestContext，repository 不从 header 自行推断 tenant。
+- [x] 登录前/后独立限流；可信代理配置外不接受转发 IP。
 **测试：** token 攻击矩阵、tenant path 伪造、代理 header、撤销即时生效。
 
 ### API-003：并发、分页和实时通知
