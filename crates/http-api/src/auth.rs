@@ -1,10 +1,12 @@
 //! HTTP authentication extractor and helpers.
 
 use application::auth::{AuthContext, Authenticator};
+use async_trait::async_trait;
 use axum::{
     extract::FromRequestParts,
     http::{StatusCode, header, request::Parts},
 };
+use foundation::{ErrorCode, PlatformError};
 use std::sync::Arc;
 
 use crate::error::AppError;
@@ -78,4 +80,22 @@ pub fn www_authenticate() -> (StatusCode, [(&'static str, &'static str); 1], ())
         [("WWW-Authenticate", "Bearer")],
         (),
     )
+}
+
+/// Fallback authenticator that rejects every token.
+///
+/// Useful as a safe default in binaries that have not yet wired a real
+/// `TokenAuthenticator`; it prevents `Auth`/`ApiRequestContext` from leaking
+/// an internal server error when a client sends an `Authorization` header.
+#[derive(Debug, Clone)]
+pub struct DenyAllAuthenticator;
+
+#[async_trait]
+impl Authenticator for DenyAllAuthenticator {
+    async fn authenticate(&self, _token: &str) -> Result<AuthContext, PlatformError> {
+        Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid token",
+        ))
+    }
 }

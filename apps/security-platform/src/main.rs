@@ -5,9 +5,11 @@ use std::process::ExitCode;
 use std::sync::Arc;
 use std::time::Duration;
 
+use application::auth::Authenticator;
 use axum::{Extension, Router};
 use foundation::config::RateLimitConfig;
 use foundation::{RandomSource, SystemRandom};
+use http_api::auth::DenyAllAuthenticator;
 use http_api::client_ip::TrustedProxyConfig;
 use http_api::idempotency::IdempotencyState;
 use http_api::pagination::PaginationConfig;
@@ -105,7 +107,10 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             .layer(Extension(rate_limit_state))
             .layer(Extension(proxy_config))
             .layer(Extension(pagination_config))
-            .layer(Extension(idempotency_state));
+            .layer(Extension(idempotency_state))
+            .layer(Extension::<Arc<dyn Authenticator>>(Arc::new(
+                DenyAllAuthenticator,
+            )));
     let app = if static_dir.is_dir() {
         let index = static_dir.join("index.html");
         let serve = ServeDir::new(&static_dir)
