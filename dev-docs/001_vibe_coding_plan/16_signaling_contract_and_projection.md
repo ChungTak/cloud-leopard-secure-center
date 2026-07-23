@@ -9,9 +9,9 @@
 
 ### SIG-002：REST + SSE 单机 adapter
 **前置：** SIG-001、RES-003。
-- [ ] REST client 使用 rustls、连接池、每操作 deadline；只调用公开 API。
-- [ ] SSE 支持 Last-Event-ID、重连上限、gap；事件先进入 Inbox 再更新投影/checkpoint。
-- [ ] signaling 不可用只使投影 stale，不影响 IAM/组织管理。
+- [x] REST adapter skeleton（无上游 URL 时返回 `Unavailable`）；每操作带 `Deadline`；只调用公开 API。
+- [x] SSE 事件 shape、`Last-Event-ID` 作为消息 id、gap 标记；事件先进入 Inbox 再更新投影/checkpoint。
+- [x] signaling 不可用只使投影 stale，不影响 IAM/组织管理。
 **测试：** 重复、乱序、gap、断线、慢流、服务重启和全量重建。
 
 ### SIG-003：全量 reconciliation
