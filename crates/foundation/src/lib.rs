@@ -1,6 +1,7 @@
 //! Cloud Leopard Secure Center foundation types and utilities.
 
 pub mod config;
+pub mod retry;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
