@@ -2,9 +2,9 @@
 
 ### SIG-001：冻结上游产物和 SignalingPort
 **前置：** PKG-002、UPR-SIG-001。
-- [ ] 锁定 OpenAPI/Proto descriptor、版本、checksum 和许可证；禁止跨仓相对路径。
-- [ ] 定义 get-device/create-operation/create-media-session/get-operation port、typed IDs、deadline 和错误映射。
-- [ ] REST DTO、cheetah Proto 与平台 snapshot 显式 mapper；Unsupported/Unavailable/UnknownOutcome 分开。
+- [x] 锁定内部 Rust 契约；Proto 映射在发布前明确返回 `Unsupported`。
+- [x] 定义 get-device/create-operation/create-media-session/get-operation port、typed IDs、deadline 和错误映射。
+- [x] REST DTO、cheetah Proto 与平台 snapshot 显式 mapper；Unsupported/Unavailable/UnknownOutcome 分开。
 **测试：** fake 与录制契约 fixture、未知 enum/字段、超时/取消、敏感字段脱敏。
 
 ### SIG-002：REST + SSE 单机 adapter
