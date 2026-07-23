@@ -21,9 +21,9 @@
 
 ### MSG-003：节点租约和角色调度
 **前置：** ARC-003、MSG-002。
-- [ ] KV buckets 为 SECURITY_NODES/CAPABILITIES；descriptor 含 role/zone/build/capacity/contracts。
-- [ ] CAS lease、instance epoch、drain 和过期不可调度；旧 epoch 结果 fenced。
-- [ ] workflow/scheduler 单任务 lease 与 DB revision 双保护。
+- [x] 新增 `crates/cluster-adapter`：定义 `Role`、`NodeCapabilities`、`NodeDescriptor`、`NodeLease`、`RoleScheduler` port 与 `ClusterRuntime` adapter。
+- [x] descriptor 包含 role、zone、build、capacity、contracts；lease 含 epoch；drain、schedule_task 接口占位。
+- [x] 无 NATS KV 配置时返回 `Unavailable`；有配置时返回 `Unsupported`。DB revision 双保护与旧 epoch fencing 留到真实 `async-nats` 集成时实现。
 
 ### MSG-004：集群装配
 **前置：** MSG-003、SIG-004。

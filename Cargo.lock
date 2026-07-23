@@ -252,6 +252,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "cluster-adapter"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "foundation",
+ "serde",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "cmov"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

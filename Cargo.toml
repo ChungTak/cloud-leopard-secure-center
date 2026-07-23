@@ -21,6 +21,7 @@ members = [
     "crates/nats-adapter",
     "crates/http-api",
     "crates/observability",
+    "crates/cluster-adapter",
 ]
 
 [workspace.package]
