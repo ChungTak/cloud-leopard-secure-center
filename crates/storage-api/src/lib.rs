@@ -24,9 +24,9 @@ use domain_resource::projection::{
 };
 use domain_resource::tag::{ResourceType, Tag};
 use foundation::{
-    AreaId, BindingId, BuildingId, CameraId, DeviceId, ExternalBindingId, FloorId, OrganizationId,
-    PlatformError, RequestContext, Revision, RoleId, SiteId, TagId, TenantId, UserId, UtcTimestamp,
-    uuid::Uuid,
+    AreaId, BindingId, BuildingId, CameraId, DeviceId, ErrorCode, ExternalBindingId, FloorId,
+    OrganizationId, PlatformError, RequestContext, Revision, RoleId, SiteId, TagId, TenantId,
+    UserId, UtcTimestamp, uuid::Uuid,
 };
 
 /// Page of results returned by a repository list query.
@@ -876,6 +876,36 @@ pub trait IdempotencyRepository: Send + Sync {
         record: &IdempotencyRecord,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
+
+    /// Persist the record only if the composite key has not been used, or
+    /// return the existing record when the request digest matches. A different
+    /// digest for the same key returns `ErrorCode::Conflict`.
+    async fn save_or_conflict(
+        &self,
+        record: &IdempotencyRecord,
+        ctx: &RequestContext,
+    ) -> Result<Option<IdempotencyRecord>, PlatformError> {
+        if let Some(existing) = self
+            .find(
+                record.tenant_id,
+                record.principal_id,
+                &record.endpoint_scope,
+                &record.idempotency_key,
+                ctx,
+            )
+            .await?
+        {
+            if existing.request_digest != record.request_digest {
+                return Err(PlatformError::new(
+                    ErrorCode::Conflict,
+                    "idempotency key reused with different request digest",
+                ));
+            }
+            return Ok(Some(existing));
+        }
+        self.save(record, ctx).await?;
+        Ok(None)
+    }
 }
 
 /// Repository for outbox messages.

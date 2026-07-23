@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use foundation::chrono::{DateTime, Utc};
 use foundation::uuid::Uuid;
-use foundation::{PlatformError, RequestContext, TenantId, UserId, UtcTimestamp};
+use foundation::{ErrorCode, PlatformError, RequestContext, TenantId, UserId, UtcTimestamp};
 use sqlx::{PgPool, Row};
 use storage_api::{IdempotencyRecord, IdempotencyRepository};
 
@@ -90,6 +90,70 @@ impl IdempotencyRepository for PostgresIdempotencyRepository {
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
         Ok(())
+    }
+
+    async fn save_or_conflict(
+        &self,
+        record: &IdempotencyRecord,
+        ctx: &RequestContext,
+    ) -> Result<Option<IdempotencyRecord>, PlatformError> {
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
+        let tenant_uuid = record.tenant_id.map(|id| *id.as_uuid());
+
+        let existing = sqlx::query(
+            "SELECT tenant_id, principal_id, endpoint_scope, idempotency_key,
+                    request_digest, response_status, response_body, expires_at
+             FROM infra.idempotency_records
+             WHERE tenant_id IS NOT DISTINCT FROM $1
+               AND principal_id = $2
+               AND endpoint_scope = $3
+               AND idempotency_key = $4
+             FOR UPDATE",
+        )
+        .bind(tenant_uuid)
+        .bind(*record.principal_id.as_uuid())
+        .bind(&record.endpoint_scope)
+        .bind(&record.idempotency_key)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db_error)?;
+
+        if let Some(row) = existing {
+            let existing_record = row_to_record(row)?;
+            if existing_record.request_digest != record.request_digest {
+                return Err(PlatformError::new(
+                    ErrorCode::Conflict,
+                    "idempotency key reused with different request digest",
+                ));
+            }
+            drop(tx);
+            tx_managed.commit().await.map_err(db_error)?;
+            return Ok(Some(existing_record));
+        }
+
+        sqlx::query(
+            "INSERT INTO infra.idempotency_records
+             (tenant_id, principal_id, endpoint_scope, idempotency_key,
+              request_digest, response_status, response_body, expires_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+             ON CONFLICT (tenant_id, principal_id, endpoint_scope, idempotency_key) DO NOTHING",
+        )
+        .bind(tenant_uuid)
+        .bind(*record.principal_id.as_uuid())
+        .bind(&record.endpoint_scope)
+        .bind(&record.idempotency_key)
+        .bind(&record.request_digest)
+        .bind(record.response_status)
+        .bind(record.response_body.as_ref())
+        .bind(utc_to_db(record.expires_at))
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
+        Ok(None)
     }
 }
 
