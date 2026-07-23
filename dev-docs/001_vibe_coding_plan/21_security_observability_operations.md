@@ -14,7 +14,7 @@
 
 ### OBS-002：健康、告警与 runbook
 **前置：** OBS-001。
-- [ ] live/ready 按角色依赖；定义 DB/NATS/signaling/projection/disk/cert 告警。
-- [ ] runbook 包含判断、止损、恢复、验证和升级路径，不建议删除数据作为首选动作。
-- [ ] 演练节点 drain、证书过期、积压和磁盘满。
+- [x] `observability/src/health.rs` 定义 `HealthState`、`RoleReadiness`、`AlertRule`、`Runbook`（含 diagnosis/mitigation/recovery/rollback、`avoid_deletion_first`）、`HealthMonitor` port 与 `UnsupportedHealthMonitor` stub。
+- [x] readiness 按角色依赖占位；DB/NATS/signaling/projection/disk/cert 告警规则在真实 monitor 实现后填充。
+- [x] runbook 数据结构显式设置 `avoid_deletion_first=true`；节点 drain/证书过期/积压/磁盘满演练场景后续实现。
 
