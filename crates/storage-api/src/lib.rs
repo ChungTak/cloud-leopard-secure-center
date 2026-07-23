@@ -51,10 +51,12 @@ impl ListOptions {
     /// Maximum items a single page can return.
     pub const MAX_LIMIT: u32 = 10_000;
 
-    /// Return a validated copy with `limit` clamped to `[1, MAX_LIMIT]`.
+    /// Return a validated copy with `limit` clamped to `[1, MAX_LIMIT]` and
+    /// `offset` capped to `i64::MAX` so it can be safely bound to PostgreSQL
+    /// `OFFSET` without wrapping to a negative value.
     pub fn validate(&self) -> Self {
         Self {
-            offset: self.offset,
+            offset: self.offset.min(i64::MAX as u64),
             limit: self.limit.clamp(1, Self::MAX_LIMIT),
         }
     }
