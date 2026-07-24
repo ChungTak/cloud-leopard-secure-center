@@ -155,6 +155,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         &self,
         id: ExternalBindingId,
         expected: Revision,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<ExternalBinding, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -211,7 +212,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         .await
         .map_err(db_error)?;
 
-        let now = Utc::now();
+        let now_db = utc_to_db(now);
         let next_state = if conflicting.is_some() {
             ExternalBindingState::Conflict
         } else {
@@ -222,13 +223,14 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 
         sqlx::query(
             "UPDATE resource.external_bindings
-             SET state = $1, activated_at = $2, revision = $3, updated_at = $4
-             WHERE id = $5 AND revision = $6 AND deleted_at IS NULL",
+             SET state = $1, activated_at = $2, revision = $3, updated_at = $4, actor = $5
+             WHERE id = $6 AND revision = $7 AND deleted_at IS NULL",
         )
         .bind(next_state.as_str())
-        .bind(now)
+        .bind(now_db)
         .bind(next_revision.to_i64()?)
-        .bind(now)
+        .bind(now_db)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(binding.id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)
@@ -237,12 +239,12 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 
         if next_state == ExternalBindingState::Active {
             binding.state = ExternalBindingState::Active;
-            binding.activated_at = Some(now.into());
+            binding.activated_at = Some(now);
         } else {
             binding.state = ExternalBindingState::Conflict;
         }
         binding.revision = next_revision;
-        binding.updated_at = now.into();
+        binding.updated_at = now;
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
@@ -253,21 +255,23 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         &self,
         id: ExternalBindingId,
         expected: Revision,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         check_revision(&mut *tx, id, expected).await?;
 
-        let now = Utc::now();
+        let now_db = utc_to_db(now);
         let rows = sqlx::query(
             "UPDATE resource.external_bindings
-             SET state = $1, revision = $2, updated_at = $3
-             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
+             SET state = $1, revision = $2, updated_at = $3, actor = $4
+             WHERE id = $5 AND revision = $6 AND deleted_at IS NULL",
         )
         .bind(ExternalBindingState::Disabled.as_str())
         .bind(expected.next_i64()?)
-        .bind(now)
+        .bind(now_db)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

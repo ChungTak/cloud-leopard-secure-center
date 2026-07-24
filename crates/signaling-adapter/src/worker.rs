@@ -22,6 +22,7 @@ impl SignalingEventProcessor {
         event: &SignalingEvent,
         projection: &P,
         inbox: &I,
+        clock: &dyn Clock,
         ctx: &RequestContext,
     ) -> Result<(), SignalingError>
     where
@@ -40,7 +41,10 @@ impl SignalingEventProcessor {
                     status: InboxStatus::Pending,
                     result_digest: None,
                     attempts: 0,
-                    expires_at: UtcTimestamp::from(chrono::Utc::now() + chrono::Duration::hours(1)),
+                    expires_at: UtcTimestamp::from(
+                        chrono::DateTime::<chrono::Utc>::from(clock.now())
+                            + chrono::Duration::hours(1),
+                    ),
                 },
                 ctx,
             )
@@ -144,7 +148,7 @@ impl SignalingEventWorker {
             }
 
             self.processor
-                .process(&event, projection, inbox, ctx)
+                .process(&event, projection, inbox, &*self.clock, ctx)
                 .await?;
         }
 
@@ -187,7 +191,8 @@ mod tests {
     use super::*;
     use domain_resource::projection::{ChannelProjection, DeviceProjection, ProjectionFailure};
     use foundation::{
-        DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, uuid::Uuid,
+        Clock, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp,
+        uuid::Uuid,
     };
 
     fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -231,6 +236,7 @@ mod tests {
         async fn get_device(
             &self,
             _external_ref: &str,
+            _now: UtcTimestamp,
             _ctx: &RequestContext,
         ) -> Result<DeviceProjection, foundation::PlatformError> {
             Err(foundation::PlatformError::new(
@@ -258,6 +264,7 @@ mod tests {
         async fn get_channel(
             &self,
             _external_ref: &str,
+            _now: UtcTimestamp,
             _ctx: &RequestContext,
         ) -> Result<ChannelProjection, foundation::PlatformError> {
             Err(foundation::PlatformError::new(
@@ -270,6 +277,7 @@ mod tests {
             &self,
             _device_events: Vec<DeviceEvent>,
             _channel_events: Vec<ChannelEvent>,
+            _now: UtcTimestamp,
             _ctx: &RequestContext,
         ) -> Result<(), foundation::PlatformError> {
             Ok(())
@@ -280,6 +288,7 @@ mod tests {
             _worker_id: &str,
             _last_event_id: &str,
             _observed_at: UtcTimestamp,
+            _now: UtcTimestamp,
             _ctx: &RequestContext,
         ) -> Result<(), foundation::PlatformError> {
             Ok(())
@@ -288,6 +297,7 @@ mod tests {
         async fn record_failure(
             &self,
             failure: ProjectionFailure,
+            _now: UtcTimestamp,
             _ctx: &RequestContext,
         ) -> Result<(), foundation::PlatformError> {
             lock(&self.failures).push(failure);
@@ -343,7 +353,7 @@ mod tests {
             last_event_id: ok_or_panic(foundation::MessageId::generate(&generator)).to_string(),
             tenant_id: ok_or_panic(TenantId::generate(&generator)),
             device_id: ok_or_panic(DeviceId::generate(&generator)),
-            observed_at: UtcTimestamp::from(chrono::Utc::now()),
+            observed_at: SystemClock.now(),
             payload,
         }
     }
@@ -362,11 +372,11 @@ mod tests {
         let ctx = RequestContext::default();
         let e = event(SignalingEventPayload::DeviceOnline);
 
-        match block_on(processor.process(&e, &projection, &inbox, &ctx)) {
+        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
             Ok(_) => {}
             Err(_) => panic!("first process failed"),
         }
-        match block_on(processor.process(&e, &projection, &inbox, &ctx)) {
+        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
             Ok(_) => {}
             Err(_) => panic!("second process failed"),
         }
@@ -391,7 +401,7 @@ mod tests {
             is_enabled: true,
         });
 
-        match block_on(processor.process(&e, &projection, &inbox, &ctx)) {
+        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
             Ok(_) => {}
             Err(_) => panic!("process failed"),
         }
@@ -410,7 +420,8 @@ mod tests {
             ok_or_panic(TenantId::generate(&generator)),
             ok_or_panic(DeviceId::generate(&generator)),
             Deadline::new(UtcTimestamp::from(
-                chrono::Utc::now() + chrono::Duration::seconds(30),
+                chrono::DateTime::<chrono::Utc>::from(SystemClock.now())
+                    + chrono::Duration::seconds(30),
             )),
         ));
         match result {

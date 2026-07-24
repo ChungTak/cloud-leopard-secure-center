@@ -1,7 +1,9 @@
 use domain_organization::tenant::Tenant;
 use domain_resource::external_binding::{ExternalBinding, ExternalBindingState};
 use domain_resource::tag::{MAX_TAGS_PER_RESOURCE, ResourceType, Tag};
-use foundation::{ExternalBindingId, FakeClock, RequestContext, TagId, TenantId, uuid::Uuid};
+use foundation::{
+    Clock, ExternalBindingId, FakeClock, RequestContext, SystemClock, TagId, TenantId, uuid::Uuid,
+};
 use storage_api::{ExternalBindingRepository, ListOptions, TagRepository, TenantRepository};
 use storage_postgres::external_binding_repository::PostgresExternalBindingRepository;
 use storage_postgres::tag_repository::PostgresTagRepository;
@@ -146,10 +148,16 @@ async fn external_binding_activation_and_conflict(pool: sqlx::PgPool) -> sqlx::R
     ));
     ok_or_panic(repo.create(&second, &ctx).await);
 
-    let activated = ok_or_panic(repo.activate(first.id, first.revision, &ctx).await);
+    let activated = ok_or_panic(
+        repo.activate(first.id, first.revision, SystemClock.now(), &ctx)
+            .await,
+    );
     assert_eq!(activated.state, ExternalBindingState::Active);
 
-    let conflicting = ok_or_panic(repo.activate(second.id, second.revision, &ctx).await);
+    let conflicting = ok_or_panic(
+        repo.activate(second.id, second.revision, SystemClock.now(), &ctx)
+            .await,
+    );
     assert_eq!(conflicting.state, ExternalBindingState::Conflict);
 
     let list = ok_or_panic(
@@ -160,7 +168,10 @@ async fn external_binding_activation_and_conflict(pool: sqlx::PgPool) -> sqlx::R
     assert!(states.contains(&ExternalBindingState::Active));
     assert!(states.contains(&ExternalBindingState::Conflict));
 
-    ok_or_panic(repo.disable(activated.id, activated.revision, &ctx).await);
+    ok_or_panic(
+        repo.disable(activated.id, activated.revision, SystemClock.now(), &ctx)
+            .await,
+    );
     let disabled = ok_or_panic(repo.by_id(activated.id, &ctx).await);
     assert_eq!(disabled.state, ExternalBindingState::Disabled);
 
@@ -192,7 +203,10 @@ async fn different_external_kinds_do_not_conflict(pool: sqlx::PgPool) -> sqlx::R
             &FakeClock::from_millis(1_000_000_000_000 + i as i64),
         ));
         ok_or_panic(repo.create(&binding, &ctx).await);
-        let activated = ok_or_panic(repo.activate(binding.id, binding.revision, &ctx).await);
+        let activated = ok_or_panic(
+            repo.activate(binding.id, binding.revision, SystemClock.now(), &ctx)
+                .await,
+        );
         assert_eq!(activated.state, ExternalBindingState::Active);
     }
 
@@ -224,7 +238,7 @@ async fn non_pending_binding_cannot_be_activated(pool: sqlx::PgPool) -> sqlx::Re
     ok_or_panic(repo.create(&binding, &ctx).await);
 
     assert!(
-        repo.activate(binding.id, binding.revision, &ctx)
+        repo.activate(binding.id, binding.revision, SystemClock.now(), &ctx)
             .await
             .is_err()
     );
