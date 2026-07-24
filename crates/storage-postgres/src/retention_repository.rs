@@ -357,8 +357,8 @@ impl RetentionRepository for PostgresRetentionRepository {
 
     async fn drop_partition(
         &self,
-        target: RetentionTarget,
-        partition: &str,
+        _target: RetentionTarget,
+        _partition: &str,
         backup_confirmed: bool,
     ) -> Result<(), PlatformError> {
         if !backup_confirmed {
@@ -367,20 +367,6 @@ impl RetentionRepository for PostgresRetentionRepository {
                 "partition drop requires a confirmed recoverable backup",
             ));
         }
-
-        let mut tx = self.begin_cleanup_transaction().await?;
-
-        sqlx::query(
-            "INSERT INTO audit.records (actor, tenant_id, action, target_type, target_id, result, details)
-             VALUES ('cleanup_worker', NULL, 'partition_drop', $1, $2, 'pending', jsonb_build_object('partition', $2))",
-        )
-        .bind(target.as_str())
-        .bind(partition)
-        .execute(&mut *tx)
-        .await
-        .map_err(db_error)?;
-
-        tx.commit().await.map_err(db_error)?;
 
         Err(PlatformError::new(
             ErrorCode::Unsupported,
