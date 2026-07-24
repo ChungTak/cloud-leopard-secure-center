@@ -2,7 +2,7 @@
 
 use axum::{body::Body, extract::Request, http::StatusCode, middleware::Next, response::Response};
 use base64ct::Encoding;
-use http_body_util::BodyExt;
+use http_body_util::{BodyExt, Limited};
 use sha2::{Digest, Sha256};
 use std::{
     collections::{HashMap, VecDeque},
@@ -15,6 +15,7 @@ use crate::{
     auth::extract_bearer,
     client_ip::{TrustedProxyConfig, resolve_client_ip},
     error::AppError,
+    middleware::BODY_LIMIT,
 };
 
 /// Maximum number of completed idempotent responses to keep in memory.
@@ -74,15 +75,15 @@ impl std::fmt::Debug for IdempotencyState {
 
 /// Middleware that caches write responses by `Idempotency-Key`.
 pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, AppError> {
-    let state = req.extensions().get::<Arc<IdempotencyState>>().cloned();
+    // Idempotency is only active when the application supplies a state store.
+    // Tests and other callers without the extension continue without caching.
+    let Some(state) = req.extensions().get::<Arc<IdempotencyState>>().cloned() else {
+        return Ok(next.run(req).await);
+    };
 
     let key = match idempotency_key(&req) {
         Some(key) => key,
         None => return Ok(next.run(req).await),
-    };
-
-    let Some(state) = state else {
-        return Err(AppError::Internal);
     };
 
     let (parts, body) = req.into_parts();
@@ -199,10 +200,10 @@ fn digest_bytes(bytes: &axum::body::Bytes) -> String {
 }
 
 async fn collect_body(body: Body) -> Result<axum::body::Bytes, AppError> {
-    let collected = body.collect().await.map_err(|err| {
-        // RequestBodyLimitLayer returns a Limited body; collecting past the
-        // limit yields a LengthLimitError that we surface as 413 instead of
-        // the generic 503 used for other body-stream failures.
+    // Apply the same limit as RequestBodyLimitLayer while collecting the body
+    // for replay, so idempotent requests cannot be used to bypass size limits.
+    let limited = Limited::new(body, BODY_LIMIT);
+    let collected = limited.collect().await.map_err(|err| {
         if err.to_string().to_lowercase().contains("length limit") {
             AppError::PayloadTooLarge
         } else {
