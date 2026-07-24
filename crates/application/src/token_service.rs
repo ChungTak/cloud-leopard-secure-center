@@ -11,6 +11,10 @@ use sha2::{Digest, Sha256};
 
 type HmacSha256 = Hmac<Sha256>;
 
+const MAX_ISSUER_LEN: usize = 256;
+const MAX_AUDIENCE_LEN: usize = 256;
+const MAX_JTI_LEN: usize = 256;
+
 /// Issues and verifies HMAC-SHA256 access tokens and generates refresh tokens.
 #[derive(Clone)]
 pub struct TokenService {
@@ -36,12 +40,12 @@ impl TokenService {
     /// `access_ttl_seconds` must be positive.
     pub fn new(
         secret: impl AsRef<[u8]>,
-        issuer: impl Into<String>,
-        audience: impl Into<String>,
+        issuer: impl AsRef<str>,
+        audience: impl AsRef<str>,
         access_ttl_seconds: i64,
     ) -> Result<Self, PlatformError> {
-        let secret = secret.as_ref().to_vec();
-        if secret.len() < 32 {
+        let secret_bytes = secret.as_ref();
+        if secret_bytes.len() < 32 {
             return Err(PlatformError::new(
                 ErrorCode::Invalid,
                 "token secret must be at least 32 bytes",
@@ -53,10 +57,14 @@ impl TokenService {
                 "access token ttl must be positive",
             ));
         }
+        let issuer = issuer.as_ref();
+        validate_token_string(issuer, "issuer", MAX_ISSUER_LEN)?;
+        let audience = audience.as_ref();
+        validate_token_string(audience, "audience", MAX_AUDIENCE_LEN)?;
         Ok(Self {
-            secret,
-            issuer: issuer.into(),
-            audience: audience.into(),
+            secret: secret_bytes.to_vec(),
+            issuer: issuer.to_string(),
+            audience: audience.to_string(),
             access_ttl_seconds,
         })
     }
@@ -68,8 +76,10 @@ impl TokenService {
         tenant_id: TenantId,
         session_version: u64,
         now: UtcTimestamp,
-        jti: impl Into<String>,
+        jti: impl AsRef<str>,
     ) -> Result<String, PlatformError> {
+        let jti = jti.as_ref();
+        validate_token_string(jti, "jti", MAX_JTI_LEN)?;
         let iat = now.timestamp_millis() / 1000;
         let exp = iat
             .checked_add(self.access_ttl_seconds)
@@ -82,7 +92,7 @@ impl TokenService {
             iss: self.issuer.clone(),
             nbf: iat,
             exp,
-            jti: jti.into(),
+            jti: jti.to_string(),
         };
         self.sign(&claims)
     }
@@ -238,4 +248,17 @@ fn new_mac(secret: &[u8]) -> Result<HmacSha256, PlatformError> {
 fn hash_raw(raw: &str) -> String {
     let hash = Sha256::digest(raw.as_bytes());
     Base64UrlUnpadded::encode_string(&hash)
+}
+
+fn validate_token_string(value: &str, field: &str, max: usize) -> Result<(), PlatformError> {
+    if value.trim().is_empty() {
+        return Err(PlatformError::invalid(field, "value must not be empty"));
+    }
+    if value.len() > max {
+        return Err(PlatformError::invalid(
+            field,
+            "value exceeds maximum length",
+        ));
+    }
+    Ok(())
 }
