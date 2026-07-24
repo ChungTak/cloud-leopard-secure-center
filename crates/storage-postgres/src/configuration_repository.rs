@@ -172,14 +172,14 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
 
-        Ok(ConfigValue {
-            id: Some(ConfigValueId(id)),
-            scope: value.scope.clone(),
-            config_key: value.config_key.clone(),
-            raw_value: raw_value.clone(),
-            secret_ref: value.secret_ref.clone(),
-            revision: revision_from_i64(revision)?,
-        })
+        ConfigValue::from_parts(
+            Some(ConfigValueId(id)),
+            value.scope.clone(),
+            value.config_key.clone(),
+            raw_value.clone(),
+            value.secret_ref.clone(),
+            revision_from_i64(revision)?,
+        )
     }
 
     async fn get_value(
@@ -303,14 +303,14 @@ fn parse_value(
     let secret_ref: Option<String> = row.get("secret_ref");
     let revision: i64 = row.get("revision");
 
-    Ok(ConfigValue {
-        id: Some(ConfigValueId(id)),
+    ConfigValue::from_parts(
+        Some(ConfigValueId(id)),
         scope,
-        config_key: config_key.to_string(),
+        config_key,
         raw_value,
         secret_ref,
-        revision: revision_from_i64(revision)?,
-    })
+        revision_from_i64(revision)?,
+    )
 }
 
 fn parse_scope(

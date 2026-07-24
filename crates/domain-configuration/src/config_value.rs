@@ -111,6 +111,53 @@ impl ConfigValue {
         })
     }
 
+    /// Reconstruct a value from persisted parts.
+    pub fn from_parts(
+        id: Option<ConfigValueId>,
+        scope: ConfigScope,
+        config_key: impl Into<String>,
+        raw_value: impl Into<String>,
+        secret_ref: Option<String>,
+        revision: Revision,
+    ) -> Result<Self, PlatformError> {
+        let config_key = config_key.into();
+        let raw_value = raw_value.into();
+        if config_key.trim().is_empty() {
+            return Err(PlatformError::invalid(
+                "config_key",
+                "configuration key must not be empty",
+            ));
+        }
+        if raw_value.trim().is_empty() {
+            return Err(PlatformError::invalid(
+                "value",
+                "configuration value must not be empty",
+            ));
+        }
+        if let Some(ref secret_ref) = secret_ref {
+            if secret_ref.trim().is_empty() {
+                return Err(PlatformError::invalid(
+                    "secret_ref",
+                    "secret reference must not be empty when present",
+                ));
+            }
+            if secret_ref.len() > 512 {
+                return Err(PlatformError::invalid(
+                    "secret_ref",
+                    "secret reference must be at most 512 characters",
+                ));
+            }
+        }
+        Ok(Self {
+            id,
+            scope,
+            config_key,
+            raw_value,
+            secret_ref,
+            revision,
+        })
+    }
+
     /// Returns the effective value to be stored or returned.
     ///
     /// For sensitive definitions this is the secret reference, never the resolved secret.
