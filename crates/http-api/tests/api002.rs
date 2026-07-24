@@ -105,7 +105,8 @@ fn test_app(
         .route("/tenants/{tenant_id}/profile", get(profile_handler))
         .route("/protected", get(protected_handler))
         .route("/client-ip", get(client_ip_handler))
-        .route("/login", post(login_handler));
+        .route("/login", post(login_handler))
+        .route("/tenants/{tenant_id}/tokens/refresh", post(login_handler));
 
     http_api::middleware::with_middleware(router, None)
         .layer(Extension(authenticator))
@@ -437,6 +438,40 @@ async fn api_rate_limit_returns_429_by_token() {
     assert_eq!(first.status().as_u16(), 200);
 
     let second = match app.oneshot(bearer("GET", &uri, "token-a")).await {
+        Ok(res) => res,
+        Err(e) => panic!("request failed: {e}"),
+    };
+    assert_eq!(second.status().as_u16(), 429);
+}
+
+#[tokio::test]
+async fn nested_token_refresh_uses_login_rate_limit() {
+    let tenant = tenant_id(0);
+    let user = user_id(0);
+    let auth = Arc::new(TestAuthenticator::new(user, tenant, &[]));
+    let rate = Arc::new(RateLimitState::new(
+        foundation::config::RateLimitConfig {
+            requests: 1,
+            window_seconds: 60,
+        },
+        foundation::config::RateLimitConfig {
+            requests: 100,
+            window_seconds: 60,
+        },
+    ));
+    let app = test_app(auth, rate, TrustedProxyConfig::default());
+
+    let peer = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 12345);
+    let uri = format!("/tenants/{}/tokens/refresh", tenant.as_uuid());
+    let req = with_connect_info(build_request("POST", &uri, Body::empty()), peer);
+    let first = match app.clone().oneshot(req).await {
+        Ok(res) => res,
+        Err(e) => panic!("request failed: {e}"),
+    };
+    assert_eq!(first.status().as_u16(), 200);
+
+    let req = with_connect_info(build_request("POST", &uri, Body::empty()), peer);
+    let second = match app.oneshot(req).await {
         Ok(res) => res,
         Err(e) => panic!("request failed: {e}"),
     };

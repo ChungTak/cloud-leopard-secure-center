@@ -152,12 +152,11 @@ fn is_login_request(req: &Request<Body>) -> bool {
     }
     let path = req.uri().path();
     // Rate limiting applies to login and token issuance, which may be mounted
-    // under a prefix such as `/api/v1`.
+    // under a prefix such as `/api/v1` or nested under `/api/v1/tenants/{id}`.
     let base = path.strip_prefix("/api/v1").unwrap_or(path);
-    base == "/login"
-        || base.starts_with("/login/")
-        || base == "/tokens"
-        || base.starts_with("/tokens/")
+    base.split('/')
+        .filter(|s| !s.is_empty())
+        .any(|s| s == "login" || s == "tokens")
 }
 
 fn login_key(headers: &HeaderMap, extensions: &Extensions, config: &TrustedProxyConfig) -> String {
