@@ -21,7 +21,7 @@ where
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         let request_id = request_id_from_parts(parts);
-        let tenant = tenant_from_path(parts.uri.path());
+        let tenant = tenant_from_path(parts.uri.path())?;
         let auth = optional_auth(parts).await?;
 
         match (tenant, auth.as_ref()) {
@@ -87,12 +87,22 @@ fn header_organization_id(headers: &HeaderMap, name: &str) -> Option<Organizatio
 }
 
 /// Parse the tenant id from the first `/tenants/<uuid>` segment, if any.
-fn tenant_from_path(path: &str) -> Option<TenantId> {
+/// Returns `Ok(None)` when no tenant segment is present, and `Err` when a
+/// tenant segment contains an invalid UUID so that malformed paths fail early.
+fn tenant_from_path(path: &str) -> Result<Option<TenantId>, AppError> {
     let mut segments = path.split('/');
     while let Some(segment) = segments.next() {
         if segment == "tenants" {
-            return segments.next().and_then(|s| TenantId::parse_str(s).ok());
+            let Some(raw) = segments.next() else {
+                return Ok(None);
+            };
+            return TenantId::parse_str(raw)
+                .map(Some)
+                .map_err(|_| AppError::BadRequest {
+                    field: "tenant_id".to_string(),
+                    message: "tenant id in path is not a valid uuid".to_string(),
+                });
         }
     }
-    None
+    Ok(None)
 }
