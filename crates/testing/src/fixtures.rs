@@ -45,7 +45,7 @@ impl Default for BusFixture {
 impl BusFixture {
     pub fn new() -> Self {
         Self {
-            local: LocalMessageBus::new(LocalMessageBusConfig::default()),
+            local: LocalMessageBus::new(LocalMessageBusConfig::default(), SystemClock),
         }
     }
 }
