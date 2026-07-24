@@ -31,12 +31,22 @@ impl ApiKey {
         token_hash: String,
         expires_at: UtcTimestamp,
         created_at: UtcTimestamp,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        validate_scopes(&scopes)?;
+        validate_allowed_sources(&allowed_sources)?;
+        if expires_at <= created_at {
+            return Err(PlatformError::invalid(
+                "expires_at",
+                "api key expiration must be after creation time",
+            ));
+        }
+        Ok(Self {
             id,
             tenant_id,
             owner_id,
-            name: name.into(),
+            name,
             scopes,
             allowed_sources,
             token_hash,
@@ -44,7 +54,7 @@ impl ApiKey {
             revoked_at: None,
             created_at,
             last_used_at: None,
-        }
+        })
     }
 
     /// Verify that this key can be used from `source` for `scope` at `now`.
@@ -95,4 +105,62 @@ impl ApiKey {
     pub fn record_usage(&mut self, now: UtcTimestamp) {
         self.last_used_at = Some(now);
     }
+}
+
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "api_key_name",
+            "api key name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "api_key_name",
+            "api key name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_scopes(scopes: &[String]) -> Result<(), PlatformError> {
+    if scopes.is_empty() {
+        return Err(PlatformError::invalid(
+            "api_key_scopes",
+            "api key must have at least one scope",
+        ));
+    }
+    for scope in scopes {
+        if scope.trim().is_empty() {
+            return Err(PlatformError::invalid(
+                "api_key_scopes",
+                "api key scope must not be empty",
+            ));
+        }
+        if scope.len() > 128 {
+            return Err(PlatformError::invalid(
+                "api_key_scopes",
+                "api key scope must be at most 128 characters",
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_allowed_sources(sources: &[String]) -> Result<(), PlatformError> {
+    for source in sources {
+        if source.trim().is_empty() {
+            return Err(PlatformError::invalid(
+                "api_key_allowed_sources",
+                "allowed source must not be empty",
+            ));
+        }
+        if source.len() > 128 {
+            return Err(PlatformError::invalid(
+                "api_key_allowed_sources",
+                "allowed source must be at most 128 characters",
+            ));
+        }
+    }
+    Ok(())
 }

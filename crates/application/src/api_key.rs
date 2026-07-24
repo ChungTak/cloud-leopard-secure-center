@@ -49,7 +49,7 @@ pub async fn create_api_key(
         token_hash,
         expires_at,
         clock.now(),
-    );
+    )?;
     repo.create(&api_key, ctx).await?;
 
     Ok(CreatedApiKey { api_key, raw_token })

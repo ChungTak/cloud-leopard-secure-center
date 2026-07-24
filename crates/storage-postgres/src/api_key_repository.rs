@@ -181,7 +181,7 @@ fn row_to_api_key(row: sqlx::postgres::PgRow) -> Result<ApiKey, PlatformError> {
         token_hash,
         expires_at.into(),
         created_at.into(),
-    );
+    )?;
     api_key.revoked_at = revoked_at.map(Into::into);
     api_key.last_used_at = last_used_at.map(Into::into);
     Ok(api_key)
