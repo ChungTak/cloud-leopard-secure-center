@@ -3,9 +3,7 @@
 
 use domain_resource::projection::{ChannelEvent, DeviceEvent};
 use domain_signaling::{SignalingError, SignalingErrorKind};
-use foundation::{
-    Clock, Deadline, RequestContext, SystemClock, SystemRandom, UtcTimestamp, chrono,
-};
+use foundation::{Clock, Deadline, RandomSource, RequestContext, UtcTimestamp, chrono};
 use futures::{Stream, StreamExt};
 use storage_api::{InboxMessage, InboxRepository, InboxStatus, ProjectionRepository};
 
@@ -24,12 +22,13 @@ impl SignalingEventProcessor {
         inbox: &I,
         clock: &dyn Clock,
         ctx: &RequestContext,
+        random: &dyn RandomSource,
     ) -> Result<(), SignalingError>
     where
         P: ProjectionRepository,
         I: InboxRepository,
     {
-        let message_id = parse_or_generate_event_id(&event.last_event_id)
+        let message_id = parse_or_generate_event_id(&event.last_event_id, clock, random)
             .map_err(|e| SignalingError::new(SignalingErrorKind::UnknownOutcome, e.to_string()))?;
         let consumer_id = "signaling-sse".to_string();
         let received = inbox
@@ -110,14 +109,16 @@ impl SignalingEventProcessor {
 pub struct SignalingEventWorker {
     processor: SignalingEventProcessor,
     clock: Box<dyn Clock>,
+    random: Box<dyn RandomSource>,
 }
 
 impl SignalingEventWorker {
-    /// Create a worker with the system clock.
-    pub fn new() -> Self {
+    /// Create a worker with the supplied clock and random source.
+    pub fn new(clock: impl Clock + 'static, random: impl RandomSource + 'static) -> Self {
         Self {
             processor: SignalingEventProcessor,
-            clock: Box::new(SystemClock),
+            clock: Box::new(clock),
+            random: Box::new(random),
         }
     }
 
@@ -148,7 +149,7 @@ impl SignalingEventWorker {
             }
 
             self.processor
-                .process(&event, projection, inbox, &*self.clock, ctx)
+                .process(&event, projection, inbox, &*self.clock, ctx, &*self.random)
                 .await?;
         }
 
@@ -156,21 +157,14 @@ impl SignalingEventWorker {
     }
 }
 
-impl Default for SignalingEventWorker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 fn parse_or_generate_event_id(
     input: &str,
+    clock: &dyn Clock,
+    random: &dyn RandomSource,
 ) -> Result<foundation::uuid::Uuid, foundation::PlatformError> {
     match foundation::uuid::Uuid::parse_str(input) {
         Ok(uuid) => Ok(uuid),
-        Err(_) => {
-            let generator = foundation::SystemIdGenerator::new(SystemClock, SystemRandom);
-            Ok(foundation::MessageId::generate(&generator)?.into())
-        }
+        Err(_) => Ok(foundation::generate_uuid(clock, random)?),
     }
 }
 
@@ -372,11 +366,13 @@ mod tests {
         let ctx = RequestContext::default();
         let e = event(SignalingEventPayload::DeviceOnline);
 
-        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
+        let random = SystemRandom;
+
+        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx, &random)) {
             Ok(_) => {}
             Err(_) => panic!("first process failed"),
         }
-        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
+        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx, &random)) {
             Ok(_) => {}
             Err(_) => panic!("second process failed"),
         }
@@ -401,7 +397,14 @@ mod tests {
             is_enabled: true,
         });
 
-        match block_on(processor.process(&e, &projection, &inbox, &SystemClock, &ctx)) {
+        match block_on(processor.process(
+            &e,
+            &projection,
+            &inbox,
+            &SystemClock,
+            &ctx,
+            &SystemRandom,
+        )) {
             Ok(_) => {}
             Err(_) => panic!("process failed"),
         }
