@@ -113,7 +113,6 @@ tokio::task_local! {
 
 /// A database connection that is either owned by the caller or borrowed from
 /// an active unit of work.
-#[derive(Clone)]
 pub struct ManagedTransaction {
     inner: Arc<Mutex<PoolConnection<Postgres>>>,
     owned: bool,
