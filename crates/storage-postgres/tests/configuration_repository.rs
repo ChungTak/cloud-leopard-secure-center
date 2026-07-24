@@ -1,6 +1,8 @@
 use domain_configuration::{ConfigDefinition, ConfigScope, ConfigValue, ConfigValueType};
 use domain_organization::tenant::Tenant;
-use foundation::{FakeClock, RequestContext, Revision, TenantId, uuid::Uuid};
+use foundation::{
+    FakeClock, RequestContext, Revision, SystemClock, SystemRandom, TenantId, uuid::Uuid,
+};
 use storage_api::{ConfigurationRepository, TenantRepository};
 use storage_postgres::configuration_repository::PostgresConfigurationRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -75,7 +77,7 @@ fn secret_definition(key: &str) -> ConfigDefinition {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn definition_and_value_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresConfigurationRepository::new(pool.clone());
+    let repo = PostgresConfigurationRepository::new(pool.clone(), SystemClock, SystemRandom);
     let definition = int_definition("http.port", "8080");
     ok_or_panic(repo.save_definition(&definition).await);
 
@@ -110,7 +112,7 @@ async fn scope_precedence_module_tenant_platform(pool: sqlx::PgPool) -> sqlx::Re
     )
     .await;
     let ctx = tenant_ctx(&tenant_id.as_uuid().to_string());
-    let repo = PostgresConfigurationRepository::new(pool.clone());
+    let repo = PostgresConfigurationRepository::new(pool.clone(), SystemClock, SystemRandom);
     let definition = int_definition("http.port", "8080");
     ok_or_panic(repo.save_definition(&definition).await);
 
@@ -170,7 +172,7 @@ async fn scope_precedence_module_tenant_platform(pool: sqlx::PgPool) -> sqlx::Re
 async fn sensitive_value_rejects_plain_value_and_returns_secret_ref(
     pool: sqlx::PgPool,
 ) -> sqlx::Result<()> {
-    let repo = PostgresConfigurationRepository::new(pool.clone());
+    let repo = PostgresConfigurationRepository::new(pool.clone(), SystemClock, SystemRandom);
     let definition = secret_definition("db.password");
     ok_or_panic(repo.save_definition(&definition).await);
 
@@ -196,7 +198,7 @@ async fn sensitive_value_rejects_plain_value_and_returns_secret_ref(
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn invalid_value_does_not_replace_existing_snapshot(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresConfigurationRepository::new(pool.clone());
+    let repo = PostgresConfigurationRepository::new(pool.clone(), SystemClock, SystemRandom);
     let definition = int_definition("http.port", "8080");
     ok_or_panic(repo.save_definition(&definition).await);
 
@@ -231,7 +233,7 @@ async fn invalid_value_does_not_replace_existing_snapshot(pool: sqlx::PgPool) ->
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn stale_revision_update_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresConfigurationRepository::new(pool.clone());
+    let repo = PostgresConfigurationRepository::new(pool.clone(), SystemClock, SystemRandom);
     let definition = int_definition("http.port", "8080");
     ok_or_panic(repo.save_definition(&definition).await);
 
