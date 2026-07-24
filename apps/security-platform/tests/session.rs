@@ -74,7 +74,7 @@ async fn seed_user(
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hasher = Argon2idPasswordHasher::default();
-    let hash = ok_or_panic(hasher.hash("secret123"));
+    let hash = ok_or_panic(hasher.hash("secret123", &SystemRandom));
     let credential = ok_or_panic(domain_identity::credential::Credential::new_password(
         tenant_id,
         user.id,
@@ -405,6 +405,7 @@ async fn password_change_increments_session_version(pool: sqlx::PgPool) -> sqlx:
             &credentials,
             &sessions,
             &hasher,
+            &SystemRandom,
             &SystemClock,
             &ctx,
             user.id,

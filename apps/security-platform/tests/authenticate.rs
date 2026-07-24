@@ -72,7 +72,7 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     ok_or_panic(user.activate(&SystemClock, None));
     ok_or_panic(users.create(&user, &ctx).await);
 
-    let hash = ok_or_panic(hasher.hash("secret123"));
+    let hash = ok_or_panic(hasher.hash("secret123", &SystemRandom));
     let credential = ok_or_panic(Credential::new_password(
         tenant_id,
         user.id,
@@ -90,6 +90,7 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
             &attempts,
             &tenants,
             &hasher,
+            &SystemRandom,
             &AuthenticationPolicy::default(),
             &SystemClock,
             &ctx,
@@ -137,7 +138,7 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
     ok_or_panic(user.activate(&SystemClock, None));
     ok_or_panic(users.create(&user, &ctx).await);
 
-    let hash = ok_or_panic(hasher.hash("secret123"));
+    let hash = ok_or_panic(hasher.hash("secret123", &SystemRandom));
     let credential = ok_or_panic(Credential::new_password(
         tenant_id,
         user.id,
@@ -155,6 +156,7 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
             &attempts,
             &tenants,
             &hasher,
+            &SystemRandom,
             &AuthenticationPolicy::default(),
             &SystemClock,
             &ctx,
@@ -207,7 +209,7 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
     ok_or_panic(user.activate(&SystemClock, None));
     ok_or_panic(users.create(&user, &ctx).await);
 
-    let hash = ok_or_panic(hasher.hash("secret123"));
+    let hash = ok_or_panic(hasher.hash("secret123", &SystemRandom));
     let credential = ok_or_panic(Credential::new_password(
         tenant_id,
         user.id,
@@ -225,6 +227,7 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
             &attempts,
             &tenants,
             &hasher,
+            &SystemRandom,
             &policy,
             &SystemClock,
             &ctx,
@@ -279,7 +282,7 @@ async fn failure_count_is_case_insensitive(pool: sqlx::PgPool) -> sqlx::Result<(
     ok_or_panic(user.activate(&SystemClock, None));
     ok_or_panic(users.create(&user, &ctx).await);
 
-    let hash = ok_or_panic(hasher.hash("secret123"));
+    let hash = ok_or_panic(hasher.hash("secret123", &SystemRandom));
     let credential = ok_or_panic(Credential::new_password(
         tenant_id,
         user.id,
@@ -297,6 +300,7 @@ async fn failure_count_is_case_insensitive(pool: sqlx::PgPool) -> sqlx::Result<(
             &attempts,
             &tenants,
             &hasher,
+            &SystemRandom,
             &policy,
             &SystemClock,
             &ctx,

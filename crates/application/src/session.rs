@@ -206,6 +206,7 @@ pub async fn change_password(
     credentials: &dyn CredentialRepository,
     sessions: &dyn SessionRepository,
     hasher: &Argon2idPasswordHasher,
+    random: &dyn RandomSource,
     clock: &dyn Clock,
     ctx: &RequestContext,
     user_id: UserId,
@@ -231,7 +232,7 @@ pub async fn change_password(
         ));
     }
 
-    let new_hash = hasher.hash(new_password)?;
+    let new_hash = hasher.hash(new_password, random)?;
     let expected = credential.revision;
     credential.rotate(new_hash, "argon2id", clock)?;
     credentials.update(&credential, expected, ctx).await?;
