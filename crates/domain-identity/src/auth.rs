@@ -25,13 +25,17 @@ pub struct AuthenticationPolicy {
 
 impl AuthenticationPolicy {
     /// Return true if the number of failures from one identity exceeds the policy.
+    /// A `max_attempts_per_identity` of `0` is treated as "no limit" rather than
+    /// locking immediately, preventing a misconfigured policy from banning every user.
     pub fn identity_locked(&self, failures: i64) -> bool {
-        failures >= self.max_attempts_per_identity as i64
+        let max = self.max_attempts_per_identity as i64;
+        max > 0 && failures >= max
     }
 
     /// Return true if the number of failures from one source exceeds the policy.
     pub fn source_locked(&self, failures: i64) -> bool {
-        failures >= self.max_attempts_per_source as i64
+        let max = self.max_attempts_per_source as i64;
+        max > 0 && failures >= max
     }
 }
 
