@@ -17,13 +17,8 @@ pub async fn run_message_bus_contract<B: MessageBus + Sync>(bus: &B) -> Result<(
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     let id = MessageId::generate(&generator).map_err(|e| e.to_string())?;
     let tenant = TenantId::generate(&generator).map_err(|e| e.to_string())?;
-    let envelope = Envelope::event(
-        id,
-        tenant,
-        "security.v1.test".to_string(),
-        vec![1, 2, 3],
-        &SystemClock,
-    );
+    let envelope = Envelope::event(id, tenant, "security.v1.test", vec![1, 2, 3], &SystemClock)
+        .map_err(|e| e.to_string())?;
     let id = bus.publish(envelope).await.map_err(|e| e.to_string())?;
     if id.to_string().is_empty() {
         return Err("message id is empty".to_string());
