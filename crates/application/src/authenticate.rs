@@ -85,7 +85,7 @@ pub async fn authenticate(
                 && let Ok(new_hash) = hasher.hash(password)
             {
                 let mut credential = credential;
-                credential.rotate(new_hash, "argon2id", &foundation::SystemClock);
+                credential.rotate(new_hash, "argon2id", &foundation::SystemClock)?;
                 let expected = credential.revision.prev();
                 let _ = credentials.update(&credential, expected, ctx).await;
             }

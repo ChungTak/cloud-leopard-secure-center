@@ -75,13 +75,13 @@ async fn seed_user(
 
     let hasher = Argon2idPasswordHasher::default();
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = domain_identity::credential::Credential::new_password(
+    let credential = ok_or_panic(domain_identity::credential::Credential::new_password(
         tenant_id,
         user.id,
         hash,
         "argon2id",
         &SystemClock,
-    );
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
     (users, credentials, tenants, user)
 }

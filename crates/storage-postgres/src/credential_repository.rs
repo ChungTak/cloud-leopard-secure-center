@@ -185,16 +185,16 @@ fn row_to_credential(row: sqlx::postgres::PgRow) -> Result<Credential, PlatformE
     let created_at: DateTime<Utc> = row.try_get("created_at").map_err(db_error)?;
     let updated_at: DateTime<Utc> = row.try_get("updated_at").map_err(db_error)?;
 
-    Ok(Credential {
-        user_id: UserId::parse_str(&user_id.to_string())?,
-        tenant_id: TenantId::parse_str(&tenant_id.to_string())?,
-        credential_type: CredentialType::parse(&credential_type)?,
+    Credential::from_parts(
+        TenantId::parse_str(&tenant_id.to_string())?,
+        UserId::parse_str(&user_id.to_string())?,
+        CredentialType::parse(&credential_type)?,
         value,
         parameters,
-        revision: revision_from_i64(revision)?,
-        created_at: created_at.into(),
-        updated_at: updated_at.into(),
-    })
+        revision_from_i64(revision)?,
+        created_at.into(),
+        updated_at.into(),
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

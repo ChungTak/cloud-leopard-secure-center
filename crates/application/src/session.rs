@@ -207,7 +207,7 @@ pub async fn change_password(
 
     let new_hash = hasher.hash(new_password)?;
     let expected = credential.revision;
-    credential.rotate(new_hash, "argon2id", clock);
+    credential.rotate(new_hash, "argon2id", clock)?;
     credentials.update(&credential, expected, ctx).await?;
 
     let expected_user = user.revision;

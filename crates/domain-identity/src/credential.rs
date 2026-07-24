@@ -55,18 +55,50 @@ impl Credential {
         phc_hash: impl Into<String>,
         parameters: impl Into<String>,
         clock: &dyn foundation::Clock,
-    ) -> Self {
+    ) -> Result<Self, PlatformError> {
+        let value = phc_hash.into();
+        let parameters = parameters.into();
+        validate_credential_value(&value)?;
+        validate_credential_parameters(&parameters)?;
         let now = clock.now();
-        Self {
+        Ok(Self {
             tenant_id,
             user_id,
             credential_type: CredentialType::PasswordHash,
-            value: phc_hash.into(),
-            parameters: parameters.into(),
+            value,
+            parameters,
             revision: Revision::initial(),
             created_at: now,
             updated_at: now,
-        }
+        })
+    }
+
+    /// Reconstruct a credential from persisted parts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        tenant_id: TenantId,
+        user_id: UserId,
+        credential_type: CredentialType,
+        value: impl Into<String>,
+        parameters: impl Into<String>,
+        revision: Revision,
+        created_at: UtcTimestamp,
+        updated_at: UtcTimestamp,
+    ) -> Result<Self, PlatformError> {
+        let value = value.into();
+        let parameters = parameters.into();
+        validate_credential_value(&value)?;
+        validate_credential_parameters(&parameters)?;
+        Ok(Self {
+            tenant_id,
+            user_id,
+            credential_type,
+            value,
+            parameters,
+            revision,
+            created_at,
+            updated_at,
+        })
     }
 
     /// Replace the stored value and bump revision.
@@ -75,10 +107,47 @@ impl Credential {
         phc_hash: impl Into<String>,
         parameters: impl Into<String>,
         clock: &dyn foundation::Clock,
-    ) {
-        self.value = phc_hash.into();
-        self.parameters = parameters.into();
+    ) -> Result<(), PlatformError> {
+        let value = phc_hash.into();
+        let parameters = parameters.into();
+        validate_credential_value(&value)?;
+        validate_credential_parameters(&parameters)?;
+        self.value = value;
+        self.parameters = parameters;
         self.updated_at = clock.now();
         self.revision = self.revision.next();
+        Ok(())
     }
+}
+
+fn validate_credential_value(value: &str) -> Result<(), PlatformError> {
+    if value.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "credential_value",
+            "credential value must not be empty",
+        ));
+    }
+    if value.len() > 1024 {
+        return Err(PlatformError::invalid(
+            "credential_value",
+            "credential value must be at most 1024 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_credential_parameters(parameters: &str) -> Result<(), PlatformError> {
+    if parameters.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "credential_parameters",
+            "credential parameters must not be empty",
+        ));
+    }
+    if parameters.len() > 1024 {
+        return Err(PlatformError::invalid(
+            "credential_parameters",
+            "credential parameters must be at most 1024 characters",
+        ));
+    }
+    Ok(())
 }

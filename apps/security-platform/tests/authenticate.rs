@@ -73,7 +73,13 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("127.0.0.1").ok();
@@ -131,7 +137,13 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("10.0.0.1").ok();
@@ -194,7 +206,13 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("192.168.0.1").ok();
