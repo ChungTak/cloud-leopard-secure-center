@@ -7,8 +7,8 @@ use domain_media::{
     MediaPort, PlaybackEntitlement, PlayerPolicy,
 };
 use foundation::{
-    CameraId, Clock, Deadline, EntitlementId, PlatformError, RequestContext, SystemClock, TenantId,
-    UserId, UtcTimestamp, chrono,
+    CameraId, Clock, Deadline, EntitlementId, PlatformError, RequestContext, TenantId, UserId,
+    UtcTimestamp, chrono,
 };
 
 use crate::authorization::{AuthorizationPort, AuthorizationRequest};
@@ -83,15 +83,16 @@ pub trait MediaUseCase: Send + Sync {
 
 /// Default media entitlement application service.
 #[derive(Debug, Clone)]
-pub struct MediaService<M, A> {
+pub struct MediaService<M, A, C> {
     port: M,
     auth: A,
+    clock: C,
 }
 
-impl<M, A> MediaService<M, A> {
+impl<M, A, C: Clock> MediaService<M, A, C> {
     /// Create a new media service.
-    pub fn new(port: M, auth: A) -> Self {
-        Self { port, auth }
+    pub fn new(port: M, auth: A, clock: C) -> Self {
+        Self { port, auth, clock }
     }
 
     fn build_request(
@@ -101,6 +102,7 @@ impl<M, A> MediaService<M, A> {
         actions: Vec<MediaAction>,
         protocol: String,
         ctx: &RequestContext,
+        clock: &dyn Clock,
     ) -> DomainCreateRequest {
         DomainCreateRequest {
             tenant_id,
@@ -109,7 +111,7 @@ impl<M, A> MediaService<M, A> {
             actions,
             protocol,
             deadline: ctx.deadline.unwrap_or_else(|| {
-                let now: chrono::DateTime<chrono::Utc> = SystemClock.now().into();
+                let now: chrono::DateTime<chrono::Utc> = clock.now().into();
                 Deadline::new(UtcTimestamp::from(now + chrono::Duration::seconds(30)))
             }),
         }
@@ -117,7 +119,7 @@ impl<M, A> MediaService<M, A> {
 }
 
 #[async_trait]
-impl<M, A> MediaUseCase for MediaService<M, A>
+impl<M, A, C: Clock> MediaUseCase for MediaService<M, A, C>
 where
     M: MediaPort,
     A: AuthorizationPort,
@@ -146,6 +148,7 @@ where
                 request.actions,
                 request.protocol,
                 ctx,
+                &self.clock,
             ))
             .await
             .map_err(map_media_error)?;
