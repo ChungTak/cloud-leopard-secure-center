@@ -235,8 +235,14 @@ where
 
         match request.payload.status {
             UserStatus::Active => user.activate(&self.clock, Some(actor))?,
-            UserStatus::Locked => user.lock(&self.clock, Some(actor))?,
-            UserStatus::Disabled => user.disable(&self.clock, Some(actor))?,
+            UserStatus::Locked => {
+                user.lock(&self.clock, Some(actor))?;
+                user.bump_session_version(&self.clock, Some(actor))?;
+            }
+            UserStatus::Disabled => {
+                user.disable(&self.clock, Some(actor))?;
+                user.bump_session_version(&self.clock, Some(actor))?;
+            }
             UserStatus::Pending => user.enable(&self.clock, Some(actor))?,
         }
 
