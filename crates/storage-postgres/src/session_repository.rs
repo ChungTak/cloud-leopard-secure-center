@@ -33,7 +33,7 @@ impl SessionRepository for PostgresSessionRepository {
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
-        sqlx::query(
+        let result = sqlx::query(
             "INSERT INTO iam.refresh_tokens
              (id, tenant_id, user_id, family_id, token_hash, session_version, used, expires_at, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -49,8 +49,14 @@ impl SessionRepository for PostgresSessionRepository {
         .bind(utc_to_db(token.expires_at))
         .bind(utc_to_db(token.created_at))
         .execute(&mut *tx)
-        .await
-        .map_err(db_error)?;
+        .await;
+        let rows = result.map_err(db_error)?.rows_affected();
+        if rows == 0 {
+            return Err(PlatformError::new(
+                ErrorCode::Conflict,
+                "refresh token already exists",
+            ));
+        }
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
         Ok(())
