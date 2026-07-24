@@ -331,6 +331,13 @@ pub fn generate_uuid(clock: &dyn Clock, random: &dyn RandomSource) -> Result<Uui
         .timestamp_millis()
         .try_into()
         .map_err(|_| PlatformError::invalid("timestamp", "timestamp is out of UUIDv7 range"))?;
+    // UUIDv7 timestamps are 48-bit unsigned millisecond values.
+    if ts > 0x0000_FFFF_FFFF_FFFF {
+        return Err(PlatformError::invalid(
+            "timestamp",
+            "timestamp exceeds UUIDv7 48-bit range",
+        ));
+    }
     let mut rand = [0u8; 10];
     random.fill_bytes(&mut rand)?;
     let mut bytes = [0u8; 16];
@@ -363,6 +370,12 @@ impl<C: Clock, R: RandomSource> IdGenerator for StandardIdGenerator<C, R> {
             .timestamp_millis()
             .try_into()
             .map_err(|_| PlatformError::invalid("timestamp", "timestamp is out of UUIDv7 range"))?;
+        if ts > 0x0000_FFFF_FFFF_FFFF {
+            return Err(PlatformError::invalid(
+                "timestamp",
+                "timestamp exceeds UUIDv7 48-bit range",
+            ));
+        }
         let mut rand = [0u8; 10];
         self.random.fill_bytes(&mut rand)?;
         let mut bytes = [0u8; 16];
