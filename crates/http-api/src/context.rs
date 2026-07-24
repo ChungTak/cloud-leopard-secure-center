@@ -40,7 +40,7 @@ where
             ctx = ctx.with_correlation_id(id);
         }
         if let Some(id) = header_str(&parts.headers, "x-trace-id") {
-            ctx = ctx.with_trace_id(id);
+            ctx = ctx.with_trace_id(id)?;
         }
         if let Some(id) = header_organization_id(&parts.headers, "x-organization-id") {
             ctx = ctx.with_organization_id(id);
@@ -64,12 +64,11 @@ fn request_id_from_parts(parts: &Parts) -> Option<MessageId> {
         .or_else(|| header_message_id(&parts.headers, "x-request-id"))
 }
 
-fn header_str(headers: &HeaderMap, name: &str) -> Option<String> {
+fn header_str<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
     headers
         .get(name)
         .and_then(|value| value.to_str().ok())
         .filter(|text| !text.is_empty())
-        .map(|text| text.to_string())
 }
 
 fn header_message_id(headers: &HeaderMap, name: &str) -> Option<MessageId> {
