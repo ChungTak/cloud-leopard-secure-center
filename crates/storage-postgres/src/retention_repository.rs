@@ -86,14 +86,16 @@ impl RetentionRepository for PostgresRetentionRepository {
     }
 
     async fn get_policy(&self, target: RetentionTarget) -> Result<RetentionPolicy, PlatformError> {
+        let mut tx = self.begin_cleanup_transaction().await?;
         let row = sqlx::query(
             "SELECT days FROM audit.retention_policy
              WHERE target = $1 AND tenant_id IS NULL",
         )
         .bind(target.as_str())
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
+        tx.commit().await.map_err(db_error)?;
 
         match row {
             Some(r) => {
@@ -134,15 +136,17 @@ impl RetentionRepository for PostgresRetentionRepository {
         tenant_id: Option<TenantId>,
     ) -> Result<u32, PlatformError> {
         if let Some(t) = tenant_id {
+            let mut tx = self.begin_cleanup_transaction().await?;
             let row = sqlx::query(
                 "SELECT days FROM audit.retention_policy
                  WHERE target = $1 AND tenant_id = $2",
             )
             .bind(target.as_str())
             .bind(t.as_uuid())
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(db_error)?;
+            tx.commit().await.map_err(db_error)?;
             if let Some(r) = row {
                 let days: i64 = r.get("days");
                 return u32::try_from(days).map_err(|_| {

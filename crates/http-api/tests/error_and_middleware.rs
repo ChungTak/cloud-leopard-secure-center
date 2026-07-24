@@ -231,7 +231,10 @@ async fn empty_cors_allowed_origins_denies_cross_origin() {
 
     assert_eq!(response.status().as_u16(), 200);
     assert!(
-        response.headers().get("access-control-allow-origin").is_none(),
+        response
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none(),
         "empty allowed origins must not permit cross-origin requests"
     );
 }
@@ -257,7 +260,10 @@ async fn wildcard_cors_allowed_origins_is_treated_as_deny() {
 
     assert_eq!(response.status().as_u16(), 200);
     assert!(
-        response.headers().get("access-control-allow-origin").is_none(),
+        response
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none(),
         "wildcard must not be accepted as a configured origin"
     );
 }
