@@ -105,6 +105,22 @@ pub fn normalize_username(input: &str) -> Result<String, PlatformError> {
     Ok(trimmed)
 }
 
+fn validate_display_name(name: &str) -> Result<(), PlatformError> {
+    if name.is_empty() {
+        return Err(PlatformError::invalid(
+            "display_name",
+            "display name cannot be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "display_name",
+            "display name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
 /// A user account.
 #[derive(Debug, Clone)]
 pub struct User {
@@ -146,12 +162,7 @@ impl User {
     ) -> Result<Self, PlatformError> {
         let username = normalize_username(&username.into())?;
         let display_name = display_name.into().trim().to_string();
-        if display_name.is_empty() {
-            return Err(PlatformError::invalid(
-                "display_name",
-                "display name cannot be empty",
-            ));
-        }
+        validate_display_name(&display_name)?;
         let now = clock.now();
         let pending_events = vec![UserDomainEvent::Created {
             user_id: id,
@@ -203,12 +214,7 @@ impl User {
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         let display_name = display_name.into().trim().to_string();
-        if display_name.is_empty() {
-            return Err(PlatformError::invalid(
-                "display_name",
-                "display name cannot be empty",
-            ));
-        }
+        validate_display_name(&display_name)?;
         if display_name == self.display_name {
             return Ok(());
         }
