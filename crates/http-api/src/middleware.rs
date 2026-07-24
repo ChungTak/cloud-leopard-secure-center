@@ -186,7 +186,7 @@ fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
                 .filter_map(|o| o.trim().parse::<HeaderValue>().ok())
                 .collect();
             if allowed.is_empty() {
-                CorsLayer::new()
+                deny_cors()
             } else {
                 CorsLayer::new()
                     .allow_origin(AllowOrigin::list(allowed))
