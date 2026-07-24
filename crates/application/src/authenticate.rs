@@ -245,5 +245,6 @@ async fn lock_user(
 ) -> Result<(), PlatformError> {
     let expected = user.revision;
     user.lock(&foundation::SystemClock, ctx.actor_id)?;
+    user.bump_session_version(&foundation::SystemClock, ctx.actor_id)?;
     users.update(&user, expected, ctx).await
 }
