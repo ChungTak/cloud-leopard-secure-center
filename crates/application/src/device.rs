@@ -199,16 +199,16 @@ where
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
 
-        let mut device = self.repo.by_id(request.payload.id, ctx).await?;
-        let device_id = device.id;
-
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
             "tenant:device:write",
-            ResourceRef::Device(device_id),
+            ResourceRef::Device(request.payload.id),
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut device = self.repo.by_id(request.payload.id, ctx).await?;
+        let device_id = device.id;
 
         device.rename(request.payload.name, &self.clock, Some(actor))?;
         if request.payload.organization_id != device.organization_id
@@ -260,16 +260,16 @@ where
             )
         })?;
 
-        let mut device = self.repo.by_id(request.payload.id, ctx).await?;
-        let device_id = device.id;
-
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
             "tenant:device:write",
-            ResourceRef::Device(device_id),
+            ResourceRef::Device(request.payload.id),
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut device = self.repo.by_id(request.payload.id, ctx).await?;
+        let device_id = device.id;
 
         match request.payload.lifecycle {
             DeviceLifecycle::Active => device.activate(&self.clock, Some(actor))?,

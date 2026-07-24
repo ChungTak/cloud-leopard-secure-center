@@ -169,21 +169,21 @@ where
     ) -> Result<WriteResponse<OrganizationUnitDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
+        let tenant_id = usecase::require_tenant(ctx)?;
         let expected = request.expected_revision.ok_or_else(|| {
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
-
-        let mut unit = self.repo.by_id(request.payload.id, ctx).await?;
-        let tenant_id = unit.tenant_id;
-        let unit_id = unit.id;
 
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
             "tenant:organization:write",
-            ResourceRef::Organization(unit_id),
+            ResourceRef::Organization(request.payload.id),
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut unit = self.repo.by_id(request.payload.id, ctx).await?;
+        let unit_id = unit.id;
 
         unit.rename(request.payload.name, &self.clock, Some(actor))?;
 
@@ -217,8 +217,7 @@ where
     ) -> Result<OrganizationUnitDto, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let unit = self.repo.by_id(id, ctx).await?;
-        let tenant_id = unit.tenant_id;
+        let tenant_id = usecase::require_tenant(ctx)?;
 
         let auth_req = usecase::tenant_authorization(
             actor,
@@ -228,6 +227,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
+        let unit = self.repo.by_id(id, ctx).await?;
         Ok(OrganizationUnitDto::from(&unit))
     }
 
