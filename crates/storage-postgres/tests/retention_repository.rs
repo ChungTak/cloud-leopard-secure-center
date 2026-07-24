@@ -191,6 +191,7 @@ async fn double_worker_lease_prevents_concurrent_cleanup(pool: sqlx::PgPool) -> 
             "records_default",
             "worker-1",
             future(1),
+            now(),
         )
         .await,
     );
@@ -202,6 +203,7 @@ async fn double_worker_lease_prevents_concurrent_cleanup(pool: sqlx::PgPool) -> 
             "records_default",
             "worker-2",
             future(1),
+            now(),
         )
         .await,
     );
@@ -218,6 +220,7 @@ async fn double_worker_lease_prevents_concurrent_cleanup(pool: sqlx::PgPool) -> 
             "records_default",
             "worker-2",
             future(1),
+            now(),
         )
         .await,
     );
@@ -236,6 +239,7 @@ async fn expired_lease_allows_recovery(pool: sqlx::PgPool) -> sqlx::Result<()> {
             "records_default",
             "worker-1",
             future(1),
+            now(),
         )
         .await,
     );
@@ -256,6 +260,7 @@ async fn expired_lease_allows_recovery(pool: sqlx::PgPool) -> sqlx::Result<()> {
             "records_default",
             "worker-2",
             future(1),
+            now(),
         )
         .await,
     );

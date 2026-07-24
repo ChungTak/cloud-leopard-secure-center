@@ -118,6 +118,7 @@ mod tests {
             ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
             b"{}".to_vec(),
+            &SystemClock,
         );
         match bus.publish(envelope).await {
             Ok(_) => panic!("expected unavailable"),
@@ -136,6 +137,7 @@ mod tests {
             ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
             b"{}".to_vec(),
+            &SystemClock,
         );
         match bus.publish(envelope).await {
             Ok(_) => panic!("expected unsupported"),
