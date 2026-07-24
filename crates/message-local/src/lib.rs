@@ -5,6 +5,7 @@
 //! persistent: shutdown loses in-flight messages.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 /// Return the crate version.
 pub fn version() -> &'static str {
@@ -15,10 +16,9 @@ pub fn version() -> &'static str {
 pub fn message_api_version() -> &'static str {
     message_api::version()
 }
-use std::sync::Arc;
 
 use async_trait::async_trait;
-use foundation::MessageId;
+use foundation::{Clock, MessageId};
 use futures::stream::{BoxStream, StreamExt};
 use message_api::{Envelope, MessageBus, MessageError, MessageErrorKind};
 use tokio::sync::{Mutex, Notify, RwLock};
@@ -52,9 +52,10 @@ impl Default for LocalMessageBusConfig {
 }
 
 /// In-memory, non-persistent message bus.
-#[derive(Debug)]
 pub struct LocalMessageBus {
     config: LocalMessageBusConfig,
+    /// Clock used to check message deadlines.
+    clock: Arc<dyn Clock>,
     /// Wake subscribers when a message is (re-)published.
     notify: Notify,
     /// Broadcast channel for live delivery.
@@ -65,12 +66,21 @@ pub struct LocalMessageBus {
     in_flight_count: Arc<Mutex<usize>>,
 }
 
+impl std::fmt::Debug for LocalMessageBus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LocalMessageBus")
+            .field("config", &self.config)
+            .finish()
+    }
+}
+
 impl LocalMessageBus {
     /// Create a new local bus with the supplied configuration.
-    pub fn new(config: LocalMessageBusConfig) -> Self {
+    pub fn new(config: LocalMessageBusConfig, clock: impl Clock + 'static) -> Self {
         let (sender, _) = tokio::sync::broadcast::channel(config.broadcast_capacity);
         Self {
             config,
+            clock: Arc::new(clock),
             notify: Notify::new(),
             sender,
             in_flight: Arc::new(RwLock::new(HashMap::new())),
@@ -78,9 +88,11 @@ impl LocalMessageBus {
         }
     }
 
-    /// Create a local bus with default configuration.
+    /// Create a local bus with default configuration and the system clock.
+    /// Test-only; production code should supply an explicit clock.
+    #[cfg(test)]
     pub fn default_bus() -> Self {
-        Self::new(LocalMessageBusConfig::default())
+        Self::new(LocalMessageBusConfig::default(), foundation::SystemClock)
     }
 
     fn topic_matches(topic: &str, filter: &str) -> bool {
@@ -162,7 +174,7 @@ impl MessageBus for LocalMessageBus {
     async fn publish(&self, envelope: Envelope) -> Result<MessageId, MessageError> {
         let deadline_exceeded = envelope
             .deadline
-            .is_some_and(|d| d.is_expired(&foundation::SystemClock));
+            .is_some_and(|d| d.is_expired(&*self.clock));
         if deadline_exceeded {
             return Err(MessageError::new(
                 MessageErrorKind::Timeout,
@@ -284,7 +296,7 @@ impl MessageBus for LocalMessageBus {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use foundation::{SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp};
+    use foundation::{SystemClock, SystemIdGenerator, SystemRandom, TenantId};
     use futures::StreamExt;
     use message_api::EnvelopeKind;
 
@@ -380,7 +392,7 @@ mod tests {
             topic: topic.to_string(),
             payload: payload.to_vec(),
             headers: HashMap::new(),
-            timestamp: UtcTimestamp::now(),
+            timestamp: SystemClock.now(),
             deadline: None,
         }
     }
@@ -429,7 +441,7 @@ mod tests {
             max_nack_count: 2,
             ..Default::default()
         };
-        let bus = LocalMessageBus::new(config);
+        let bus = LocalMessageBus::new(config, SystemClock);
         let envelope = make_envelope(EnvelopeKind::Command, "security.v1.command.0.test", b"x");
         ok_or_panic(bus.publish(envelope.clone()).await);
 
@@ -462,7 +474,7 @@ mod tests {
             max_in_flight: 1,
             ..Default::default()
         };
-        let bus = LocalMessageBus::new(config);
+        let bus = LocalMessageBus::new(config, SystemClock);
 
         let e1 = make_envelope(EnvelopeKind::Event, "test", b"a");
         let e2 = make_envelope(EnvelopeKind::Event, "test", b"b");
