@@ -1,6 +1,6 @@
 use domain_identity::user::User;
 use foundation::{
-    RequestContext, Revision, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId,
+    Clock, RequestContext, Revision, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId,
 };
 use storage_api::UserRepository;
 use storage_postgres::user_repository::PostgresUserRepository;
@@ -140,7 +140,10 @@ async fn soft_delete_allows_recreate_with_same_username(pool: sqlx::PgPool) -> s
     ));
     ok_or_panic(repo.create(&user, &ctx).await);
 
-    ok_or_panic(repo.delete(user.id, Revision::initial(), &ctx).await);
+    ok_or_panic(
+        repo.delete(user.id, Revision::initial(), SystemClock.now(), &ctx)
+            .await,
+    );
 
     let replacement = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),

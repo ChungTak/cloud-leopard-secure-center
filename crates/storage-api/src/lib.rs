@@ -113,6 +113,7 @@ pub trait TenantRepository: Send + Sync {
         &self,
         id: TenantId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -157,6 +158,7 @@ pub trait OrganizationUnitRepository: Send + Sync {
         &self,
         id: OrganizationId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -195,6 +197,7 @@ pub trait SpatialRepository: Send + Sync {
         &self,
         id: SiteId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
     async fn list_sites(
@@ -224,6 +227,7 @@ pub trait SpatialRepository: Send + Sync {
         &self,
         id: BuildingId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
     async fn list_buildings(
@@ -245,6 +249,7 @@ pub trait SpatialRepository: Send + Sync {
         &self,
         id: FloorId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
     async fn list_floors(
@@ -266,6 +271,7 @@ pub trait SpatialRepository: Send + Sync {
         &self,
         id: AreaId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
     async fn list_areas(
@@ -323,6 +329,7 @@ pub trait UserRepository: Send + Sync {
         &self,
         id: UserId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -533,6 +540,7 @@ pub trait RoleRepository: Send + Sync {
         &self,
         id: RoleId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -574,6 +582,7 @@ pub trait RoleBindingRepository: Send + Sync {
         &self,
         id: BindingId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -612,6 +621,7 @@ pub trait DeviceRepository: Send + Sync {
         &self,
         id: DeviceId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -640,6 +650,7 @@ pub trait CameraRepository: Send + Sync {
         &self,
         id: CameraId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -669,6 +680,7 @@ pub trait TagRepository: Send + Sync {
         &self,
         id: TagId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 

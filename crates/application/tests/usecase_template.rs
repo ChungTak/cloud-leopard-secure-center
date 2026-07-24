@@ -121,6 +121,7 @@ impl TenantRepository for FakeTenantRepo {
         &self,
         _id: TenantId,
         _expected: Revision,
+        _deleted_at: UtcTimestamp,
         _ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         Ok(())
@@ -213,6 +214,7 @@ impl UserRepository for FakeUserRepo {
         &self,
         _id: UserId,
         _expected: Revision,
+        _deleted_at: UtcTimestamp,
         _ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         Ok(())

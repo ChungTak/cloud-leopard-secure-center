@@ -169,6 +169,7 @@ impl CameraRepository for PostgresCameraRepository {
         &self,
         id: CameraId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -198,13 +199,15 @@ impl CameraRepository for PostgresCameraRepository {
             Some(_) => {}
         }
 
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
             "UPDATE resource.cameras
-             SET deleted_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(Utc::now())
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

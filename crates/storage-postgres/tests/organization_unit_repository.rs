@@ -1,6 +1,8 @@
 use domain_organization::organization_unit::OrganizationUnit;
 use domain_organization::tenant::Tenant;
-use foundation::{OrganizationId, RequestContext, Revision, SystemClock, TenantId, uuid::Uuid};
+use foundation::{
+    Clock, OrganizationId, RequestContext, Revision, SystemClock, TenantId, uuid::Uuid,
+};
 use storage_api::{ListOptions, OrganizationUnitRepository, TenantRepository};
 use storage_postgres::organization_unit_repository::PostgresOrganizationUnitRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -328,7 +330,12 @@ async fn delete_with_children_fails(pool: sqlx::PgPool) -> sqlx::Result<()> {
     );
 
     let result = unit_repo
-        .delete(parse_org(&parent.to_string()), Revision::initial(), &ctx)
+        .delete(
+            parse_org(&parent.to_string()),
+            Revision::initial(),
+            SystemClock.now(),
+            &ctx,
+        )
         .await;
     assert!(result.is_err());
 
@@ -373,7 +380,12 @@ async fn delete_leaf_removes_closure(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
     ok_or_panic(
         unit_repo
-            .delete(parse_org(&leaf.to_string()), Revision::initial(), &ctx)
+            .delete(
+                parse_org(&leaf.to_string()),
+                Revision::initial(),
+                SystemClock.now(),
+                &ctx,
+            )
             .await,
     );
 
