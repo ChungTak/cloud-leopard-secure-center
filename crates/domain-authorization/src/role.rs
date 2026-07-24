@@ -186,6 +186,12 @@ fn validate_permissions(
                 "tenant-scoped roles cannot be granted platform permissions",
             ));
         }
+        if tenant_id.is_none() && p.scope == PermissionScope::Tenant {
+            return Err(PlatformError::invalid(
+                "permission",
+                "platform-scoped roles cannot be granted tenant permissions",
+            ));
+        }
         keys.push(p.key);
     }
     keys.sort();
