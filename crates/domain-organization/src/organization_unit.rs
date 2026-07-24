@@ -38,13 +38,15 @@ impl OrganizationUnit {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             parent_id,
             code,
-            name: name.into(),
+            name,
             revision: Revision::initial(),
             created_at: now,
             updated_at: now,
@@ -67,12 +69,14 @@ impl OrganizationUnit {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         Ok(Self {
             id,
             tenant_id,
             parent_id,
             code,
-            name: name.into(),
+            name,
             revision,
             created_at,
             updated_at,
@@ -81,11 +85,22 @@ impl OrganizationUnit {
     }
 
     /// Rename the unit and bump the revision.
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 
     /// Set a new parent after validating that it is not this unit or one of its descendants.
@@ -145,6 +160,22 @@ fn validate_code(code: &str) -> Result<(), PlatformError> {
     Ok(())
 }
 
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "organization_unit_name",
+            "organization unit name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "organization_unit_name",
+            "organization unit name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -198,7 +229,7 @@ mod tests {
         let clock = FakeClock::from_millis(1_000_000_000_000);
         let mut unit = make_unit()?;
         let before = unit.revision;
-        unit.rename("Updated", &clock, None);
+        unit.rename("Updated", &clock, None)?;
         assert_eq!(unit.revision.value(), before.value() + 1);
         Ok(())
     }
