@@ -77,22 +77,22 @@ impl Tag {
         tenant_id: TenantId,
         resource_type: ResourceType,
         resource_id: Uuid,
-        key: impl Into<String>,
-        value: impl Into<String>,
+        key: impl AsRef<str>,
+        value: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let key = key.into();
-        let value = value.into();
-        validate_key(&key)?;
-        validate_value(&value)?;
+        let key = key.as_ref();
+        let value = value.as_ref();
+        validate_key(key)?;
+        validate_value(value)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             resource_type,
             resource_id,
-            key: normalize_key(&key),
+            key: normalize_key(key),
             value: value.trim().to_string(),
             revision: Revision::initial(),
             created_at: now,
@@ -108,23 +108,23 @@ impl Tag {
         tenant_id: TenantId,
         resource_type: ResourceType,
         resource_id: Uuid,
-        key: impl Into<String>,
-        value: impl Into<String>,
+        key: impl AsRef<str>,
+        value: impl AsRef<str>,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let key = key.into();
-        let value = value.into();
-        validate_key(&key)?;
-        validate_value(&value)?;
+        let key = key.as_ref();
+        let value = value.as_ref();
+        validate_key(key)?;
+        validate_value(value)?;
         Ok(Self {
             id,
             tenant_id,
             resource_type,
             resource_id,
-            key: normalize_key(&key),
+            key: normalize_key(key),
             value: value.trim().to_string(),
             revision,
             created_at,
@@ -136,12 +136,12 @@ impl Tag {
     /// Update the tag value.
     pub fn set_value(
         &mut self,
-        value: impl Into<String>,
+        value: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let value = value.into();
-        validate_value(&value)?;
+        let value = value.as_ref();
+        validate_value(value)?;
         self.value = value.trim().to_string();
         self.updated_at = clock.now();
         self.actor = actor;
