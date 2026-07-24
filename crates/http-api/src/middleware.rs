@@ -10,7 +10,8 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use foundation::{IdGenerator, MessageId, RequestContext, SystemClock, SystemRandom};
+use foundation::{Clock, MessageId, RandomSource, RequestContext, generate_uuid};
+use std::sync::Arc;
 use std::time::Duration;
 use tower::{ServiceBuilder, timeout::TimeoutLayer};
 use tower_http::{
@@ -42,7 +43,15 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// - `Some(origins)` allows the listed origins only. The wildcard `*` is
 ///   intentionally treated as an invalid origin so a misconfigured environment
 ///   cannot silently allow every origin.
-pub fn with_middleware(router: Router, cors_allowed_origins: Option<Vec<String>>) -> Router {
+///
+/// `clock` and `random` are used to generate the `x-request-id` so request IDs
+/// are deterministic and testable instead of pulling from the hidden system clock.
+pub fn with_middleware(
+    router: Router,
+    cors_allowed_origins: Option<Vec<String>>,
+    clock: impl Clock + 'static,
+    random: impl RandomSource + 'static,
+) -> Router {
     let request_id_header = HeaderName::from_static("x-request-id");
     let trace_id_header = HeaderName::from_static("x-trace-id");
 
@@ -76,7 +85,7 @@ pub fn with_middleware(router: Router, cors_allowed_origins: Option<Vec<String>>
             // Generate and propagate request ids back to the client.
             .layer(SetRequestIdLayer::new(
                 request_id_header.clone(),
-                MakeUuidRequestId,
+                MakeUuidRequestId::new(clock, random),
             ))
             .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
             .layer(PropagateRequestIdLayer::new(trace_id_header))
@@ -103,14 +112,25 @@ pub fn with_middleware(router: Router, cors_allowed_origins: Option<Vec<String>>
     router.layer(axum::middleware::from_fn(crate::rate_limit::rate_limit))
 }
 
-/// Request ID generator backed by `Uuid::new_v7`.
-#[derive(Clone, Copy, Debug)]
-struct MakeUuidRequestId;
+/// Request ID generator backed by UUIDv7 from injected `Clock`/`RandomSource`.
+#[derive(Clone)]
+struct MakeUuidRequestId {
+    clock: Arc<dyn Clock>,
+    random: Arc<dyn RandomSource>,
+}
+
+impl MakeUuidRequestId {
+    fn new(clock: impl Clock + 'static, random: impl RandomSource + 'static) -> Self {
+        Self {
+            clock: Arc::new(clock),
+            random: Arc::new(random),
+        }
+    }
+}
 
 impl MakeRequestId for MakeUuidRequestId {
     fn make_request_id<B>(&mut self, _req: &Request<B>) -> Option<RequestId> {
-        let generator = foundation::SystemIdGenerator::new(SystemClock, SystemRandom);
-        let id = generator.generate().ok()?;
+        let id = generate_uuid(&*self.clock, &*self.random).ok()?;
         let value = HeaderValue::from_str(&id.to_string()).ok()?;
         Some(RequestId::new(value))
     }
