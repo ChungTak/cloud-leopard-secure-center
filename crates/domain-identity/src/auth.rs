@@ -18,8 +18,9 @@ pub struct AuthenticationPolicy {
     pub max_attempts_per_identity: u32,
     /// Failed attempts allowed per source IP within the window.
     pub max_attempts_per_source: u32,
-    /// Sliding window in seconds.
-    pub window_seconds: i64,
+    /// Sliding window in seconds. `u64` prevents negative values from silently
+    /// disabling the lockout window in the SQL interval expression.
+    pub window_seconds: u64,
 }
 
 impl AuthenticationPolicy {
