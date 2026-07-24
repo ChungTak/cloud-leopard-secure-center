@@ -206,6 +206,21 @@ async fn invalid_token_is_unauthenticated() {
 }
 
 #[tokio::test]
+async fn oversized_bearer_token_is_bad_request() {
+    let tenant = tenant_id(0);
+    let user = user_id(0);
+    let auth = Arc::new(TestAuthenticator::new(user, tenant, &["valid"]));
+    let app = test_app(auth, default_rate(), TrustedProxyConfig::default());
+    let huge_token = "x".repeat(8193);
+    let req = bearer("GET", "/protected", &huge_token);
+    let response = match app.oneshot(req).await {
+        Ok(res) => res,
+        Err(e) => panic!("request failed: {e}"),
+    };
+    assert_eq!(response.status().as_u16(), 400);
+}
+
+#[tokio::test]
 async fn revoked_token_is_unauthenticated() {
     let tenant = tenant_id(0);
     let user = user_id(0);
