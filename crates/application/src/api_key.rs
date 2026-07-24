@@ -6,7 +6,7 @@ use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp, uuid::Uuid,
 };
 use sha2::{Digest, Sha256};
-use storage_api::ApiKeyRepository;
+use storage_api::{ApiKeyRepository, UserRepository};
 
 /// A newly created API key. The raw token is only available here.
 #[derive(Clone)]
@@ -30,6 +30,7 @@ impl std::fmt::Debug for CreatedApiKey {
 /// only its hash is persisted.
 #[allow(clippy::too_many_arguments)]
 pub async fn create_api_key(
+    users: &dyn UserRepository,
     repo: &dyn ApiKeyRepository,
     random: &dyn RandomSource,
     clock: &dyn Clock,
@@ -40,6 +41,9 @@ pub async fn create_api_key(
     allowed_sources: Vec<String>,
     expires_at: UtcTimestamp,
 ) -> Result<CreatedApiKey, PlatformError> {
+    // Verify the owner exists in the current tenant before creating the key.
+    users.by_id(owner_id, ctx).await?;
+
     let id = foundation::generate_uuid(clock, random)?;
 
     let raw_token = generate_random_string(random, 32)?;
