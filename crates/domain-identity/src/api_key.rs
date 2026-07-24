@@ -3,7 +3,7 @@
 use foundation::{ErrorCode, PlatformError, TenantId, UserId, UtcTimestamp, uuid::Uuid};
 
 /// An API key tied to a user or service account.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ApiKey {
     pub id: Uuid,
     pub tenant_id: TenantId,
@@ -16,6 +16,24 @@ pub struct ApiKey {
     pub revoked_at: Option<UtcTimestamp>,
     pub created_at: UtcTimestamp,
     pub last_used_at: Option<UtcTimestamp>,
+}
+
+impl std::fmt::Debug for ApiKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ApiKey")
+            .field("id", &self.id)
+            .field("tenant_id", &self.tenant_id)
+            .field("owner_id", &self.owner_id)
+            .field("name", &self.name)
+            .field("scopes", &self.scopes)
+            .field("allowed_sources", &self.allowed_sources)
+            .field("token_hash", &"<redacted>")
+            .field("expires_at", &self.expires_at)
+            .field("revoked_at", &self.revoked_at)
+            .field("created_at", &self.created_at)
+            .field("last_used_at", &self.last_used_at)
+            .finish()
+    }
 }
 
 impl ApiKey {

@@ -9,12 +9,21 @@ use sha2::{Digest, Sha256};
 use storage_api::ApiKeyRepository;
 
 /// A newly created API key. The raw token is only available here.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CreatedApiKey {
     /// Persisted API key aggregate.
     pub api_key: ApiKey,
     /// Raw token shown once to the caller.
     pub raw_token: String,
+}
+
+impl std::fmt::Debug for CreatedApiKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CreatedApiKey")
+            .field("api_key", &self.api_key)
+            .field("raw_token", &"<redacted>")
+            .finish()
+    }
 }
 
 /// Create a new API key for `owner_id`. The raw token is returned once;

@@ -27,7 +27,7 @@ impl CredentialType {
 }
 
 /// A stored credential for a user.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Credential {
     /// Owning tenant.
     pub tenant_id: TenantId,
@@ -45,6 +45,21 @@ pub struct Credential {
     pub created_at: UtcTimestamp,
     /// Last update timestamp.
     pub updated_at: UtcTimestamp,
+}
+
+impl std::fmt::Debug for Credential {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Credential")
+            .field("tenant_id", &self.tenant_id)
+            .field("user_id", &self.user_id)
+            .field("credential_type", &self.credential_type)
+            .field("value", &"<redacted>")
+            .field("parameters", &self.parameters)
+            .field("revision", &self.revision)
+            .field("created_at", &self.created_at)
+            .field("updated_at", &self.updated_at)
+            .finish()
+    }
 }
 
 impl Credential {
