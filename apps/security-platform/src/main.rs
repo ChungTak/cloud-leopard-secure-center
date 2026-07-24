@@ -79,6 +79,9 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|s| !s.is_empty())
         .map(|s| s.into_bytes())
         .ok_or("CLSC_CURSOR_SECRET must be set to a non-empty value")?;
+    if cursor_secret.len() < 32 {
+        return Err("CLSC_CURSOR_SECRET must be at least 32 bytes".into());
+    }
     let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret)?);
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")

@@ -34,12 +34,13 @@ impl std::fmt::Debug for PaginationConfig {
 
 impl PaginationConfig {
     /// Create a pagination config. `max_page_size` is clamped to a positive
-    /// value no larger than `10_000`. `cursor_secret` must be non-empty; an
-    /// empty secret would make cursor signing trivially bypassable.
+    /// value no larger than `10_000`. `cursor_secret` must be at least 32 bytes;
+    /// shorter or empty secrets would make cursor signing trivially bypassable.
     pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Result<Self, AppError> {
         const MAX_PAGE_SIZE: u32 = 10_000;
+        const MIN_SECRET_LEN: usize = 32;
         let cursor_secret = cursor_secret.into();
-        if cursor_secret.is_empty() {
+        if cursor_secret.len() < MIN_SECRET_LEN {
             return Err(AppError::Internal);
         }
         Ok(Self {

@@ -119,6 +119,10 @@ impl std::fmt::Debug for RateLimitState {
 
 /// Middleware that enforces pre-login and authenticated rate limits.
 pub async fn rate_limit(req: Request<Body>, next: Next) -> Result<Response, AppError> {
+    if is_health_request(&req) {
+        return Ok(next.run(req).await);
+    }
+
     let state = req
         .extensions()
         .get::<Arc<RateLimitState>>()
@@ -144,6 +148,16 @@ pub async fn rate_limit(req: Request<Body>, next: Next) -> Result<Response, AppE
     }
 
     Ok(next.run(req).await)
+}
+
+fn is_health_request(req: &Request<Body>) -> bool {
+    if req.method() != Method::GET {
+        return false;
+    }
+    let path = req.uri().path();
+    // The health endpoint may be mounted directly or under an API prefix.
+    let base = path.strip_prefix("/api/v1").unwrap_or(path);
+    base == "/health"
 }
 
 fn is_login_request(req: &Request<Body>) -> bool {
