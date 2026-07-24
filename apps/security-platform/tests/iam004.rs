@@ -366,9 +366,29 @@ async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
     );
 
     let code = ok_or_panic(totp::current_code(&enrolled.raw_secret, SystemClock.now()));
-    ok_or_panic(verify_totp(&mfa_repo, &resolver, &SystemClock, &ctx, user.id, &code).await);
+    ok_or_panic(
+        verify_totp(
+            &user_repo,
+            &mfa_repo,
+            &resolver,
+            &SystemClock,
+            &ctx,
+            user.id,
+            &code,
+        )
+        .await,
+    );
 
-    let replay = verify_totp(&mfa_repo, &resolver, &SystemClock, &ctx, user.id, &code).await;
+    let replay = verify_totp(
+        &user_repo,
+        &mfa_repo,
+        &resolver,
+        &SystemClock,
+        &ctx,
+        user.id,
+        &code,
+    )
+    .await;
     assert!(replay.is_err(), "same TOTP code must not be accepted twice");
 
     Ok(())
@@ -396,9 +416,9 @@ async fn recovery_code_one_time_use(pool: sqlx::PgPool) -> sqlx::Result<()> {
     );
 
     let raw_code = enrolled.recovery_codes[0].clone();
-    ok_or_panic(use_recovery_code(&mfa_repo, &ctx, user.id, &raw_code).await);
+    ok_or_panic(use_recovery_code(&user_repo, &mfa_repo, &ctx, user.id, &raw_code).await);
     assert!(
-        use_recovery_code(&mfa_repo, &ctx, user.id, &raw_code)
+        use_recovery_code(&user_repo, &mfa_repo, &ctx, user.id, &raw_code)
             .await
             .is_err()
     );
