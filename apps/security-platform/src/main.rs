@@ -8,7 +8,6 @@ use std::time::Duration;
 use application::auth::Authenticator;
 use axum::{Extension, Router};
 use foundation::config::RateLimitConfig;
-use foundation::{RandomSource, SystemRandom};
 use http_api::auth::DenyAllAuthenticator;
 use http_api::client_ip::TrustedProxyConfig;
 use http_api::idempotency::IdempotencyState;
@@ -75,19 +74,11 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .transpose()?
         .unwrap_or_default();
 
-    let cursor_secret = if let Some(secret) = env::var("CLSC_CURSOR_SECRET")
+    let cursor_secret = env::var("CLSC_CURSOR_SECRET")
         .ok()
         .filter(|s| !s.is_empty())
-    {
-        secret.into_bytes()
-    } else {
-        eprintln!("warning: CLSC_CURSOR_SECRET not set; generating an ephemeral pagination secret");
-        let mut buf = [0u8; 32];
-        SystemRandom
-            .fill_bytes(&mut buf)
-            .map_err(|e| format!("failed to generate pagination secret: {e}"))?;
-        buf.to_vec()
-    };
+        .map(|s| s.into_bytes())
+        .ok_or("CLSC_CURSOR_SECRET must be set to a non-empty value")?;
     let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret)?);
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
