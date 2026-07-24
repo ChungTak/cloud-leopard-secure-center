@@ -31,7 +31,7 @@ impl AccessTokenClaims {
         self.exp <= now.timestamp_millis() / 1000
     }
 
-    /// Validate issuer, audience and expiration.
+    /// Validate issuer, audience, not-before time and expiration.
     pub fn validate(
         &self,
         expected_issuer: &str,
@@ -45,6 +45,13 @@ impl AccessTokenClaims {
             ));
         }
         if self.aud != expected_audience {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+        let now_seconds = now.timestamp_millis() / 1000;
+        if now_seconds < self.nbf {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
