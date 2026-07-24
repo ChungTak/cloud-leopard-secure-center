@@ -5,6 +5,8 @@ use serde::Deserialize;
 use std::path::Path;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
+const MAX_SECRET_VALUE_BYTES: usize = 64 * 1024;
+
 /// Reference to a secret stored outside the configuration file.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Deserialize)]
 #[serde(transparent)]
@@ -33,9 +35,17 @@ impl SecretRef {
 pub struct SecretValue(String);
 
 impl SecretValue {
-    /// Create a secret value from a string.
-    pub fn new(value: impl Into<String>) -> Self {
-        Self(value.into())
+    /// Create a secret value from a string, capping its byte length to prevent
+    /// oversized secrets from being carried through the configuration layer.
+    pub fn new(value: impl AsRef<str>) -> Result<Self, PlatformError> {
+        let value = value.as_ref();
+        if value.len() > MAX_SECRET_VALUE_BYTES {
+            return Err(PlatformError::invalid(
+                "secret",
+                "secret value exceeds maximum length",
+            ));
+        }
+        Ok(Self(value.to_string()))
     }
 
     /// Expose the secret as a string slice.
@@ -64,9 +74,9 @@ impl SecretPort for EnvSecretProvider {
     fn resolve(&self, reference: &SecretRef) -> Result<SecretValue, PlatformError> {
         let key = reference.as_str().to_ascii_uppercase().replace(".", "__");
         let var = format!("CLSC_SECRET_{key}");
-        std::env::var(&var)
-            .map(SecretValue::new)
-            .map_err(|_| PlatformError::invalid("secret", "secret not found".to_string()))
+        let value = std::env::var(&var)
+            .map_err(|_| PlatformError::invalid("secret", "secret not found".to_string()))?;
+        SecretValue::new(value)
     }
 }
 
@@ -269,7 +279,8 @@ impl AppConfig {
                 trusted_proxies: Vec::new(),
             },
             storage: StorageConfig {
-                url: SecretValue::new("placeholder".to_string()),
+                url: SecretValue::new("placeholder")
+                    .unwrap_or_else(|e| panic!("placeholder secret is within bounds: {e}")),
                 max_connections: 10,
             },
             security: SecurityConfig {
@@ -371,7 +382,7 @@ mod secret_or_plain {
         deserializer: D,
     ) -> Result<SecretValue, D::Error> {
         let text = String::deserialize(deserializer)?;
-        Ok(SecretValue::new(text))
+        SecretValue::new(text).map_err(serde::de::Error::custom)
     }
 }
 
@@ -443,11 +454,11 @@ max_connections = 5
 
     impl SecretPort for StaticSecretProvider {
         fn resolve(&self, reference: &SecretRef) -> Result<SecretValue, PlatformError> {
-            self.0
-                .get(reference.as_str())
-                .cloned()
-                .map(SecretValue::new)
-                .ok_or_else(|| PlatformError::invalid("secret", "secret not found".to_string()))
+            let value =
+                self.0.get(reference.as_str()).cloned().ok_or_else(|| {
+                    PlatformError::invalid("secret", "secret not found".to_string())
+                })?;
+            SecretValue::new(value)
         }
     }
 
