@@ -608,10 +608,28 @@ impl RequestContext {
         self
     }
 
-    /// Set the trace identifier.
-    pub fn with_trace_id(mut self, id: impl Into<String>) -> Self {
-        self.trace_id = Some(id.into());
-        self
+    /// Maximum length for a trace identifier.
+    pub const MAX_TRACE_ID_LEN: usize = 256;
+
+    /// Set the trace identifier. `id` is validated to be non-empty and
+    /// bounded to prevent unbounded header values from being carried through
+    /// the request context and into audit logs.
+    pub fn with_trace_id(mut self, id: impl AsRef<str>) -> Result<Self, PlatformError> {
+        let id = id.as_ref();
+        if id.trim().is_empty() {
+            return Err(PlatformError::invalid(
+                "trace_id",
+                "trace id must not be empty",
+            ));
+        }
+        if id.len() > Self::MAX_TRACE_ID_LEN {
+            return Err(PlatformError::invalid(
+                "trace_id",
+                "trace id exceeds maximum length",
+            ));
+        }
+        self.trace_id = Some(id.to_string());
+        Ok(self)
     }
 
     /// Set the organization scope.
