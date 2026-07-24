@@ -56,13 +56,24 @@ impl AccessTokenClaims {
             ));
         }
         let now_seconds = now.timestamp_millis() / 1000;
-        if now_seconds < self.nbf - CLOCK_SKEW_LEEWAY_SECONDS {
+        let leeway = CLOCK_SKEW_LEEWAY_SECONDS;
+
+        // Compute bounds using `now` so maliciously extreme claim values cannot
+        // cause arithmetic overflow during leeway adjustment.
+        let not_before = now_seconds
+            .checked_add(leeway)
+            .ok_or_else(|| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        if not_before < self.nbf {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
             ));
         }
-        if now_seconds > self.exp + CLOCK_SKEW_LEEWAY_SECONDS {
+
+        let not_after = now_seconds
+            .checked_sub(leeway)
+            .ok_or_else(|| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+        if not_after > self.exp {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
