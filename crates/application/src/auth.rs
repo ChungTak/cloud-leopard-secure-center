@@ -398,7 +398,7 @@ mod tests {
     }
 
     #[test]
-    fn missing_jti_is_rejected() {
+    fn empty_jti_is_rejected_at_issue() {
         let service = TokenService::new(
             b"a-very-secret-key-of-at-least-32-bytes",
             "clsc",
@@ -409,12 +409,9 @@ mod tests {
         let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
         let user_id = UserId::generate(&id_gen).expect("generate user id");
         let tenant_id = TenantId::generate(&id_gen).expect("generate tenant id");
-        let token = service
-            .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "")
-            .expect("issue");
         assert!(
             service
-                .verify_access_token(&token, SystemClock.now(), 1)
+                .issue_access_token(user_id, tenant_id, 1, SystemClock.now(), "")
                 .is_err()
         );
     }
