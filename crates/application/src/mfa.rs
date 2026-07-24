@@ -3,6 +3,7 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use domain_identity::assurance::AssuranceLevel;
 use domain_identity::mfa::MfaFactor;
+use domain_identity::user::{User, UserStatus};
 use foundation::{Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId};
 use storage_api::{MfaRepository, UserRepository};
 
@@ -44,10 +45,12 @@ pub async fn enroll_totp(
         "missing tenant",
     ))?;
 
-    // Verify the user exists in the current tenant before creating an MFA
-    // factor; this prevents a tenant-scoped caller from creating orphan
-    // factors for users that belong to another tenant.
-    users.by_id(user_id, ctx).await?;
+    // Verify the user exists and is active in the current tenant before
+    // creating an MFA factor; this prevents a tenant-scoped caller from
+    // creating orphan factors for users that belong to another tenant or are
+    // disabled/deleted.
+    let user = users.by_id(user_id, ctx).await?;
+    require_active_user(&user, "enroll_totp")?;
 
     let mut secret = vec![0u8; 32];
     random.fill_bytes(&mut secret)?;
@@ -80,6 +83,7 @@ pub async fn enroll_totp(
 
 /// Verify a TOTP code for `user_id`. Updates replay-prevention state on success.
 pub async fn verify_totp(
+    users: &dyn UserRepository,
     repo: &dyn MfaRepository,
     resolver: &dyn SecretResolver,
     clock: &dyn Clock,
@@ -87,6 +91,9 @@ pub async fn verify_totp(
     user_id: UserId,
     code: &str,
 ) -> Result<(), PlatformError> {
+    let user = users.by_id(user_id, ctx).await?;
+    require_active_user(&user, "verify_totp")?;
+
     let mut factor = match repo.find_active_factor_by_user(user_id, ctx).await? {
         Some(f) => f,
         None => {
@@ -114,11 +121,15 @@ pub async fn verify_totp(
 
 /// Consume a recovery code for `user_id`.
 pub async fn use_recovery_code(
+    users: &dyn UserRepository,
     repo: &dyn MfaRepository,
     ctx: &RequestContext,
     user_id: UserId,
     code: &str,
 ) -> Result<(), PlatformError> {
+    let user = users.by_id(user_id, ctx).await?;
+    require_active_user(&user, "use_recovery_code")?;
+
     let mut factor = match repo.find_active_factor_by_user(user_id, ctx).await? {
         Some(f) => f,
         None => {
@@ -138,6 +149,17 @@ pub async fn use_recovery_code(
             "invalid recovery code",
         ))
     }
+}
+
+/// Ensure a user is active before MFA or API key operations.
+fn require_active_user(user: &User, _context: &str) -> Result<(), PlatformError> {
+    if user.deleted_at.is_some() || user.status != UserStatus::Active {
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "user is not active",
+        ));
+    }
+    Ok(())
 }
 
 /// Ensure `current` assurance meets `required`.

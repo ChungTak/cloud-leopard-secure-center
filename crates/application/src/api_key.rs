@@ -42,8 +42,11 @@ pub async fn create_api_key(
     allowed_sources: Vec<String>,
     expires_at: UtcTimestamp,
 ) -> Result<CreatedApiKey, PlatformError> {
-    // Verify the owner exists in the current tenant before creating the key.
-    users.by_id(owner_id, ctx).await?;
+    // Verify the owner exists and is active in the current tenant before creating the key.
+    let user = users.by_id(owner_id, ctx).await?;
+    if user.deleted_at.is_some() || user.status != UserStatus::Active {
+        return Err(PlatformError::invalid("owner_id", "user is not active"));
+    }
 
     let id = foundation::generate_uuid(clock, random)?;
 
