@@ -32,8 +32,8 @@ impl std::fmt::Debug for TokenService {
 }
 
 impl TokenService {
-    /// Create a token service. `secret` must not be empty and `access_ttl_seconds`
-    /// must be positive.
+    /// Create a token service. `secret` must be at least 32 bytes and
+    /// `access_ttl_seconds` must be positive.
     pub fn new(
         secret: impl AsRef<[u8]>,
         issuer: impl Into<String>,
@@ -41,8 +41,11 @@ impl TokenService {
         access_ttl_seconds: i64,
     ) -> Result<Self, PlatformError> {
         let secret = secret.as_ref().to_vec();
-        if secret.is_empty() {
-            return Err(PlatformError::new(ErrorCode::Invalid, "empty token secret"));
+        if secret.len() < 32 {
+            return Err(PlatformError::new(
+                ErrorCode::Invalid,
+                "token secret must be at least 32 bytes",
+            ));
         }
         if access_ttl_seconds <= 0 {
             return Err(PlatformError::new(
