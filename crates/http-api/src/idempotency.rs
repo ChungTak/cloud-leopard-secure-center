@@ -5,7 +5,7 @@ use base64ct::Encoding;
 use http_body_util::BodyExt;
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -17,11 +17,16 @@ use crate::{
     error::AppError,
 };
 
+/// Maximum number of completed idempotent responses to keep in memory.
+const MAX_CACHE_ENTRIES: usize = 10_000;
+
 /// In-memory idempotency store keyed by request signature.
 #[derive(Clone)]
 pub struct IdempotencyState {
     /// Completed responses indexed by idempotency key.
     cache: Arc<Mutex<HashMap<IdempotencyKey, CachedResponse>>>,
+    /// Insertion order used for FIFO eviction when the cache exceeds its size cap.
+    order: Arc<Mutex<VecDeque<IdempotencyKey>>>,
     /// Per-key claims used to serialize concurrent requests sharing the same
     /// idempotency key without blocking unrelated requests.
     claims: Arc<Mutex<HashMap<IdempotencyKey, Arc<Mutex<()>>>>>,
@@ -51,6 +56,7 @@ impl IdempotencyState {
     pub fn new(ttl: Duration) -> Self {
         Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
+            order: Arc::new(Mutex::new(VecDeque::new())),
             claims: Arc::new(Mutex::new(HashMap::new())),
             ttl,
         }
@@ -61,6 +67,7 @@ impl std::fmt::Debug for IdempotencyState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IdempotencyState")
             .field("ttl", &self.ttl)
+            .field("max_entries", &MAX_CACHE_ENTRIES)
             .finish_non_exhaustive()
     }
 }
@@ -119,10 +126,24 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     // Cache the computed response and drop the per-key claim.
     {
         let mut cache = state.cache.lock().await;
+        let mut order = state.order.lock().await;
         let now = Instant::now();
         cache.retain(|_, cached| cached.expires_at > now);
+        while order.front().is_some_and(|k| !cache.contains_key(k)) {
+            order.pop_front();
+        }
         cache.insert(key.clone(), cached.clone());
+        order.push_back(key.clone());
+        while cache.len() > MAX_CACHE_ENTRIES {
+            match order.pop_front() {
+                Some(old) => {
+                    cache.remove(&old);
+                }
+                None => break,
+            }
+        }
         drop(cache);
+        drop(order);
         state.claims.lock().await.remove(&key);
     }
 
