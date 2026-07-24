@@ -7,6 +7,18 @@ use std::collections::{HashMap, HashSet};
 
 use foundation::{PluginId, TenantId};
 
+const MAX_VERSION_LEN: usize = 64;
+const MAX_API_RANGE_LEN: usize = 64;
+const MAX_DIGEST_LEN: usize = 1024;
+const MAX_PUBLISHER_LEN: usize = 256;
+const MAX_SIGNATURE_LEN: usize = 4096;
+const MAX_CHECKSUM_LEN: usize = 1024;
+const MAX_STRING_SET_SIZE: usize = 256;
+const MAX_SET_ITEM_LEN: usize = 256;
+const MAX_METADATA_ENTRIES: usize = 64;
+const MAX_METADATA_KEY_LEN: usize = 64;
+const MAX_METADATA_VALUE_LEN: usize = 1024;
+
 /// Plugin kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -51,24 +63,30 @@ impl PluginManifest {
     /// Validate the manifest shape. Real signature/ checksum verification is
     /// deferred to the verifier port.
     pub fn validate(&self) -> Result<(), PluginError> {
-        if self.version.is_empty() {
-            return Err(PluginError::new(
-                PluginErrorKind::Invalid,
-                "version is empty",
-            ));
-        }
-        if self.api_range.is_empty() {
-            return Err(PluginError::new(
-                PluginErrorKind::Invalid,
-                "api_range is empty",
-            ));
-        }
-        if self.config_digest.is_empty() {
-            return Err(PluginError::new(
-                PluginErrorKind::Invalid,
-                "config_digest is empty",
-            ));
-        }
+        validate_manifest_string(&self.version, "version", MAX_VERSION_LEN)?;
+        validate_manifest_string(&self.api_range, "api_range", MAX_API_RANGE_LEN)?;
+        validate_manifest_string(&self.config_digest, "config_digest", MAX_DIGEST_LEN)?;
+        validate_manifest_string(&self.publisher, "publisher", MAX_PUBLISHER_LEN)?;
+        validate_manifest_string(&self.signature, "signature", MAX_SIGNATURE_LEN)?;
+        validate_manifest_string(&self.checksum, "checksum", MAX_CHECKSUM_LEN)?;
+        validate_manifest_set(
+            &self.capabilities,
+            "capabilities",
+            MAX_STRING_SET_SIZE,
+            MAX_SET_ITEM_LEN,
+        )?;
+        validate_manifest_set(
+            &self.resources,
+            "resources",
+            MAX_STRING_SET_SIZE,
+            MAX_SET_ITEM_LEN,
+        )?;
+        validate_manifest_set(
+            &self.events,
+            "events",
+            MAX_STRING_SET_SIZE,
+            MAX_SET_ITEM_LEN,
+        )?;
         Ok(())
     }
 }
@@ -96,6 +114,13 @@ impl Plugin {
         })
     }
 
+    /// Attach bounded metadata to a plugin.
+    pub fn with_metadata(mut self, metadata: HashMap<String, String>) -> Result<Self, PluginError> {
+        validate_plugin_metadata(&metadata)?;
+        self.metadata = metadata;
+        Ok(self)
+    }
+
     /// Move to the next state if the transition is legal.
     pub fn transition(&mut self, next: PluginState) -> Result<(), PluginError> {
         let legal = matches!(
@@ -121,6 +146,63 @@ impl Plugin {
         self.state = next;
         Ok(())
     }
+}
+
+fn validate_manifest_string(value: &str, field: &str, max: usize) -> Result<(), PluginError> {
+    if value.trim().is_empty() || value.len() > max {
+        return Err(PluginError::new(
+            PluginErrorKind::Invalid,
+            format!("{field} is empty or exceeds maximum length"),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_manifest_set(
+    set: &HashSet<String>,
+    field: &str,
+    max_size: usize,
+    max_item_len: usize,
+) -> Result<(), PluginError> {
+    if set.len() > max_size {
+        return Err(PluginError::new(
+            PluginErrorKind::Invalid,
+            format!("{field} exceeds maximum size"),
+        ));
+    }
+    for item in set {
+        if item.trim().is_empty() || item.len() > max_item_len {
+            return Err(PluginError::new(
+                PluginErrorKind::Invalid,
+                format!("{field} contains empty or oversized item"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_plugin_metadata(metadata: &HashMap<String, String>) -> Result<(), PluginError> {
+    if metadata.len() > MAX_METADATA_ENTRIES {
+        return Err(PluginError::new(
+            PluginErrorKind::Invalid,
+            "plugin metadata exceeds maximum number of entries",
+        ));
+    }
+    for (key, value) in metadata {
+        if key.trim().is_empty() || key.len() > MAX_METADATA_KEY_LEN {
+            return Err(PluginError::new(
+                PluginErrorKind::Invalid,
+                "plugin metadata key is empty or too long",
+            ));
+        }
+        if value.len() > MAX_METADATA_VALUE_LEN {
+            return Err(PluginError::new(
+                PluginErrorKind::Invalid,
+                "plugin metadata value is too long",
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// Plugin domain error.
