@@ -199,10 +199,10 @@ pub async fn audit_write(
     )
     .map_err(|e| PlatformError::invalid("audit_record", e.to_string()))?;
     if let Some(request_id) = ctx.request_id {
-        record = record.with_request_id(request_id.to_string());
+        record = record.with_request_id(request_id.to_string())?;
     }
     if let Some(trace_id) = &ctx.trace_id {
-        record = record.with_trace_id(trace_id.clone());
+        record = record.with_trace_id(trace_id.clone())?;
     }
     // Audit records are partitioned and RLS-protected by the record's tenant.
     // For platform-level operations (e.g. tenant creation) the request context
