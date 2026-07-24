@@ -6,6 +6,9 @@
 use foundation::{CameraId, Deadline, EntitlementId, OperationId, TenantId, UtcTimestamp};
 use serde::{Deserialize, Serialize};
 
+const MAX_SESSION_ID_LEN: usize = 256;
+const MAX_PROTOCOL_LEN: usize = 64;
+
 /// Errors that can occur in media entitlement processing.
 #[derive(Debug, Clone, thiserror::Error, PartialEq, Eq)]
 #[error("{kind:?}: {message}")]
@@ -62,16 +65,20 @@ impl MediaSession {
         tenant_id: TenantId,
         principal_id: Option<foundation::UserId>,
         camera_id: CameraId,
-        session_id: impl Into<String>,
-        protocol: impl Into<String>,
-    ) -> Self {
-        Self {
+        session_id: impl AsRef<str>,
+        protocol: impl AsRef<str>,
+    ) -> Result<Self, MediaError> {
+        let session_id = session_id.as_ref();
+        validate_media_string(session_id, "session_id", MAX_SESSION_ID_LEN)?;
+        let protocol = protocol.as_ref();
+        validate_media_string(protocol, "protocol", MAX_PROTOCOL_LEN)?;
+        Ok(Self {
             tenant_id,
             principal_id,
             camera_id,
-            session_id: session_id.into(),
-            protocol: protocol.into(),
-        }
+            session_id: session_id.to_string(),
+            protocol: protocol.to_string(),
+        })
     }
 }
 
@@ -92,18 +99,22 @@ impl MediaToken {
         tenant_id: TenantId,
         principal_id: Option<foundation::UserId>,
         camera_id: CameraId,
-        session_id: impl Into<String>,
-        protocol: impl Into<String>,
+        session_id: impl AsRef<str>,
+        protocol: impl AsRef<str>,
         expires_at: UtcTimestamp,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MediaError> {
+        let session_id = session_id.as_ref();
+        validate_media_string(session_id, "session_id", MAX_SESSION_ID_LEN)?;
+        let protocol = protocol.as_ref();
+        validate_media_string(protocol, "protocol", MAX_PROTOCOL_LEN)?;
+        Ok(Self {
             tenant_id,
             principal_id,
             camera_id,
-            session_id: session_id.into(),
-            protocol: protocol.into(),
+            session_id: session_id.to_string(),
+            protocol: protocol.to_string(),
             expires_at,
-        }
+        })
     }
 }
 
@@ -143,6 +154,39 @@ pub struct CreateEntitlementRequest {
     pub actions: Vec<MediaAction>,
     pub protocol: String,
     pub deadline: Deadline,
+}
+
+impl CreateEntitlementRequest {
+    /// Create a validated entitlement request.
+    pub fn new(
+        tenant_id: TenantId,
+        principal_id: foundation::UserId,
+        camera_id: CameraId,
+        actions: Vec<MediaAction>,
+        protocol: impl AsRef<str>,
+        deadline: Deadline,
+    ) -> Result<Self, MediaError> {
+        let protocol = protocol.as_ref();
+        validate_media_string(protocol, "protocol", MAX_PROTOCOL_LEN)?;
+        Ok(Self {
+            tenant_id,
+            principal_id,
+            camera_id,
+            actions,
+            protocol: protocol.to_string(),
+            deadline,
+        })
+    }
+}
+
+fn validate_media_string(value: &str, field: &str, max: usize) -> Result<(), MediaError> {
+    if value.trim().is_empty() || value.len() > max {
+        return Err(MediaError::new(
+            MediaErrorKind::Invalid,
+            format!("{field} is empty or exceeds maximum length"),
+        ));
+    }
+    Ok(())
 }
 
 /// Port for media entitlement operations.
