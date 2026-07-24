@@ -71,13 +71,22 @@ impl RetentionRepository for PostgresRetentionRepository {
     async fn save_policy(&self, policy: &RetentionPolicy) -> Result<(), PlatformError> {
         let mut tx = self.begin_cleanup_transaction().await?;
 
+        let max_batch_size = i64::try_from(policy.max_batch_size).map_err(|_| {
+            PlatformError::new(
+                ErrorCode::Invalid,
+                "invalid retention max_batch_size".to_string(),
+            )
+        })?;
+
         sqlx::query(
-            "INSERT INTO audit.retention_policy (target, tenant_id, days)
-             VALUES ($1, NULL, $2)
-             ON CONFLICT (target, tenant_id) DO UPDATE SET days = EXCLUDED.days",
+            "INSERT INTO audit.retention_policy (target, tenant_id, days, max_batch_size)
+             VALUES ($1, NULL, $2, $3)
+             ON CONFLICT (target, tenant_id) DO UPDATE
+             SET days = EXCLUDED.days, max_batch_size = EXCLUDED.max_batch_size",
         )
         .bind(policy.target.as_str())
         .bind(i64::from(policy.days))
+        .bind(max_batch_size)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -88,7 +97,7 @@ impl RetentionRepository for PostgresRetentionRepository {
     async fn get_policy(&self, target: RetentionTarget) -> Result<RetentionPolicy, PlatformError> {
         let mut tx = self.begin_cleanup_transaction().await?;
         let row = sqlx::query(
-            "SELECT days FROM audit.retention_policy
+            "SELECT days, max_batch_size FROM audit.retention_policy
              WHERE target = $1 AND tenant_id IS NULL",
         )
         .bind(target.as_str())
@@ -103,7 +112,14 @@ impl RetentionRepository for PostgresRetentionRepository {
                 let days_u32: u32 = days.try_into().map_err(|_| {
                     PlatformError::new(ErrorCode::Invalid, "invalid retention days".to_string())
                 })?;
-                RetentionPolicy::new(target, days_u32, 1000)
+                let max_batch_size: i64 = r.get("max_batch_size");
+                let max_batch_size_u64: u64 = max_batch_size.try_into().map_err(|_| {
+                    PlatformError::new(
+                        ErrorCode::Invalid,
+                        "invalid retention max_batch_size".to_string(),
+                    )
+                })?;
+                RetentionPolicy::new(target, days_u32, max_batch_size_u64)
             }
             None => built_in_default(target),
         }
