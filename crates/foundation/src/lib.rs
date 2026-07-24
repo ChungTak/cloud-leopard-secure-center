@@ -326,7 +326,11 @@ pub trait IdGenerator: Send + Sync {
 /// This is the standalone equivalent of [`StandardIdGenerator`] for callers that
 /// already hold `&dyn` trait objects.
 pub fn generate_uuid(clock: &dyn Clock, random: &dyn RandomSource) -> Result<Uuid, PlatformError> {
-    let ts = clock.now().timestamp_millis() as u64;
+    let ts: u64 = clock
+        .now()
+        .timestamp_millis()
+        .try_into()
+        .map_err(|_| PlatformError::invalid("timestamp", "timestamp is out of UUIDv7 range"))?;
     let mut rand = [0u8; 10];
     random.fill_bytes(&mut rand)?;
     let mut bytes = [0u8; 16];
@@ -353,7 +357,12 @@ impl<C, R> StandardIdGenerator<C, R> {
 
 impl<C: Clock, R: RandomSource> IdGenerator for StandardIdGenerator<C, R> {
     fn generate(&self) -> Result<Uuid, PlatformError> {
-        let ts = self.clock.now().timestamp_millis() as u64;
+        let ts: u64 = self
+            .clock
+            .now()
+            .timestamp_millis()
+            .try_into()
+            .map_err(|_| PlatformError::invalid("timestamp", "timestamp is out of UUIDv7 range"))?;
         let mut rand = [0u8; 10];
         self.random.fill_bytes(&mut rand)?;
         let mut bytes = [0u8; 16];
