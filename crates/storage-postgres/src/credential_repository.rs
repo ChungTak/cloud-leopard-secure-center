@@ -1,6 +1,6 @@
 //! PostgreSQL implementation of the `CredentialRepository` port.
 
-use crate::db_error;
+use crate::{begin_tenant_transaction, db_error, revision_from_i64};
 use async_trait::async_trait;
 use domain_identity::credential::{Credential, CredentialType};
 use foundation::{
@@ -10,8 +10,6 @@ use foundation::{
 };
 use sqlx::Row;
 use storage_api::CredentialRepository;
-
-use crate::begin_tenant_transaction;
 
 /// PostgreSQL-backed credential repository.
 #[derive(Debug, Clone)]
@@ -193,7 +191,7 @@ fn row_to_credential(row: sqlx::postgres::PgRow) -> Result<Credential, PlatformE
         credential_type: CredentialType::parse(&credential_type)?,
         value,
         parameters,
-        revision: Revision::new(revision as u64),
+        revision: revision_from_i64(revision)?,
         created_at: created_at.into(),
         updated_at: updated_at.into(),
     })

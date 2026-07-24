@@ -90,12 +90,14 @@ impl MfaFactor {
             raw_codes.push(raw);
         }
 
+        let secret_ref = secret_ref.into();
+        validate_secret_ref(&secret_ref)?;
         let factor = Self {
             id,
             tenant_id,
             user_id,
             factor_type: MfaFactorType::Totp,
-            secret_ref: secret_ref.into(),
+            secret_ref,
             enabled: true,
             verified_at: Some(clock.now()),
             created_at: clock.now(),
@@ -166,13 +168,38 @@ impl MfaFactor {
         recovery_code_used: Vec<bool>,
         last_used_step: Option<u64>,
         last_used_code: Option<String>,
-    ) -> Self {
+    ) -> Result<Self, PlatformError> {
+        validate_secret_ref(&secret_ref)?;
+        if recovery_code_hashes.len() != recovery_code_used.len() {
+            return Err(PlatformError::invalid(
+                "recovery_codes",
+                "recovery code hashes and used flags must have the same length",
+            ));
+        }
+        for hash in &recovery_code_hashes {
+            validate_recovery_code_hash(hash)?;
+        }
+        match (last_used_step, &last_used_code) {
+            (Some(_), None) | (None, Some(_)) => {
+                return Err(PlatformError::invalid(
+                    "last_used_step",
+                    "last_used_step and last_used_code must both be present or both absent",
+                ));
+            }
+            (Some(_), Some(code)) if code.trim().is_empty() => {
+                return Err(PlatformError::invalid(
+                    "last_used_code",
+                    "last used code must not be empty when a step is present",
+                ));
+            }
+            _ => {}
+        }
         let recovery_codes = recovery_code_hashes
             .into_iter()
             .zip(recovery_code_used)
             .map(|(hash, used)| RecoveryCode { hash, used })
             .collect();
-        Self {
+        Ok(Self {
             id,
             tenant_id,
             user_id,
@@ -184,8 +211,34 @@ impl MfaFactor {
             recovery_codes,
             last_used_step,
             last_used_code,
-        }
+        })
     }
+}
+
+fn validate_secret_ref(secret_ref: &str) -> Result<(), PlatformError> {
+    if secret_ref.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "secret_ref",
+            "secret reference must not be empty",
+        ));
+    }
+    if secret_ref.len() > 256 {
+        return Err(PlatformError::invalid(
+            "secret_ref",
+            "secret reference must be at most 256 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_recovery_code_hash(hash: &str) -> Result<(), PlatformError> {
+    if hash.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "recovery_code_hash",
+            "recovery code hash must not be empty",
+        ));
+    }
+    Ok(())
 }
 
 fn hash_raw(raw: &str) -> String {

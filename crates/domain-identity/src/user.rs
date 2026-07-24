@@ -185,6 +185,40 @@ impl User {
         })
     }
 
+    /// Reconstruct a user from persisted parts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        id: UserId,
+        tenant_id: TenantId,
+        username: impl Into<String>,
+        display_name: impl Into<String>,
+        status: UserStatus,
+        session_version: u64,
+        revision: Revision,
+        created_at: UtcTimestamp,
+        updated_at: UtcTimestamp,
+        actor: Option<UserId>,
+        deleted_at: Option<UtcTimestamp>,
+    ) -> Result<Self, PlatformError> {
+        let username = normalize_username(&username.into())?;
+        let display_name = display_name.into().trim().to_string();
+        validate_display_name(&display_name)?;
+        Ok(Self {
+            id,
+            tenant_id,
+            username,
+            display_name,
+            status,
+            session_version,
+            revision,
+            created_at,
+            updated_at,
+            actor,
+            deleted_at,
+            pending_events: Vec::new(),
+        })
+    }
+
     /// Change the username and bump revision.
     pub fn set_username(
         &mut self,

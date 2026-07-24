@@ -1,18 +1,16 @@
 //! PostgreSQL configuration repository.
 
-use crate::db_error;
+use crate::{begin_tenant_transaction, db_error, revision_from_i64};
 use async_trait::async_trait;
 use domain_configuration::{
     ConfigDefinition, ConfigScope, ConfigValue, ConfigValueId, resolve_config,
 };
 use foundation::{
-    ErrorCode, IdGenerator, PlatformError, RequestContext, Revision, SystemClock,
-    SystemIdGenerator, SystemRandom, TenantId,
+    ErrorCode, IdGenerator, PlatformError, RequestContext, SystemClock, SystemIdGenerator,
+    SystemRandom, TenantId,
 };
 use sqlx::{PgPool, Row};
 use storage_api::ConfigurationRepository;
-
-use crate::begin_tenant_transaction;
 
 /// PostgreSQL-backed configuration repository.
 #[derive(Debug, Clone)]
@@ -180,7 +178,7 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
             config_key: value.config_key.clone(),
             raw_value: raw_value.clone(),
             secret_ref: value.secret_ref.clone(),
-            revision: Revision::new(revision as u64),
+            revision: revision_from_i64(revision)?,
         })
     }
 
@@ -311,7 +309,7 @@ fn parse_value(
         config_key: config_key.to_string(),
         raw_value,
         secret_ref,
-        revision: Revision::new(revision as u64),
+        revision: revision_from_i64(revision)?,
     })
 }
 

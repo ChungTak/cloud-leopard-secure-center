@@ -12,7 +12,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ExternalBindingRepository as ExternalBindingRepositoryPort, ListOptions, Page};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate, revision_from_i64};
 
 /// PostgreSQL-backed external binding repository.
 #[derive(Debug, Clone)]
@@ -404,7 +404,7 @@ fn row_to_binding(row: sqlx::postgres::PgRow) -> Result<ExternalBinding, Platfor
         external_kind,
         ExternalBindingState::parse(&state)?,
         activated_at.map(Into::into),
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor

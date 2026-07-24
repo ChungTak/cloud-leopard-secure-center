@@ -36,7 +36,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use foundation::{ErrorCode, PlatformError, RequestContext};
+use foundation::{ErrorCode, PlatformError, RequestContext, Revision};
 use sqlx::pool::PoolConnection;
 use sqlx::postgres::{PgConnection, PgPoolOptions};
 use sqlx::{PgPool, Postgres};
@@ -65,6 +65,26 @@ pub(crate) fn paginate<T>(mut items: Vec<T>, options: ListOptionsInner) -> Page<
             next_cursor: None,
         }
     }
+}
+
+/// Convert a database `BIGINT` revision to the domain `Revision`, rejecting
+/// negative or otherwise invalid values that could silently wrap around `u64`.
+pub(crate) fn revision_from_i64(value: i64) -> Result<Revision, PlatformError> {
+    let value = value
+        .try_into()
+        .map_err(|_| PlatformError::invalid("revision", "stored revision is out of valid range"))?;
+    Ok(Revision::new(value))
+}
+
+/// Convert a database `BIGINT` session version to `u64`, rejecting negative
+/// values that would wrap around.
+pub(crate) fn session_version_from_i64(value: i64) -> Result<u64, PlatformError> {
+    value.try_into().map_err(|_| {
+        PlatformError::invalid(
+            "session_version",
+            "stored session version is out of valid range",
+        )
+    })
 }
 
 /// Run all SQLx migrations in `migrations/` against `database_url`.

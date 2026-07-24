@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ListOptions, Page, RoleBindingRepository};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate, revision_from_i64};
 
 /// PostgreSQL-backed role binding repository.
 #[derive(Debug, Clone)]
@@ -408,7 +408,7 @@ fn row_to_binding(row: sqlx::postgres::PgRow) -> Result<RoleBinding, PlatformErr
         scope_from_db(&scope_type, scope_ref)?,
         valid_from.into(),
         valid_until.map(|d| d.into()),
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor
