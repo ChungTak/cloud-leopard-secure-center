@@ -1,7 +1,9 @@
 use foundation::chrono::{DateTime, Utc};
 use foundation::retry::RetryPolicy;
 use foundation::uuid::Uuid;
-use foundation::{PlatformError, RandomSource, RequestContext, TenantId, UtcTimestamp};
+use foundation::{
+    PlatformError, RandomSource, RequestContext, SystemClock, SystemRandom, TenantId, UtcTimestamp,
+};
 use storage_api::{InboxMessage, InboxRepository, InboxStatus, Job, JobRepository, JobStatus};
 use storage_postgres::inbox_repository::PostgresInboxRepository;
 use storage_postgres::job_repository::PostgresJobRepository;
@@ -187,7 +189,7 @@ fn job(queue: &str, payload: &str) -> Job {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_happy_path(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q1", "{}"), &ctx()).await);
 
     let claimed = some_or_panic(
@@ -222,7 +224,7 @@ async fn job_happy_path(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_lease_expires_and_reclaimed(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q2", "{}"), &ctx()).await);
 
     let first = some_or_panic(
@@ -267,7 +269,7 @@ async fn job_lease_expires_and_reclaimed(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_dual_worker_complete_once(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q3", "{}"), &ctx()).await);
 
     let first = some_or_panic(
@@ -314,7 +316,7 @@ async fn job_dual_worker_complete_once(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_transient_retry_succeeds(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q4", "{}"), &ctx()).await);
 
     let first = some_or_panic(
@@ -367,7 +369,7 @@ async fn job_transient_retry_succeeds(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_poison_after_max_attempts(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     let mut template = job("q5", "{}");
     template.max_attempts = 2;
     ok_or_panic(repo.schedule(&template, &ctx()).await);
@@ -428,7 +430,7 @@ async fn job_poison_after_max_attempts(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_cancel(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     let scheduled = ok_or_panic(repo.schedule(&job("q6", "{}"), &ctx()).await);
     let job_id = some_or_panic(scheduled.job_id, "job id missing");
 
@@ -445,7 +447,7 @@ async fn job_cancel(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_retry_deadline_exceeded(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q7", "{}"), &ctx()).await);
 
     let first = some_or_panic(
@@ -480,7 +482,7 @@ async fn job_retry_deadline_exceeded(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn job_retry_backoff_with_clock_advance(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let repo = PostgresJobRepository::new(pool);
+    let repo = PostgresJobRepository::new(pool, SystemClock, SystemRandom);
     ok_or_panic(repo.schedule(&job("q8", "{}"), &ctx()).await);
 
     let first = some_or_panic(

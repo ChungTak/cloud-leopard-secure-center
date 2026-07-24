@@ -7,9 +7,9 @@ use domain_resource::projection::{
     is_projection_stale,
 };
 use foundation::{
-    ErrorCode, IdGenerator, PlatformError, RequestContext, SystemClock, SystemIdGenerator,
-    SystemRandom, UtcTimestamp,
+    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UtcTimestamp,
     chrono::{DateTime, Utc},
+    generate_uuid,
     uuid::Uuid,
 };
 use sqlx::{AssertSqlSafe, PgPool, Row};
@@ -24,15 +24,33 @@ const DEFAULT_CHANNEL_VIEW: &str = "channels";
 const SHADOW_CHANNEL_VIEW: &str = "channels_shadow";
 
 /// PostgreSQL-backed projection repository.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PostgresProjectionRepository {
     pool: PgPool,
+    clock: std::sync::Arc<dyn Clock>,
+    random: std::sync::Arc<dyn RandomSource>,
+}
+
+impl std::fmt::Debug for PostgresProjectionRepository {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PostgresProjectionRepository")
+            .field("pool", &self.pool)
+            .finish()
+    }
 }
 
 impl PostgresProjectionRepository {
     /// Create a new repository backed by `pool`.
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(
+        pool: PgPool,
+        clock: impl Clock + 'static,
+        random: impl RandomSource + 'static,
+    ) -> Self {
+        Self {
+            pool,
+            clock: std::sync::Arc::new(clock),
+            random: std::sync::Arc::new(random),
+        }
     }
 }
 
@@ -90,6 +108,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                         "payload_mismatch",
                         &event.payload,
                         event.observed_at,
+                        generate_uuid(&*self.clock, &*self.random)?,
                     )
                     .await?;
                     return Ok(());
@@ -200,6 +219,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                         "payload_mismatch",
                         &event.payload,
                         event.observed_at,
+                        generate_uuid(&*self.clock, &*self.random)?,
                     )
                     .await?;
                     return Ok(());
@@ -419,8 +439,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .ok_or_else(missing_tenant)?;
 
         let id = if failure.id.is_empty() {
-            let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-            generator.generate()?
+            generate_uuid(&*self.clock, &*self.random)?
         } else {
             Uuid::parse_str(&failure.id)
                 .map_err(|e| PlatformError::invalid("failure_id", e.to_string()))?
@@ -685,6 +704,7 @@ fn row_to_channel_projection(
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn record_failure_sql(
     tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: Uuid,
@@ -693,9 +713,8 @@ async fn record_failure_sql(
     reason: &str,
     payload: &str,
     now: UtcTimestamp,
+    id: Uuid,
 ) -> Result<(), PlatformError> {
-    let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-    let id = generator.generate()?;
     sqlx::query(
         "INSERT INTO projection.failures
          (id, tenant_id, source_event_id, external_ref, reason, payload, created_at)

@@ -6,22 +6,39 @@ use domain_configuration::{
     ConfigDefinition, ConfigScope, ConfigValue, ConfigValueId, resolve_config,
 };
 use foundation::{
-    ErrorCode, IdGenerator, PlatformError, RequestContext, SystemClock, SystemIdGenerator,
-    SystemRandom, TenantId,
+    Clock, ErrorCode, PlatformError, RandomSource, RequestContext, TenantId, generate_uuid,
 };
 use sqlx::{PgPool, Row};
 use storage_api::ConfigurationRepository;
 
 /// PostgreSQL-backed configuration repository.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PostgresConfigurationRepository {
     pool: PgPool,
+    clock: std::sync::Arc<dyn Clock>,
+    random: std::sync::Arc<dyn RandomSource>,
+}
+
+impl std::fmt::Debug for PostgresConfigurationRepository {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PostgresConfigurationRepository")
+            .field("pool", &self.pool)
+            .finish()
+    }
 }
 
 impl PostgresConfigurationRepository {
     /// Create a new repository backed by `pool`.
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(
+        pool: PgPool,
+        clock: impl Clock + 'static,
+        random: impl RandomSource + 'static,
+    ) -> Self {
+        Self {
+            pool,
+            clock: std::sync::Arc::new(clock),
+            random: std::sync::Arc::new(random),
+        }
     }
 }
 
@@ -152,7 +169,7 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
                     )
                 })?
         } else {
-            let id = SystemIdGenerator::new(SystemClock, SystemRandom).generate()?;
+            let id = generate_uuid(&*self.clock, &*self.random)?;
             let row = sqlx::query(
                 "INSERT INTO config.values
                  (config_value_id, tenant_id, scope_type, scope_id, config_key, value, raw_value, secret_ref, revision)

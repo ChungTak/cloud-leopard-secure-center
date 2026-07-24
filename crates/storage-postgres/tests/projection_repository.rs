@@ -1,7 +1,7 @@
 use domain_organization::tenant::Tenant;
 use domain_resource::projection::{ChannelEvent, DeviceEvent, ProjectionFailure};
 use foundation::{
-    Clock, FakeClock, RequestContext, SystemClock, TenantId, UtcTimestamp, uuid::Uuid,
+    Clock, FakeClock, RequestContext, SystemClock, SystemRandom, TenantId, UtcTimestamp, uuid::Uuid,
 };
 use storage_api::{ProjectionRepository, TenantRepository};
 use storage_postgres::projection_repository::PostgresProjectionRepository;
@@ -66,7 +66,7 @@ async fn device_projection_returns_observed_fields(pool: sqlx::PgPool) -> sqlx::
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     let event = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     ok_or_panic(repo.apply_device_event(event, &ctx).await);
@@ -90,7 +90,7 @@ async fn out_of_order_and_duplicate_events_are_ignored(pool: sqlx::PgPool) -> sq
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     let first = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     let duplicate = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
@@ -117,7 +117,7 @@ async fn gap_marks_projection_stale(pool: sqlx::PgPool) -> sqlx::Result<()> {
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     let first = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     let gap = device_event("dev-1", 3, "evt-3", "{\"online\":false}");
@@ -144,7 +144,7 @@ async fn mismatched_payload_for_same_sequence_is_quarantined(
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     let first = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     let mismatch = device_event("dev-1", 1, "evt-1", "{\"online\":false}");
@@ -169,7 +169,7 @@ async fn shadow_rebuild_and_atomic_view_swap(pool: sqlx::PgPool) -> sqlx::Result
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     let initial = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     ok_or_panic(repo.apply_device_event(initial, &ctx).await);
@@ -202,7 +202,7 @@ async fn checkpoint_and_failure_are_persisted(pool: sqlx::PgPool) -> sqlx::Resul
     )
     .await;
     let ctx = tenant_ctx(&tenant.as_uuid().to_string());
-    let repo = PostgresProjectionRepository::new(pool);
+    let repo = PostgresProjectionRepository::new(pool, SystemClock, SystemRandom);
 
     ok_or_panic(
         repo.checkpoint(

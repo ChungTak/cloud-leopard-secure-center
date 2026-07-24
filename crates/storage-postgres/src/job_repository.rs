@@ -4,8 +4,7 @@ use async_trait::async_trait;
 use foundation::chrono::{DateTime, Utc};
 use foundation::uuid::Uuid;
 use foundation::{
-    IdGenerator, PlatformError, RequestContext, SystemClock, SystemIdGenerator, SystemRandom,
-    TenantId, UtcTimestamp,
+    Clock, PlatformError, RandomSource, RequestContext, TenantId, UtcTimestamp, generate_uuid,
 };
 use sqlx::{PgPool, Row};
 use storage_api::{Job, JobRepository, JobStatus};
@@ -13,15 +12,33 @@ use storage_api::{Job, JobRepository, JobStatus};
 use crate::begin_tenant_transaction;
 
 /// PostgreSQL-backed job repository.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PostgresJobRepository {
     pool: PgPool,
+    clock: std::sync::Arc<dyn Clock>,
+    random: std::sync::Arc<dyn RandomSource>,
+}
+
+impl std::fmt::Debug for PostgresJobRepository {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PostgresJobRepository")
+            .field("pool", &self.pool)
+            .finish()
+    }
 }
 
 impl PostgresJobRepository {
     /// Create a new repository backed by `pool`.
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(
+        pool: PgPool,
+        clock: impl Clock + 'static,
+        random: impl RandomSource + 'static,
+    ) -> Self {
+        Self {
+            pool,
+            clock: std::sync::Arc::new(clock),
+            random: std::sync::Arc::new(random),
+        }
     }
 }
 
@@ -32,10 +49,9 @@ impl JobRepository for PostgresJobRepository {
         let mut tx = tx_managed.lock().await;
 
         let tenant_uuid = job.tenant_id.map(|id| *id.as_uuid());
-        let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
         let job_id = match job.job_id {
             Some(id) => id,
-            None => generator.generate()?,
+            None => generate_uuid(&*self.clock, &*self.random)?,
         };
         let next_run = utc_to_db(job.next_run);
         let deadline = job.deadline.map(utc_to_db);
