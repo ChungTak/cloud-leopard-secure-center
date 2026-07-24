@@ -135,6 +135,12 @@ impl ManagedTransaction {
         self.owned
     }
 
+    /// Clone the underlying shared connection so it can be installed in a
+    /// task-local for nested repository calls inside a unit of work.
+    pub fn connection(&self) -> Arc<Mutex<PoolConnection<Postgres>>> {
+        self.inner.clone()
+    }
+
     /// Commit an owned transaction. Does nothing for connections borrowed from a
     /// unit of work.
     pub async fn commit(self) -> Result<(), sqlx::Error> {
