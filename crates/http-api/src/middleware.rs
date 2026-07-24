@@ -29,9 +29,10 @@ fn deny_cors() -> CorsLayer {
 }
 
 use crate::error::{ProblemDetails, from_middleware_error};
+use crate::idempotency;
 
 /// Default request body size limit in bytes (1 MiB).
-const BODY_LIMIT: usize = 1024 * 1024;
+pub(crate) const BODY_LIMIT: usize = 1024 * 1024;
 /// Default request timeout.
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -98,6 +99,10 @@ pub fn with_middleware(
                 },
             ))
             .layer(TimeoutLayer::new(REQUEST_TIMEOUT))
+            // Cache write responses by Idempotency-Key before the global body
+            // limit; the middleware applies its own identical limit while
+            // collecting the body it needs to replay and sign.
+            .layer(axum::middleware::from_fn(idempotency::idempotency))
             .layer(RequestBodyLimitLayer::new(BODY_LIMIT))
             // Normalize paths before routing.
             .layer(NormalizePathLayer::trim_trailing_slash()),
