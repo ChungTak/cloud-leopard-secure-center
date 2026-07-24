@@ -67,10 +67,12 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let proxy_config = env::var("CLSC_TRUSTED_PROXIES")
         .ok()
+        .filter(|v| !v.trim().is_empty())
         .map(|v| {
             let raw: Vec<String> = v.split(',').map(|s| s.trim().to_string()).collect();
             TrustedProxyConfig::parse(&raw)
         })
+        .transpose()?
         .unwrap_or_default();
 
     let cursor_secret = if let Some(secret) = env::var("CLSC_CURSOR_SECRET")

@@ -311,7 +311,8 @@ async fn trusted_proxy_uses_forwarded_for() {
     let tenant = tenant_id(0);
     let user = user_id(0);
     let auth = Arc::new(TestAuthenticator::new(user, tenant, &["valid"]));
-    let proxy = TrustedProxyConfig::parse(&["127.0.0.1/32".to_string()]);
+    let proxy =
+        TrustedProxyConfig::parse(&["127.0.0.1/32".to_string()]).unwrap_or_else(|e| panic!("{e}"));
     let app = test_app(auth, default_rate(), proxy);
 
     let peer = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 12345);
@@ -347,7 +348,8 @@ async fn untrusted_peer_does_not_use_forwarded_for() {
     let tenant = tenant_id(0);
     let user = user_id(0);
     let auth = Arc::new(TestAuthenticator::new(user, tenant, &["valid"]));
-    let proxy = TrustedProxyConfig::parse(&["127.0.0.1/32".to_string()]);
+    let proxy =
+        TrustedProxyConfig::parse(&["127.0.0.1/32".to_string()]).unwrap_or_else(|e| panic!("{e}"));
     let app = test_app(auth, default_rate(), proxy);
 
     let peer = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(10, 0, 0, 1)), 12345);
