@@ -10,7 +10,7 @@ pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
-use foundation::{Deadline, MessageId, TenantId, UtcTimestamp};
+use foundation::{Clock, Deadline, MessageId, TenantId, UtcTimestamp};
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 
@@ -89,6 +89,7 @@ impl Envelope {
         tenant_id: TenantId,
         topic: impl Into<String>,
         payload: impl Into<Vec<u8>>,
+        clock: &dyn Clock,
     ) -> Self {
         Self {
             id,
@@ -97,7 +98,7 @@ impl Envelope {
             topic: topic.into(),
             payload: payload.into(),
             headers: HashMap::new(),
-            timestamp: UtcTimestamp::now(),
+            timestamp: clock.now(),
             deadline: None,
         }
     }
@@ -108,6 +109,7 @@ impl Envelope {
         tenant_id: TenantId,
         topic: impl Into<String>,
         payload: impl Into<Vec<u8>>,
+        clock: &dyn Clock,
     ) -> Self {
         Self {
             id,
@@ -116,7 +118,7 @@ impl Envelope {
             topic: topic.into(),
             payload: payload.into(),
             headers: HashMap::new(),
-            timestamp: UtcTimestamp::now(),
+            timestamp: clock.now(),
             deadline: None,
         }
     }
@@ -166,8 +168,9 @@ impl CommandEnvelope {
         tenant_id: TenantId,
         topic: impl Into<String>,
         payload: &T,
+        clock: &dyn Clock,
     ) -> Result<Self, MessageError> {
-        let mut envelope = Envelope::command(id, tenant_id, topic, vec![]);
+        let mut envelope = Envelope::command(id, tenant_id, topic, vec![], clock);
         envelope.set_json_payload(payload)?;
         Ok(Self(envelope))
     }
@@ -184,8 +187,9 @@ impl EventEnvelope {
         tenant_id: TenantId,
         topic: impl Into<String>,
         payload: &T,
+        clock: &dyn Clock,
     ) -> Result<Self, MessageError> {
-        let mut envelope = Envelope::event(id, tenant_id, topic, vec![]);
+        let mut envelope = Envelope::event(id, tenant_id, topic, vec![], clock);
         envelope.set_json_payload(payload)?;
         Ok(Self(envelope))
     }
@@ -254,6 +258,7 @@ impl MessageBus for UnsupportedMessageBus {
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use foundation::SystemClock;
 
     #[test]
     fn command_and_event_envelopes_have_distinct_kinds() {
@@ -262,8 +267,20 @@ mod tests {
         let id = MessageId::generate(&generator).expect("generate message id");
         let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
 
-        let cmd = Envelope::command(id, tenant_id, "security.v1.command.0.test", b"{}".to_vec());
-        let evt = Envelope::event(id, tenant_id, "security.v1.event.0.test", b"{}".to_vec());
+        let cmd = Envelope::command(
+            id,
+            tenant_id,
+            "security.v1.command.0.test",
+            b"{}".to_vec(),
+            &SystemClock,
+        );
+        let evt = Envelope::event(
+            id,
+            tenant_id,
+            "security.v1.event.0.test",
+            b"{}".to_vec(),
+            &SystemClock,
+        );
 
         assert_eq!(cmd.kind, EnvelopeKind::Command);
         assert_eq!(evt.kind, EnvelopeKind::Event);
@@ -283,7 +300,8 @@ mod tests {
         }
 
         let cmd = TestCommand { value: 42 };
-        let envelope = match CommandEnvelope::new(id, tenant_id, "test.command", &cmd) {
+        let envelope = match CommandEnvelope::new(id, tenant_id, "test.command", &cmd, &SystemClock)
+        {
             Ok(e) => e,
             Err(e) => panic!("{e}"),
         };
@@ -301,7 +319,7 @@ mod tests {
             foundation::SystemIdGenerator::new(foundation::SystemClock, foundation::SystemRandom);
         let id = MessageId::generate(&generator).expect("generate message id");
         let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
-        let envelope = Envelope::command(id, tenant_id, "test", b"x".to_vec());
+        let envelope = Envelope::command(id, tenant_id, "test", b"x".to_vec(), &SystemClock);
 
         let mut runtime = futures::executor::LocalPool::new();
         match runtime.run_until(bus.publish(envelope)) {

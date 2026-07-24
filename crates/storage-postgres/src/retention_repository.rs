@@ -249,6 +249,7 @@ impl RetentionRepository for PostgresRetentionRepository {
         partition: &str,
         worker_id: &str,
         lease_until: UtcTimestamp,
+        now: UtcTimestamp,
     ) -> Result<bool, PlatformError> {
         let mut tx = self.begin_cleanup_transaction().await?;
 
@@ -263,7 +264,7 @@ impl RetentionRepository for PostgresRetentionRepository {
         .await
         .map_err(db_error)?;
 
-        let now_dt: chrono::DateTime<chrono::Utc> = UtcTimestamp::now().into();
+        let now_dt: chrono::DateTime<chrono::Utc> = now.into();
         if let Some(r) = existing {
             let lease: Option<chrono::DateTime<chrono::Utc>> = r.get("lease_until");
             let owner: Option<String> = r.get("worker_id");

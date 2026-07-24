@@ -883,13 +883,15 @@ pub trait RetentionRepository: Send + Sync {
         cutoff: UtcTimestamp,
     ) -> Result<Vec<String>, PlatformError>;
 
-    /// Try to acquire a lease on a partition for a worker. Returns false if another worker holds it.
+    /// Try to acquire a lease on a partition for a worker as of `now`.
+    /// Returns false if another worker holds it.
     async fn acquire_lease(
         &self,
         target: RetentionTarget,
         partition: &str,
         worker_id: &str,
         lease_until: UtcTimestamp,
+        now: UtcTimestamp,
     ) -> Result<bool, PlatformError>;
 
     /// Release a previously acquired lease.
