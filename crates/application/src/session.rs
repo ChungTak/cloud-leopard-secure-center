@@ -12,6 +12,16 @@ use std::fmt;
 
 use storage_api::{CredentialRepository, SessionRepository, TenantRepository, UserRepository};
 
+/// Return immediately with `Unavailable` when a dependency is down; otherwise
+/// keep going so the caller can be told the token is invalid after any
+/// defensive revocation has been attempted.
+fn fail_on_unavailable(e: PlatformError) -> Result<(), PlatformError> {
+    if e.code() == ErrorCode::Unavailable {
+        return Err(e);
+    }
+    Ok(())
+}
+
 /// A freshly issued token pair.
 #[derive(Clone)]
 pub struct TokenPair {
@@ -108,7 +118,8 @@ pub async fn refresh_token_pair(
 
     let user = match users.by_id(token.user_id, ctx).await {
         Ok(u) => u,
-        Err(_) => {
+        Err(e) => {
+            fail_on_unavailable(e)?;
             sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
@@ -134,7 +145,8 @@ pub async fn refresh_token_pair(
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
-        Err(_) => {
+        Err(e) => {
+            fail_on_unavailable(e)?;
             sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
