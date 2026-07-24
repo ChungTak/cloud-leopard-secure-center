@@ -6,6 +6,12 @@
 
 use std::collections::HashMap;
 
+const MAX_CONTROL_ID_LEN: usize = 256;
+const MAX_OWNER_LEN: usize = 256;
+const MAX_TEST_REF_LEN: usize = 1024;
+const MAX_CONTROLS_PER_CATEGORY: usize = 256;
+const MAX_CATEGORIES: usize = 64;
+
 /// Threat categories relevant to the security platform.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -29,6 +35,31 @@ pub struct SecurityControl {
     pub owner: String,
     pub test_ref: String,
     pub residual_risk: RiskLevel,
+}
+
+impl SecurityControl {
+    /// Validate the control record fields.
+    pub fn validate(&self) -> Result<(), SecurityError> {
+        if self.id.trim().is_empty() || self.id.len() > MAX_CONTROL_ID_LEN {
+            return Err(SecurityError::new(
+                SecurityErrorKind::Invalid,
+                "control id is empty or exceeds maximum length",
+            ));
+        }
+        if self.owner.trim().is_empty() || self.owner.len() > MAX_OWNER_LEN {
+            return Err(SecurityError::new(
+                SecurityErrorKind::Invalid,
+                "control owner is empty or exceeds maximum length",
+            ));
+        }
+        if self.test_ref.trim().is_empty() || self.test_ref.len() > MAX_TEST_REF_LEN {
+            return Err(SecurityError::new(
+                SecurityErrorKind::Invalid,
+                "control test_ref is empty or exceeds maximum length",
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Residual risk level for a control.
@@ -59,6 +90,28 @@ impl ThreatControlMatrix {
     /// Controls for a single category.
     pub fn for_category(&self, category: ThreatCategory) -> &[SecurityControl] {
         self.controls.get(&category).map_or(&[], |v| v.as_slice())
+    }
+
+    /// Validate the entire matrix and every control.
+    pub fn validate(&self) -> Result<(), SecurityError> {
+        if self.controls.len() > MAX_CATEGORIES {
+            return Err(SecurityError::new(
+                SecurityErrorKind::Invalid,
+                "too many threat categories in matrix",
+            ));
+        }
+        for (category, controls) in &self.controls {
+            if controls.len() > MAX_CONTROLS_PER_CATEGORY {
+                return Err(SecurityError::new(
+                    SecurityErrorKind::Invalid,
+                    format!("too many controls for category {category:?}"),
+                ));
+            }
+            for control in controls {
+                control.validate()?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -116,7 +169,8 @@ impl UnsupportedSecurityAssessor {
 
 #[async_trait::async_trait]
 impl SecurityAssessor for UnsupportedSecurityAssessor {
-    async fn assess(&self, _matrix: &ThreatControlMatrix) -> Result<Vec<String>, SecurityError> {
+    async fn assess(&self, matrix: &ThreatControlMatrix) -> Result<Vec<String>, SecurityError> {
+        matrix.validate()?;
         if self.enabled {
             Err(SecurityError::new(
                 SecurityErrorKind::Unsupported,
