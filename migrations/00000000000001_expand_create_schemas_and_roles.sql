@@ -11,12 +11,19 @@ CREATE SCHEMA IF NOT EXISTS app;
 
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'clsc_migrator') THEN
-        CREATE ROLE clsc_migrator WITH LOGIN;
-    END IF;
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'clsc_app') THEN
-        CREATE ROLE clsc_app NOLOGIN;
-    END IF;
+    CREATE ROLE clsc_migrator WITH LOGIN;
+EXCEPTION
+    WHEN unique_violation OR duplicate_object THEN
+        NULL;
+END
+$$;
+
+DO $$
+BEGIN
+    CREATE ROLE clsc_app NOLOGIN;
+EXCEPTION
+    WHEN unique_violation OR duplicate_object THEN
+        NULL;
 END
 $$;
 

@@ -143,7 +143,18 @@ fn row_to_factor(row: sqlx::postgres::PgRow) -> Result<MfaFactor, PlatformError>
     let last_used_step: Option<i64> = row.try_get("last_used_step").map_err(db_error)?;
     let last_used_code: Option<String> = row.try_get("last_used_code").map_err(db_error)?;
 
-    Ok(MfaFactor::from_parts(
+    let last_used_step = last_used_step
+        .map(|s| {
+            u64::try_from(s).map_err(|_| {
+                PlatformError::invalid(
+                    "last_used_step",
+                    "stored last_used_step is out of valid range",
+                )
+            })
+        })
+        .transpose()?;
+
+    MfaFactor::from_parts(
         id,
         TenantId::parse_str(&tenant_id.to_string())?,
         UserId::parse_str(&user_id.to_string())?,
@@ -154,9 +165,9 @@ fn row_to_factor(row: sqlx::postgres::PgRow) -> Result<MfaFactor, PlatformError>
         created_at.into(),
         recovery_code_hashes,
         recovery_code_used,
-        last_used_step.map(|s| s as u64),
+        last_used_step,
         last_used_code,
-    ))
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

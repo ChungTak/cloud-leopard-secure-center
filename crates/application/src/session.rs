@@ -8,7 +8,7 @@ use domain_identity::user::{User, UserStatus};
 use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp,
 };
-use storage_api::{CredentialRepository, SessionRepository, UserRepository};
+use storage_api::{CredentialRepository, SessionRepository, TenantRepository, UserRepository};
 
 /// A freshly issued token pair.
 #[derive(Debug, Clone)]
@@ -61,6 +61,7 @@ pub async fn issue_token_pair(
 pub async fn refresh_token_pair(
     users: &dyn UserRepository,
     sessions: &dyn SessionRepository,
+    tenants: &dyn TenantRepository,
     token_service: &TokenService,
     random: &dyn RandomSource,
     clock: &dyn Clock,
@@ -104,7 +105,32 @@ pub async fn refresh_token_pair(
         }
     };
 
-    if user.session_version != token.session_version || user.status != UserStatus::Active {
+    if user.deleted_at.is_some()
+        || user.session_version != token.session_version
+        || user.status != UserStatus::Active
+    {
+        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid token",
+        ));
+    }
+
+    let tenant_ctx = RequestContext {
+        tenant_id: Some(user.tenant_id),
+        ..Default::default()
+    };
+    let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
+        Ok(t) => t,
+        Err(_) => {
+            let _ = sessions.revoke_family(token.family_id, ctx).await;
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
+        }
+    };
+    if !tenant.allows_new_sessions() {
         let _ = sessions.revoke_family(token.family_id, ctx).await;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
@@ -161,7 +187,7 @@ pub async fn change_password(
     new_password: &str,
 ) -> Result<(), PlatformError> {
     let mut user = users.by_id(user_id, ctx).await?;
-    if user.status != UserStatus::Active {
+    if user.deleted_at.is_some() || user.status != UserStatus::Active {
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid credentials",
@@ -181,7 +207,7 @@ pub async fn change_password(
 
     let new_hash = hasher.hash(new_password)?;
     let expected = credential.revision;
-    credential.rotate(new_hash, "argon2id", clock);
+    credential.rotate(new_hash, "argon2id", clock)?;
     credentials.update(&credential, expected, ctx).await?;
 
     let expected_user = user.revision;

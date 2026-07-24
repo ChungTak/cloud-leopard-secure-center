@@ -10,7 +10,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ListOptions, Page, TenantRepository};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate, revision_from_i64};
 
 /// PostgreSQL-backed tenant repository.
 #[derive(Debug, Clone)]
@@ -246,7 +246,7 @@ fn row_to_tenant(row: sqlx::postgres::PgRow) -> Result<Tenant, PlatformError> {
         locale,
         timezone,
         TenantStatus::parse(&status)?,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor

@@ -3,14 +3,15 @@ use domain_identity::auth::{AuthenticationPolicy, AuthenticationResult};
 use domain_identity::credential::Credential;
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus};
+use domain_organization::tenant::Tenant;
 use foundation::{RequestContext, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId};
 use std::net::IpAddr;
 use std::str::FromStr;
-use storage_api::{CredentialRepository, UserRepository};
+use storage_api::{CredentialRepository, TenantRepository, UserRepository};
 use storage_postgres::{
     credential_repository::PostgresCredentialRepository,
     login_attempt_repository::PostgresLoginAttemptRepository,
-    user_repository::PostgresUserRepository,
+    tenant_repository::PostgresTenantRepository, user_repository::PostgresUserRepository,
 };
 
 fn generator() -> SystemIdGenerator {
@@ -42,11 +43,23 @@ fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
 async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let users = PostgresUserRepository::new(pool.clone());
     let credentials = PostgresCredentialRepository::new(pool.clone());
+    let tenants = PostgresTenantRepository::new(pool.clone());
     let attempts = PostgresLoginAttemptRepository::new(pool);
     let id_gen = generator();
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let hasher = Argon2idPasswordHasher::default();
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
 
     let mut user = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),
@@ -60,7 +73,13 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("127.0.0.1").ok();
@@ -69,6 +88,7 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
             &users,
             &credentials,
             &attempts,
+            &tenants,
             &hasher,
             &AuthenticationPolicy::default(),
             &ctx,
@@ -87,11 +107,23 @@ async fn successful_login_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
 async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let users = PostgresUserRepository::new(pool.clone());
     let credentials = PostgresCredentialRepository::new(pool.clone());
+    let tenants = PostgresTenantRepository::new(pool.clone());
     let attempts = PostgresLoginAttemptRepository::new(pool);
     let id_gen = generator();
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let hasher = Argon2idPasswordHasher::default();
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
 
     let mut user = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),
@@ -105,7 +137,13 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("10.0.0.1").ok();
@@ -114,6 +152,7 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
             &users,
             &credentials,
             &attempts,
+            &tenants,
             &hasher,
             &AuthenticationPolicy::default(),
             &ctx,
@@ -132,6 +171,7 @@ async fn wrong_password_returns_invalid_credentials(pool: sqlx::PgPool) -> sqlx:
 async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let users = PostgresUserRepository::new(pool.clone());
     let credentials = PostgresCredentialRepository::new(pool.clone());
+    let tenants = PostgresTenantRepository::new(pool.clone());
     let attempts = PostgresLoginAttemptRepository::new(pool);
     let id_gen = generator();
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
@@ -142,6 +182,17 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
         max_attempts_per_source: 20,
         window_seconds: 900,
     };
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
 
     let mut user = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),
@@ -155,7 +206,13 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
     ok_or_panic(users.create(&user, &ctx).await);
 
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = Credential::new_password(tenant_id, user.id, hash, "argon2id", &SystemClock);
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
 
     let ip = IpAddr::from_str("192.168.0.1").ok();
@@ -164,6 +221,7 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
             &users,
             &credentials,
             &attempts,
+            &tenants,
             &hasher,
             &policy,
             &ctx,

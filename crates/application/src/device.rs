@@ -210,7 +210,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        device.rename(request.payload.name, &self.clock, Some(actor));
+        device.rename(request.payload.name, &self.clock, Some(actor))?;
         if request.payload.organization_id != device.organization_id
             || request.payload.area_id != device.area_id
         {

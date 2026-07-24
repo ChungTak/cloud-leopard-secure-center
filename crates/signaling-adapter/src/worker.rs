@@ -233,7 +233,10 @@ mod tests {
             _external_ref: &str,
             _ctx: &RequestContext,
         ) -> Result<DeviceProjection, foundation::PlatformError> {
-            unimplemented!()
+            Err(foundation::PlatformError::new(
+                foundation::ErrorCode::Unsupported,
+                "not implemented in test fake",
+            ))
         }
 
         async fn apply_channel_event(
@@ -257,7 +260,10 @@ mod tests {
             _external_ref: &str,
             _ctx: &RequestContext,
         ) -> Result<ChannelProjection, foundation::PlatformError> {
-            unimplemented!()
+            Err(foundation::PlatformError::new(
+                foundation::ErrorCode::Unsupported,
+                "not implemented in test fake",
+            ))
         }
 
         async fn rebuild_shadow(

@@ -185,7 +185,7 @@ where
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        unit.rename(request.payload.name, &self.clock, Some(actor));
+        unit.rename(request.payload.name, &self.clock, Some(actor))?;
 
         self.repo.update(&unit, expected, ctx).await?;
 

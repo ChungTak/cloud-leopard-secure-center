@@ -47,7 +47,8 @@ fn build_request(method: &str, uri: &str, body: Body) -> Request<Body> {
 }
 
 fn test_app() -> TestApp {
-    let config = Arc::new(PaginationConfig::new(3, "cursor-secret".as_bytes()));
+    let config =
+        Arc::new(PaginationConfig::new(3, "cursor-secret".as_bytes()).expect("valid config"));
     let counter = Arc::new(AtomicU64::new(0));
     let idempotency_state = Arc::new(IdempotencyState::new(Duration::from_secs(60)));
     let revision = Arc::new(tokio::sync::Mutex::new(Revision::initial()));

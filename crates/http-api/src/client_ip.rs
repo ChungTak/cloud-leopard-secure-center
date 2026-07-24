@@ -4,6 +4,7 @@ use axum::{
     extract::FromRequestParts,
     http::{Extensions, HeaderMap, StatusCode, request::Parts},
 };
+use foundation::PlatformError;
 use ipnet::IpNet;
 use std::net::{IpAddr, SocketAddr};
 
@@ -16,26 +17,33 @@ pub struct TrustedProxyConfig {
 }
 
 impl TrustedProxyConfig {
-    /// Create a config from raw CIDR or single-IP strings. Invalid entries are ignored.
-    pub fn parse(raw: &[String]) -> Self {
-        let networks = raw
-            .iter()
-            .filter_map(|s| {
-                let trimmed = s.trim();
-                if trimmed.is_empty() {
-                    return None;
+    /// Create a config from raw CIDR or single-IP strings. Empty entries are
+    /// ignored; any other invalid entry causes an error so misconfiguration is
+    /// not silently accepted.
+    pub fn parse(raw: &[String]) -> Result<Self, PlatformError> {
+        let mut networks = Vec::with_capacity(raw.len());
+        for s in raw {
+            let trimmed = s.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if let Ok(net) = trimmed.parse::<IpNet>() {
+                networks.push(net);
+                continue;
+            }
+            if let Ok(addr) = trimmed.parse::<IpAddr>() {
+                let prefix = if addr.is_ipv4() { 32 } else { 128 };
+                if let Ok(net) = IpNet::new(addr, prefix) {
+                    networks.push(net);
+                    continue;
                 }
-                if let Ok(net) = trimmed.parse::<IpNet>() {
-                    return Some(net);
-                }
-                if let Ok(addr) = trimmed.parse::<IpAddr>() {
-                    let prefix = if addr.is_ipv4() { 32 } else { 128 };
-                    return IpNet::new(addr, prefix).ok();
-                }
-                None
-            })
-            .collect();
-        Self { networks }
+            }
+            return Err(PlatformError::invalid(
+                "trusted_proxies",
+                format!("{trimmed:?} is not a valid CIDR or IP address"),
+            ));
+        }
+        Ok(Self { networks })
     }
 
     /// Whether any trusted proxy network contains the given address.

@@ -84,6 +84,8 @@ impl Site {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let address = address.into();
         if address.len() > 256 {
             return Err(PlatformError::invalid(
@@ -97,7 +99,7 @@ impl Site {
             tenant_id,
             organization_unit_id,
             code,
-            name: name.into(),
+            name,
             address,
             timezone: "UTC".to_string(),
             revision: Revision::initial(),
@@ -122,6 +124,8 @@ impl Site {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let address = address.into();
         if address.len() > 256 {
             return Err(PlatformError::invalid(
@@ -129,14 +133,16 @@ impl Site {
                 "site address must be at most 256 characters",
             ));
         }
+        let timezone = timezone.into();
+        validate_timezone(&timezone)?;
         Ok(Self {
             id,
             tenant_id,
             organization_unit_id,
             code,
-            name: name.into(),
+            name,
             address,
-            timezone: timezone.into(),
+            timezone,
             revision,
             created_at,
             updated_at,
@@ -144,11 +150,22 @@ impl Site {
         })
     }
 
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 
     pub fn set_address(
@@ -176,11 +193,17 @@ impl Site {
         timezone: impl Into<String>,
         clock: &dyn Clock,
         actor: Option<UserId>,
-    ) {
-        self.timezone = timezone.into();
+    ) -> Result<(), PlatformError> {
+        let timezone = timezone.into();
+        validate_timezone(&timezone)?;
+        if timezone == self.timezone {
+            return Ok(());
+        }
+        self.timezone = timezone;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 }
 
@@ -196,13 +219,15 @@ impl Building {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             site_id,
             code,
-            name: name.into(),
+            name,
             revision: Revision::initial(),
             created_at: now,
             updated_at: now,
@@ -223,12 +248,14 @@ impl Building {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         Ok(Self {
             id,
             tenant_id,
             site_id,
             code,
-            name: name.into(),
+            name,
             revision,
             created_at,
             updated_at,
@@ -236,11 +263,22 @@ impl Building {
         })
     }
 
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 }
 
@@ -263,13 +301,15 @@ impl Floor {
                 "floor level must be between -10 and 200",
             ));
         }
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             building_id,
             code,
-            name: name.into(),
+            name,
             level,
             revision: Revision::initial(),
             created_at: now,
@@ -298,12 +338,14 @@ impl Floor {
                 "floor level must be between -10 and 200",
             ));
         }
+        let name = name.into();
+        validate_name(&name)?;
         Ok(Self {
             id,
             tenant_id,
             building_id,
             code,
-            name: name.into(),
+            name,
             level,
             revision,
             created_at,
@@ -312,11 +354,22 @@ impl Floor {
         })
     }
 
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 
     pub fn set_level(
@@ -352,6 +405,8 @@ impl Area {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
@@ -359,7 +414,7 @@ impl Area {
             floor_id,
             parent_id,
             code,
-            name: name.into(),
+            name,
             coordinate_system: "WGS84".to_string(),
             latitude: None,
             longitude: None,
@@ -389,6 +444,8 @@ impl Area {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let coordinate_system = coordinate_system.into();
         validate_coordinates(&coordinate_system, latitude, longitude)?;
         Ok(Self {
@@ -397,7 +454,7 @@ impl Area {
             floor_id,
             parent_id,
             code,
-            name: name.into(),
+            name,
             coordinate_system,
             latitude,
             longitude,
@@ -409,11 +466,22 @@ impl Area {
         })
     }
 
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 
     pub fn set_coordinates(
@@ -516,6 +584,38 @@ fn validate_coordinates(
         return Err(PlatformError::invalid(
             "coordinates",
             "latitude and longitude must be provided together",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "spatial_name",
+            "name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "spatial_name",
+            "name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_timezone(timezone: &str) -> Result<(), PlatformError> {
+    if timezone.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "spatial_timezone",
+            "timezone must not be empty",
+        ));
+    }
+    if timezone.len() > 64 {
+        return Err(PlatformError::invalid(
+            "spatial_timezone",
+            "timezone must be at most 64 characters",
         ));
     }
     Ok(())

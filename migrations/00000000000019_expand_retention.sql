@@ -3,10 +3,12 @@
 -- Create a dedicated cleanup worker that can bypass RLS and delete audit data.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'clsc_cleanup_worker') THEN
-        CREATE ROLE clsc_cleanup_worker NOLOGIN BYPASSRLS;
-    END IF;
-END $$;
+    CREATE ROLE clsc_cleanup_worker NOLOGIN BYPASSRLS;
+EXCEPTION
+    WHEN unique_violation OR duplicate_object THEN
+        NULL;
+END
+$$;
 -- Allow the application role to switch into the cleanup worker without inheriting its DELETE privileges.
 GRANT clsc_cleanup_worker TO clsc_app WITH INHERIT FALSE;
 

@@ -2,15 +2,17 @@ use application::session::{change_password, disable_user, issue_token_pair, refr
 use application::token_service::TokenService;
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::User;
+use domain_organization::tenant::Tenant;
 use foundation::{
     Clock, FakeClock, RequestContext, SystemClock, SystemIdGenerator, SystemRandom, TenantId,
     UserId, UtcTimestamp,
     chrono::{DateTime, Duration},
 };
-use storage_api::{CredentialRepository, UserRepository};
+use storage_api::{CredentialRepository, TenantRepository, UserRepository};
 use storage_postgres::{
     credential_repository::PostgresCredentialRepository,
-    session_repository::PostgresSessionRepository, user_repository::PostgresUserRepository,
+    session_repository::PostgresSessionRepository, tenant_repository::PostgresTenantRepository,
+    user_repository::PostgresUserRepository,
 };
 
 fn parse_tenant(s: &str) -> TenantId {
@@ -36,12 +38,30 @@ fn ctx_for(tenant: &str) -> RequestContext {
 
 async fn seed_user(
     pool: sqlx::PgPool,
-) -> (PostgresUserRepository, PostgresCredentialRepository, User) {
+) -> (
+    PostgresUserRepository,
+    PostgresCredentialRepository,
+    PostgresTenantRepository,
+    User,
+) {
     let users = PostgresUserRepository::new(pool.clone());
-    let credentials = PostgresCredentialRepository::new(pool);
+    let credentials = PostgresCredentialRepository::new(pool.clone());
+    let tenants = PostgresTenantRepository::new(pool);
     let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
+
     let mut user = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
@@ -55,15 +75,15 @@ async fn seed_user(
 
     let hasher = Argon2idPasswordHasher::default();
     let hash = ok_or_panic(hasher.hash("secret123"));
-    let credential = domain_identity::credential::Credential::new_password(
+    let credential = ok_or_panic(domain_identity::credential::Credential::new_password(
         tenant_id,
         user.id,
         hash,
         "argon2id",
         &SystemClock,
-    );
+    ));
     ok_or_panic(credentials.create(&credential, &ctx).await);
-    (users, credentials, user)
+    (users, credentials, tenants, user)
 }
 
 fn token_service() -> TokenService {
@@ -83,7 +103,7 @@ fn refresh_ttl<C: Clock>(clock: &C) -> UtcTimestamp {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn access_token_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (_, _, user) = seed_user(pool.clone()).await;
+    let (_, _, _, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -117,7 +137,7 @@ async fn access_token_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn expired_access_token_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (_, _, user) = seed_user(pool.clone()).await;
+    let (_, _, _, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = ok_or_panic(TokenService::new(
         b"a-very-secret-key-of-at-least-32-bytes",
@@ -153,7 +173,7 @@ async fn expired_access_token_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn wrong_issuer_or_audience_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (_, _, user) = seed_user(pool.clone()).await;
+    let (_, _, _, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -188,7 +208,7 @@ async fn wrong_issuer_or_audience_is_rejected(pool: sqlx::PgPool) -> sqlx::Resul
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn old_session_version_is_rejected_after_logout(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (users, _, user) = seed_user(pool.clone()).await;
+    let (users, _, _tenants, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -224,7 +244,7 @@ async fn old_session_version_is_rejected_after_logout(pool: sqlx::PgPool) -> sql
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn refresh_token_replay_revokes_family(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (users, _, user) = seed_user(pool.clone()).await;
+    let (users, _, tenants, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -246,6 +266,7 @@ async fn refresh_token_replay_revokes_family(pool: sqlx::PgPool) -> sqlx::Result
         refresh_token_pair(
             &users,
             &sessions,
+            &tenants,
             &service,
             &SystemRandom,
             &SystemClock,
@@ -259,6 +280,7 @@ async fn refresh_token_replay_revokes_family(pool: sqlx::PgPool) -> sqlx::Result
     let replay = refresh_token_pair(
         &users,
         &sessions,
+        &tenants,
         &service,
         &SystemRandom,
         &SystemClock,
@@ -272,6 +294,7 @@ async fn refresh_token_replay_revokes_family(pool: sqlx::PgPool) -> sqlx::Result
     let replay_new = refresh_token_pair(
         &users,
         &sessions,
+        &tenants,
         &service,
         &SystemRandom,
         &SystemClock,
@@ -287,7 +310,7 @@ async fn refresh_token_replay_revokes_family(pool: sqlx::PgPool) -> sqlx::Result
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn concurrent_refresh_only_one_succeeds(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (users, _, user) = seed_user(pool.clone()).await;
+    let (users, _, tenants, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -309,6 +332,8 @@ async fn concurrent_refresh_only_one_succeeds(pool: sqlx::PgPool) -> sqlx::Resul
     let users2 = &users;
     let sessions1 = &sessions;
     let sessions2 = &sessions;
+    let tenants1 = &tenants;
+    let tenants2 = &tenants;
     let service1 = &service;
     let service2 = &service;
     let ctx1 = &ctx;
@@ -321,6 +346,7 @@ async fn concurrent_refresh_only_one_succeeds(pool: sqlx::PgPool) -> sqlx::Resul
             refresh_token_pair(
                 users1,
                 sessions1,
+                tenants1,
                 service1,
                 &SystemRandom,
                 &SystemClock,
@@ -334,6 +360,7 @@ async fn concurrent_refresh_only_one_succeeds(pool: sqlx::PgPool) -> sqlx::Resul
             refresh_token_pair(
                 users2,
                 sessions2,
+                tenants2,
                 service2,
                 &SystemRandom,
                 &SystemClock,
@@ -353,7 +380,7 @@ async fn concurrent_refresh_only_one_succeeds(pool: sqlx::PgPool) -> sqlx::Resul
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn password_change_increments_session_version(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (users, credentials, user) = seed_user(pool.clone()).await;
+    let (users, credentials, _tenants, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -419,7 +446,7 @@ async fn password_change_increments_session_version(pool: sqlx::PgPool) -> sqlx:
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn disabling_user_increments_session_version(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (users, _, user) = seed_user(pool.clone()).await;
+    let (users, _, _tenants, user) = seed_user(pool.clone()).await;
     let sessions = PostgresSessionRepository::new(pool);
     let service = token_service();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");

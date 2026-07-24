@@ -113,6 +113,8 @@ impl ManagedDevice {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
@@ -120,7 +122,7 @@ impl ManagedDevice {
             organization_id: None,
             area_id: None,
             code,
-            name: name.into(),
+            name,
             serial,
             lifecycle: DeviceLifecycle::Draft,
             online_state: OnlineState::Unknown,
@@ -150,13 +152,15 @@ impl ManagedDevice {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         Ok(Self {
             id,
             tenant_id,
             organization_id,
             area_id,
             code,
-            name: name.into(),
+            name,
             serial,
             lifecycle,
             online_state,
@@ -259,11 +263,22 @@ impl ManagedDevice {
     }
 
     /// Rename the device.
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 }
 
@@ -278,6 +293,22 @@ fn validate_code(code: &str) -> Result<(), PlatformError> {
         return Err(PlatformError::invalid(
             "code",
             "device code must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "name",
+            "device name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "name",
+            "device name must be at most 128 characters",
         ));
     }
     Ok(())

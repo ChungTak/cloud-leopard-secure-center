@@ -1,6 +1,6 @@
 //! PostgreSQL implementation of the `SessionRepository` port.
 
-use crate::db_error;
+use crate::{begin_tenant_transaction, db_error, session_version_from_i64};
 use async_trait::async_trait;
 use domain_identity::session::RefreshToken;
 use foundation::{
@@ -10,8 +10,6 @@ use foundation::{
 };
 use sqlx::Row;
 use storage_api::SessionRepository;
-
-use crate::begin_tenant_transaction;
 
 /// PostgreSQL-backed session/refresh token repository.
 #[derive(Debug, Clone)]
@@ -171,17 +169,17 @@ fn row_to_refresh_token(row: sqlx::postgres::PgRow) -> Result<RefreshToken, Plat
     let expires_at: DateTime<Utc> = row.try_get("expires_at").map_err(db_error)?;
     let created_at: DateTime<Utc> = row.try_get("created_at").map_err(db_error)?;
 
-    Ok(RefreshToken {
+    RefreshToken::from_parts(
         id,
-        tenant_id: TenantId::parse_str(&tenant_id.to_string())?,
-        user_id: UserId::parse_str(&user_id.to_string())?,
+        TenantId::parse_str(&tenant_id.to_string())?,
+        UserId::parse_str(&user_id.to_string())?,
         family_id,
         token_hash,
-        session_version: session_version as u64,
+        session_version_from_i64(session_version)?,
         used,
-        expires_at: expires_at.into(),
-        created_at: created_at.into(),
-    })
+        expires_at.into(),
+        created_at.into(),
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

@@ -10,7 +10,9 @@ use foundation::{
 use sqlx::Row;
 use storage_api::{ListOptions, Page, UserRepository};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{
+    begin_tenant_transaction, db_error, paginate, revision_from_i64, session_version_from_i64,
+};
 
 /// PostgreSQL-backed user repository.
 #[derive(Debug, Clone)]
@@ -261,22 +263,21 @@ fn row_to_user(row: sqlx::postgres::PgRow) -> Result<User, PlatformError> {
     let actor: Option<Uuid> = row.try_get("actor").map_err(db_error)?;
     let deleted_at: Option<DateTime<Utc>> = row.try_get("deleted_at").map_err(db_error)?;
 
-    Ok(User {
-        id: UserId::parse_str(&id.to_string())?,
-        tenant_id: TenantId::parse_str(&tenant_id.to_string())?,
+    User::from_parts(
+        UserId::parse_str(&id.to_string())?,
+        TenantId::parse_str(&tenant_id.to_string())?,
         username,
         display_name,
-        status: UserStatus::parse(&status)?,
-        session_version: session_version as u64,
-        revision: Revision::new(revision as u64),
-        created_at: created_at.into(),
-        updated_at: updated_at.into(),
-        actor: actor
+        UserStatus::parse(&status)?,
+        session_version_from_i64(session_version)?,
+        revision_from_i64(revision)?,
+        created_at.into(),
+        updated_at.into(),
+        actor
             .map(|a| UserId::parse_str(&a.to_string()))
             .transpose()?,
-        deleted_at: deleted_at.map(|d| d.into()),
-        pending_events: Vec::new(),
-    })
+        deleted_at.map(|d| d.into()),
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

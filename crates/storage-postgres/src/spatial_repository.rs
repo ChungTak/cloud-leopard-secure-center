@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{ListOptions, Page, SpatialRepository};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate, revision_from_i64};
 
 /// PostgreSQL-backed spatial repository.
 #[derive(Debug, Clone)]
@@ -1096,7 +1096,7 @@ fn site_row_to_site(row: sqlx::postgres::PgRow) -> Result<Site, PlatformError> {
         name,
         address,
         timezone,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor
@@ -1122,7 +1122,7 @@ fn building_row_to_building(row: sqlx::postgres::PgRow) -> Result<Building, Plat
         SiteId::parse_str(&site_id.to_string())?,
         code,
         name,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor
@@ -1150,7 +1150,7 @@ fn floor_row_to_floor(row: sqlx::postgres::PgRow) -> Result<Floor, PlatformError
         code,
         name,
         level,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor
@@ -1190,7 +1190,7 @@ fn area_row_to_area(row: sqlx::postgres::PgRow) -> Result<Area, PlatformError> {
         latitude,
         longitude,
         altitude,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor

@@ -32,9 +32,11 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 /// Builds a `Router` with the standard middleware stack applied.
 ///
 /// `cors_allowed_origins` controls the CORS policy:
-/// - `None` uses the permissive test policy.
+/// - `None` uses the permissive test policy (only for local tests).
 /// - `Some(vec![])` denies all cross-origin requests.
-/// - `Some(origins)` allows the listed origins only.
+/// - `Some(origins)` allows the listed origins only. The wildcard `*` is
+///   intentionally treated as an invalid origin so a misconfigured environment
+///   cannot silently allow every origin.
 pub fn with_middleware(router: Router, cors_allowed_origins: Option<Vec<String>>) -> Router {
     let request_id_header = HeaderName::from_static("x-request-id");
     let trace_id_header = HeaderName::from_static("x-trace-id");
@@ -173,15 +175,10 @@ fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
         None => CorsLayer::permissive(),
         Some(origins) if origins.is_empty() => CorsLayer::new(),
         Some(origins) => {
-            if origins.iter().any(|o| o.trim() == "*") {
-                return CorsLayer::new()
-                    .allow_origin(Any)
-                    .allow_methods(Any)
-                    .allow_headers(Any);
-            }
             let allowed: Vec<HeaderValue> = origins
                 .iter()
-                .filter_map(|o| o.parse::<HeaderValue>().ok())
+                .filter(|o| o.trim() != "*")
+                .filter_map(|o| o.trim().parse::<HeaderValue>().ok())
                 .collect();
             if allowed.is_empty() {
                 CorsLayer::new()

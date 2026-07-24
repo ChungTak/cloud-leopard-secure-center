@@ -3,9 +3,10 @@
 -- Dedicated role with INSERT/SELECT only; clsc_app can SET ROLE to it.
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'clsc_audit_writer') THEN
-        CREATE ROLE clsc_audit_writer NOLOGIN;
-    END IF;
+    CREATE ROLE clsc_audit_writer NOLOGIN;
+EXCEPTION
+    WHEN unique_violation OR duplicate_object THEN
+        NULL;
 END
 $$;
 

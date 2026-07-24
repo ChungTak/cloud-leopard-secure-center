@@ -11,7 +11,7 @@ use foundation::{
 use sqlx::{PgPool, Row};
 use storage_api::{DeviceRepository, ListOptions, Page};
 
-use crate::{begin_tenant_transaction, db_error, paginate};
+use crate::{begin_tenant_transaction, db_error, paginate, revision_from_i64};
 
 /// PostgreSQL-backed managed device repository.
 #[derive(Debug, Clone)]
@@ -295,7 +295,7 @@ fn row_to_device(row: sqlx::postgres::PgRow) -> Result<ManagedDevice, PlatformEr
         serial,
         DeviceLifecycle::parse(&lifecycle)?,
         OnlineState::parse(&online_state)?,
-        Revision::new(revision as u64),
+        revision_from_i64(revision)?,
         created_at.into(),
         updated_at.into(),
         actor

@@ -105,6 +105,22 @@ pub fn normalize_username(input: &str) -> Result<String, PlatformError> {
     Ok(trimmed)
 }
 
+fn validate_display_name(name: &str) -> Result<(), PlatformError> {
+    if name.is_empty() {
+        return Err(PlatformError::invalid(
+            "display_name",
+            "display name cannot be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "display_name",
+            "display name must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
 /// A user account.
 #[derive(Debug, Clone)]
 pub struct User {
@@ -146,12 +162,7 @@ impl User {
     ) -> Result<Self, PlatformError> {
         let username = normalize_username(&username.into())?;
         let display_name = display_name.into().trim().to_string();
-        if display_name.is_empty() {
-            return Err(PlatformError::invalid(
-                "display_name",
-                "display name cannot be empty",
-            ));
-        }
+        validate_display_name(&display_name)?;
         let now = clock.now();
         let pending_events = vec![UserDomainEvent::Created {
             user_id: id,
@@ -171,6 +182,40 @@ impl User {
             actor,
             deleted_at: None,
             pending_events,
+        })
+    }
+
+    /// Reconstruct a user from persisted parts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        id: UserId,
+        tenant_id: TenantId,
+        username: impl Into<String>,
+        display_name: impl Into<String>,
+        status: UserStatus,
+        session_version: u64,
+        revision: Revision,
+        created_at: UtcTimestamp,
+        updated_at: UtcTimestamp,
+        actor: Option<UserId>,
+        deleted_at: Option<UtcTimestamp>,
+    ) -> Result<Self, PlatformError> {
+        let username = normalize_username(&username.into())?;
+        let display_name = display_name.into().trim().to_string();
+        validate_display_name(&display_name)?;
+        Ok(Self {
+            id,
+            tenant_id,
+            username,
+            display_name,
+            status,
+            session_version,
+            revision,
+            created_at,
+            updated_at,
+            actor,
+            deleted_at,
+            pending_events: Vec::new(),
         })
     }
 
@@ -203,12 +248,7 @@ impl User {
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         let display_name = display_name.into().trim().to_string();
-        if display_name.is_empty() {
-            return Err(PlatformError::invalid(
-                "display_name",
-                "display name cannot be empty",
-            ));
-        }
+        validate_display_name(&display_name)?;
         if display_name == self.display_name {
             return Ok(());
         }
