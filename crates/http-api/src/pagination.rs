@@ -126,6 +126,13 @@ impl Cursor {
 
     /// Parse and verify a cursor token with the given secret.
     pub fn parse(token: &str, secret: &[u8]) -> Result<Self, AppError> {
+        const MAX_CURSOR_TOKEN_BYTES: usize = 4096;
+        if token.len() > MAX_CURSOR_TOKEN_BYTES {
+            return Err(AppError::BadRequest {
+                field: "cursor".to_string(),
+                message: "cursor token is too long".to_string(),
+            });
+        }
         if secret.is_empty() {
             return Err(AppError::Internal);
         }
