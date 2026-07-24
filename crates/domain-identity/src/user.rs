@@ -86,14 +86,15 @@ pub enum UserDomainEvent {
 /// Normalizes a username: lowercase, trimmed, with only ASCII alphanumeric,
 /// dots, dashes and underscores.
 pub fn normalize_username(input: &str) -> Result<String, PlatformError> {
-    let trimmed = input.trim().to_lowercase();
+    let trimmed = input.trim();
     if trimmed.is_empty() || trimmed.len() > 128 {
         return Err(PlatformError::invalid(
             "username",
             "username must be between 1 and 128 characters",
         ));
     }
-    if !trimmed
+    let normalized = trimmed.to_lowercase();
+    if !normalized
         .chars()
         .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-' || c == '_')
     {
@@ -102,7 +103,7 @@ pub fn normalize_username(input: &str) -> Result<String, PlatformError> {
             "username contains invalid characters",
         ));
     }
-    Ok(trimmed)
+    Ok(normalized)
 }
 
 fn validate_display_name(name: &str) -> Result<(), PlatformError> {
@@ -155,14 +156,15 @@ impl User {
     pub fn new(
         id: UserId,
         tenant_id: TenantId,
-        username: impl Into<String>,
-        display_name: impl Into<String>,
+        username: impl AsRef<str>,
+        display_name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let username = normalize_username(&username.into())?;
-        let display_name = display_name.into().trim().to_string();
-        validate_display_name(&display_name)?;
+        let username = normalize_username(username.as_ref())?;
+        let display_name = display_name.as_ref().trim();
+        validate_display_name(display_name)?;
+        let display_name = display_name.to_string();
         let now = clock.now();
         let pending_events = vec![UserDomainEvent::Created {
             user_id: id,
@@ -190,8 +192,8 @@ impl User {
     pub fn from_parts(
         id: UserId,
         tenant_id: TenantId,
-        username: impl Into<String>,
-        display_name: impl Into<String>,
+        username: impl AsRef<str>,
+        display_name: impl AsRef<str>,
         status: UserStatus,
         session_version: u64,
         revision: Revision,
@@ -200,9 +202,10 @@ impl User {
         actor: Option<UserId>,
         deleted_at: Option<UtcTimestamp>,
     ) -> Result<Self, PlatformError> {
-        let username = normalize_username(&username.into())?;
-        let display_name = display_name.into().trim().to_string();
-        validate_display_name(&display_name)?;
+        let username = normalize_username(username.as_ref())?;
+        let display_name = display_name.as_ref().trim();
+        validate_display_name(display_name)?;
+        let display_name = display_name.to_string();
         Ok(Self {
             id,
             tenant_id,
@@ -222,11 +225,11 @@ impl User {
     /// Change the username and bump revision.
     pub fn set_username(
         &mut self,
-        username: impl Into<String>,
+        username: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let username = normalize_username(&username.into())?;
+        let username = normalize_username(username.as_ref())?;
         if username == self.username {
             return Ok(());
         }
@@ -243,16 +246,16 @@ impl User {
     /// Change display name.
     pub fn set_display_name(
         &mut self,
-        display_name: impl Into<String>,
+        display_name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let display_name = display_name.into().trim().to_string();
-        validate_display_name(&display_name)?;
+        let display_name = display_name.as_ref().trim();
+        validate_display_name(display_name)?;
         if display_name == self.display_name {
             return Ok(());
         }
-        self.display_name = display_name;
+        self.display_name = display_name.to_string();
         self.bump(clock, actor);
         Ok(())
     }
