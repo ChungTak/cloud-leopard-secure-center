@@ -4,7 +4,7 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use domain_identity::assurance::AssuranceLevel;
 use domain_identity::mfa::MfaFactor;
 use foundation::{Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId};
-use storage_api::MfaRepository;
+use storage_api::{MfaRepository, UserRepository};
 
 /// Resolves an MFA secret reference to the actual secret bytes.
 /// Production implementations fetch from a secrets manager; tests can use an
@@ -30,6 +30,7 @@ pub struct EnrolledTotp {
 /// Enroll a new TOTP factor for a user.
 #[allow(clippy::too_many_arguments)]
 pub async fn enroll_totp(
+    users: &dyn UserRepository,
     repo: &dyn MfaRepository,
     resolver: &dyn SecretResolver,
     random: &dyn RandomSource,
@@ -42,6 +43,11 @@ pub async fn enroll_totp(
         ErrorCode::Unauthenticated,
         "missing tenant",
     ))?;
+
+    // Verify the user exists in the current tenant before creating an MFA
+    // factor; this prevents a tenant-scoped caller from creating orphan
+    // factors for users that belong to another tenant.
+    users.by_id(user_id, ctx).await?;
 
     let mut secret = vec![0u8; 32];
     random.fill_bytes(&mut secret)?;

@@ -306,13 +306,14 @@ async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let enrolled = ok_or_panic(
         enroll_totp(
+            &user_repo,
             &mfa_repo,
             &resolver,
             &SystemRandom,
@@ -335,13 +336,14 @@ async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn recovery_code_one_time_use(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let enrolled = ok_or_panic(
         enroll_totp(
+            &user_repo,
             &mfa_repo,
             &resolver,
             &SystemRandom,
