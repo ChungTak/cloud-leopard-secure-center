@@ -36,16 +36,23 @@ impl PaginationConfig {
     /// Create a pagination config. `max_page_size` is clamped to a positive
     /// value no larger than `10_000`. `cursor_secret` must be at least 32 bytes;
     /// shorter or empty secrets would make cursor signing trivially bypassable.
-    pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Result<Self, AppError> {
+    pub fn new(max_page_size: u32, cursor_secret: impl AsRef<[u8]>) -> Result<Self, AppError> {
         const MAX_PAGE_SIZE: u32 = 10_000;
         const MIN_SECRET_LEN: usize = 32;
-        let cursor_secret = cursor_secret.into();
+        const MAX_SECRET_LEN: usize = 4096;
+        let cursor_secret = cursor_secret.as_ref();
         if cursor_secret.len() < MIN_SECRET_LEN {
             return Err(AppError::Internal);
         }
+        if cursor_secret.len() > MAX_SECRET_LEN {
+            return Err(AppError::BadRequest {
+                field: "cursor_secret".to_string(),
+                message: "cursor secret is too long".to_string(),
+            });
+        }
         Ok(Self {
             max_page_size: max_page_size.clamp(1, MAX_PAGE_SIZE),
-            cursor_secret,
+            cursor_secret: cursor_secret.to_vec(),
         })
     }
 }
