@@ -108,7 +108,7 @@ fn test_app(
         .route("/login", post(login_handler))
         .route("/tenants/{tenant_id}/tokens/refresh", post(login_handler));
 
-    http_api::middleware::with_middleware(router, None)
+    http_api::middleware::with_middleware(router, None, SystemClock, SystemRandom)
         .layer(Extension(authenticator))
         .layer(Extension(rate_limit))
         .layer(Extension(proxy_config))

@@ -9,7 +9,7 @@ use axum::{
     http::Request,
     routing::{get, post},
 };
-use foundation::config::RateLimitConfig;
+use foundation::{SystemClock, SystemRandom, config::RateLimitConfig};
 use http_api::{client_ip::TrustedProxyConfig, error::AppError, rate_limit::RateLimitState};
 use http_body_util::BodyExt;
 use tower::util::ServiceExt;
@@ -32,7 +32,7 @@ fn test_app_with_cors(origins: Option<Vec<String>>) -> Router {
             window_seconds: 60,
         },
     ));
-    http_api::middleware::with_middleware(router, origins)
+    http_api::middleware::with_middleware(router, origins, SystemClock, SystemRandom)
         .layer(Extension(rate_limit))
         .layer(Extension(TrustedProxyConfig::default()))
 }
