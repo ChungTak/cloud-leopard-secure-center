@@ -145,13 +145,18 @@ pub async fn authenticate(
 
     match hasher.verify(password, &credential.value) {
         Ok(true) => {
+            let mut credential = credential;
             if hasher.needs_rehash(&credential.value).unwrap_or(false)
                 && let Ok(new_hash) = hasher.hash(password)
+                && credential
+                    .rotate(new_hash, "argon2id", &foundation::SystemClock)
+                    .is_ok()
             {
-                let mut credential = credential;
-                credential.rotate(new_hash, "argon2id", &foundation::SystemClock)?;
                 let expected = credential.revision.prev();
-                credentials.update(&credential, expected, ctx).await?;
+                // Rehash persistence is best-effort; do not fail a valid
+                // login if a concurrent update or transient DB issue
+                // prevents the write.
+                let _ = credentials.update(&credential, expected, ctx).await;
             }
             attempts
                 .record(
