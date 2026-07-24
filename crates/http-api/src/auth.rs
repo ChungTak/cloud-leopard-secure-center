@@ -11,6 +11,9 @@ use std::sync::Arc;
 
 use crate::error::AppError;
 
+/// Maximum byte length of a Bearer token carried in the `Authorization` header.
+const MAX_BEARER_TOKEN_BYTES: usize = 8192;
+
 /// Authenticated actor extracted from an `Authorization: Bearer <token>` header.
 #[derive(Debug, Clone)]
 pub struct Auth(pub AuthContext);
@@ -46,6 +49,12 @@ pub fn extract_bearer(headers: &axum::http::HeaderMap) -> Result<String, AppErro
     let token = parts.next().ok_or(AppError::Unauthenticated)?;
     if parts.next().is_some() || token.is_empty() {
         return Err(AppError::Unauthenticated);
+    }
+    if token.len() > MAX_BEARER_TOKEN_BYTES {
+        return Err(AppError::BadRequest {
+            field: "authorization".to_string(),
+            message: "bearer token is too long".to_string(),
+        });
     }
     Ok(token.to_string())
 }
