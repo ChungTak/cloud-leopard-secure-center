@@ -227,7 +227,7 @@ where
         } else {
             query.limit
         };
-        let limit = requested_limit.min(config.max_page_size);
+        let limit = requested_limit.clamp(1, config.max_page_size);
 
         Ok(Pagination {
             offset,
