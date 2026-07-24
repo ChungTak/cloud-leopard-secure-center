@@ -31,9 +31,9 @@ pub async fn authenticate(
     let normalized_username = match normalize_username(username) {
         Ok(u) => u,
         Err(_) => {
-            let _ = attempts
+            attempts
                 .record(tenant_id, username, ip_string, false, ctx)
-                .await;
+                .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
@@ -42,15 +42,15 @@ pub async fn authenticate(
     let user = match user_result {
         Ok(u) => u,
         Err(_) => {
-            let _ = attempts
+            attempts
                 .record(tenant_id, &normalized_username, ip_string, false, ctx)
-                .await;
+                .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
 
     if user.deleted_at.is_some() || user.status != UserStatus::Active {
-        let _ = attempts
+        attempts
             .record(
                 tenant_id,
                 &normalized_username,
@@ -58,7 +58,7 @@ pub async fn authenticate(
                 false,
                 ctx,
             )
-            .await;
+            .await?;
         return Ok(AuthenticationResult::InvalidCredentials);
     }
 
@@ -69,7 +69,7 @@ pub async fn authenticate(
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
         Err(_) => {
-            let _ = attempts
+            attempts
                 .record(
                     tenant_id,
                     &normalized_username,
@@ -77,12 +77,12 @@ pub async fn authenticate(
                     false,
                     ctx,
                 )
-                .await;
+                .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
     if !tenant.allows_new_sessions() {
-        let _ = attempts
+        attempts
             .record(
                 tenant_id,
                 &normalized_username,
@@ -90,7 +90,7 @@ pub async fn authenticate(
                 false,
                 ctx,
             )
-            .await;
+            .await?;
         return Ok(AuthenticationResult::InvalidCredentials);
     }
 
@@ -100,7 +100,7 @@ pub async fn authenticate(
     {
         Ok(c) => c,
         Err(_) => {
-            let _ = attempts
+            attempts
                 .record(
                     tenant_id,
                     &normalized_username,
@@ -108,7 +108,7 @@ pub async fn authenticate(
                     false,
                     ctx,
                 )
-                .await;
+                .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
