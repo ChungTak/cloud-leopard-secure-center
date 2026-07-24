@@ -306,7 +306,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         let now = Utc::now();
         let rows = sqlx::query(
             "UPDATE org.organization_units
-             SET deleted_at = $1, revision = $2
+             SET deleted_at = $1, updated_at = $1, revision = $2
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)

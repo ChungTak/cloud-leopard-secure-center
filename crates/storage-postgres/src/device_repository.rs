@@ -208,12 +208,13 @@ impl DeviceRepository for PostgresDeviceRepository {
             Some(_) => {}
         }
 
+        let now = Utc::now();
         let rows = sqlx::query(
             "UPDATE resource.managed_devices
-             SET deleted_at = $1, revision = $2
+             SET deleted_at = $1, updated_at = $1, revision = $2
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
-        .bind(Utc::now())
+        .bind(now)
         .bind(expected.value() as i64 + 1)
         .bind(id.as_uuid())
         .bind(expected.value() as i64)
