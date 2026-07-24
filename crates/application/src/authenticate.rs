@@ -118,6 +118,27 @@ pub async fn authenticate(
                     ctx,
                 )
                 .await?;
+
+            let identity_count = attempts
+                .count_failures_by_identity(
+                    tenant_id,
+                    &normalized_username,
+                    policy.window_seconds,
+                    ctx,
+                )
+                .await?;
+            let source_count = if let Some(ip) = ip_string.clone() {
+                attempts
+                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .await?
+            } else {
+                0
+            };
+
+            if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
+                lock_user(users, user, ctx).await?;
+            }
+
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
