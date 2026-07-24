@@ -267,6 +267,12 @@ fn db_error(e: sqlx::Error) -> PlatformError {
         sqlx::Error::Database(ref db) if db.is_unique_violation() => {
             PlatformError::new(ErrorCode::Conflict, "resource already exists")
         }
+        sqlx::Error::Database(ref db) if db.is_foreign_key_violation() => {
+            PlatformError::invalid("reference", "referenced resource does not exist")
+        }
+        sqlx::Error::Database(ref db) if db.is_check_violation() => {
+            PlatformError::invalid("constraint", "provided values violate a database constraint")
+        }
         sqlx::Error::RowNotFound => PlatformError::new(ErrorCode::NotFound, "resource not found"),
         _ => PlatformError::new(ErrorCode::Unavailable, "database unavailable"),
     }
