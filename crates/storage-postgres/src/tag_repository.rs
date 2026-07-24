@@ -81,6 +81,10 @@ impl TagRepository for PostgresTagRepository {
         .await
         .map_err(db_error)?;
 
+        let count = u64::try_from(count).map_err(|_| {
+            PlatformError::invalid("tag_count", "stored tag count is out of valid range")
+        })?;
+
         if count as usize >= domain_resource::tag::MAX_TAGS_PER_RESOURCE {
             return Err(PlatformError::new(
                 ErrorCode::Invalid,
@@ -103,7 +107,7 @@ impl TagRepository for PostgresTagRepository {
         .bind(tag.resource_id)
         .bind(&tag.key)
         .bind(&tag.value)
-        .bind(tag.revision.value() as i64)
+        .bind(tag.revision.to_i64()?)
         .bind(utc_to_db(tag.created_at))
         .bind(utc_to_db(tag.updated_at))
         .bind(tag.actor.map(|a| *a.as_uuid()))
@@ -140,7 +144,7 @@ impl TagRepository for PostgresTagRepository {
                     "tag not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.value() as i64 => {
+            Some(rev) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -155,11 +159,11 @@ impl TagRepository for PostgresTagRepository {
              WHERE id = $5 AND revision = $6 AND deleted_at IS NULL",
         )
         .bind(&tag.value)
-        .bind(tag.revision.value() as i64)
+        .bind(tag.revision.to_i64()?)
         .bind(utc_to_db(tag.updated_at))
         .bind(tag.actor.map(|a| *a.as_uuid()))
         .bind(tag.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -201,7 +205,7 @@ impl TagRepository for PostgresTagRepository {
                     "tag not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.value() as i64 => {
+            Some(rev) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -217,9 +221,9 @@ impl TagRepository for PostgresTagRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

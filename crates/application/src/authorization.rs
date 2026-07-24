@@ -214,7 +214,11 @@ where
         return Ok(Evaluation::Expired);
     }
 
-    let role = service.role_repo.by_id(binding.role_id, ctx).await?;
+    let role = match service.role_repo.by_id(binding.role_id, ctx).await {
+        Ok(role) => role,
+        Err(e) if e.code() == ErrorCode::NotFound => return Ok(Evaluation::PermissionMissing),
+        Err(e) => return Err(e),
+    };
     if !role.permissions.contains(&req.action) {
         return Ok(Evaluation::PermissionMissing);
     }

@@ -3,7 +3,7 @@
 use domain_identity::auth::{AuthenticationPolicy, AuthenticationResult};
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus, normalize_username};
-use foundation::{ErrorCode, PlatformError, RequestContext};
+use foundation::{Clock, ErrorCode, PlatformError, RequestContext};
 use std::net::IpAddr;
 use storage_api::{CredentialRepository, LoginAttemptRepository, TenantRepository, UserRepository};
 
@@ -17,6 +17,7 @@ pub async fn authenticate(
     tenants: &dyn TenantRepository,
     hasher: &Argon2idPasswordHasher,
     policy: &AuthenticationPolicy,
+    clock: &dyn Clock,
     ctx: &RequestContext,
     username: &str,
     password: &str,
@@ -32,7 +33,7 @@ pub async fn authenticate(
         Ok(u) => u,
         Err(_) => {
             attempts
-                .record(tenant_id, username, ip_string, false, ctx)
+                .record(tenant_id, username, ip_string, false, clock.now(), ctx)
                 .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
@@ -46,7 +47,14 @@ pub async fn authenticate(
                 return Err(e);
             }
             attempts
-                .record(tenant_id, &normalized_username, ip_string, false, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string,
+                    false,
+                    clock.now(),
+                    ctx,
+                )
                 .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
@@ -59,6 +67,7 @@ pub async fn authenticate(
                 &normalized_username,
                 ip_string.clone(),
                 false,
+                clock.now(),
                 ctx,
             )
             .await?;
@@ -67,7 +76,7 @@ pub async fn authenticate(
 
     let tenant_ctx = RequestContext {
         tenant_id: Some(user.tenant_id),
-        ..Default::default()
+        ..ctx.clone()
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
@@ -81,6 +90,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -94,6 +104,7 @@ pub async fn authenticate(
                 &normalized_username,
                 ip_string.clone(),
                 false,
+                clock.now(),
                 ctx,
             )
             .await?;
@@ -115,6 +126,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -124,19 +136,26 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string.clone() {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             return Ok(AuthenticationResult::InvalidCredentials);
@@ -145,13 +164,16 @@ pub async fn authenticate(
 
     match hasher.verify(password, &credential.value) {
         Ok(true) => {
+            let mut credential = credential;
             if hasher.needs_rehash(&credential.value).unwrap_or(false)
                 && let Ok(new_hash) = hasher.hash(password)
+                && credential.rotate(new_hash, "argon2id", clock).is_ok()
             {
-                let mut credential = credential;
-                credential.rotate(new_hash, "argon2id", &foundation::SystemClock)?;
                 let expected = credential.revision.prev();
-                credentials.update(&credential, expected, ctx).await?;
+                // Rehash persistence is best-effort; do not fail a valid
+                // login if a concurrent update or transient DB issue
+                // prevents the write.
+                let _ = credentials.update(&credential, expected, ctx).await;
             }
             attempts
                 .record(
@@ -159,6 +181,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     true,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -171,6 +194,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -180,19 +204,26 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string.clone() {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             Ok(AuthenticationResult::InvalidCredentials)
@@ -204,6 +235,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -213,19 +245,26 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             Ok(AuthenticationResult::InvalidCredentials)
@@ -236,9 +275,11 @@ pub async fn authenticate(
 async fn lock_user(
     users: &dyn UserRepository,
     mut user: User,
+    clock: &dyn Clock,
     ctx: &RequestContext,
 ) -> Result<(), PlatformError> {
     let expected = user.revision;
-    user.lock(&foundation::SystemClock, ctx.actor_id)?;
+    user.lock(clock, ctx.actor_id)?;
+    user.bump_session_version(clock, ctx.actor_id)?;
     users.update(&user, expected, ctx).await
 }

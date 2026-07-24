@@ -141,7 +141,7 @@ pub async fn refresh_token_pair(
 
     let tenant_ctx = RequestContext {
         tenant_id: Some(user.tenant_id),
-        ..Default::default()
+        ..ctx.clone()
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
@@ -253,6 +253,9 @@ pub async fn disable_user(
     user_id: UserId,
 ) -> Result<(), PlatformError> {
     let mut user = users.by_id(user_id, ctx).await?;
+    if user.status == UserStatus::Disabled {
+        return Ok(());
+    }
     let expected = user.revision;
     user.disable(clock, ctx.actor_id)?;
     user.bump_session_version(clock, ctx.actor_id)?;

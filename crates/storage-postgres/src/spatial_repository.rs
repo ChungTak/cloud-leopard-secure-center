@@ -81,7 +81,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&site.name)
         .bind(&site.address)
         .bind(&site.timezone)
-        .bind(site.revision.value() as i64)
+        .bind(site.revision.to_i64()?)
         .bind(utc_to_db(site.created_at))
         .bind(utc_to_db(site.updated_at))
         .bind(site.actor.map(|a| *a.as_uuid()))
@@ -127,11 +127,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&site.name)
         .bind(&site.address)
         .bind(&site.timezone)
-        .bind(site.revision.value() as i64)
+        .bind(site.revision.to_i64()?)
         .bind(utc_to_db(site.updated_at))
         .bind(site.actor.map(|a| *a.as_uuid()))
         .bind(site.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -180,9 +180,9 @@ impl SpatialRepository for PostgresSpatialRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -283,7 +283,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(building.site_id.as_uuid())
         .bind(&building.code)
         .bind(&building.name)
-        .bind(building.revision.value() as i64)
+        .bind(building.revision.to_i64()?)
         .bind(utc_to_db(building.created_at))
         .bind(utc_to_db(building.updated_at))
         .bind(building.actor.map(|a| *a.as_uuid()))
@@ -323,11 +323,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(building.site_id.as_uuid())
         .bind(&building.code)
         .bind(&building.name)
-        .bind(building.revision.value() as i64)
+        .bind(building.revision.to_i64()?)
         .bind(utc_to_db(building.updated_at))
         .bind(building.actor.map(|a| *a.as_uuid()))
         .bind(building.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -376,9 +376,9 @@ impl SpatialRepository for PostgresSpatialRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -470,7 +470,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&floor.code)
         .bind(&floor.name)
         .bind(floor.level)
-        .bind(floor.revision.value() as i64)
+        .bind(floor.revision.to_i64()?)
         .bind(utc_to_db(floor.created_at))
         .bind(utc_to_db(floor.updated_at))
         .bind(floor.actor.map(|a| *a.as_uuid()))
@@ -512,11 +512,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&floor.code)
         .bind(&floor.name)
         .bind(floor.level)
-        .bind(floor.revision.value() as i64)
+        .bind(floor.revision.to_i64()?)
         .bind(utc_to_db(floor.updated_at))
         .bind(floor.actor.map(|a| *a.as_uuid()))
         .bind(floor.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -565,9 +565,9 @@ impl SpatialRepository for PostgresSpatialRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -657,7 +657,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(area.latitude)
         .bind(area.longitude)
         .bind(area.altitude)
-        .bind(area.revision.value() as i64)
+        .bind(area.revision.to_i64()?)
         .bind(utc_to_db(area.created_at))
         .bind(utc_to_db(area.updated_at))
         .bind(area.actor.map(|a| *a.as_uuid()))
@@ -722,7 +722,7 @@ impl SpatialRepository for PostgresSpatialRepository {
                     "area not found".to_string(),
                 ));
             }
-            Some((rev, _parent)) if rev != expected.value() as i64 => {
+            Some((rev, _parent)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -781,7 +781,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(area.latitude)
         .bind(area.longitude)
         .bind(area.altitude)
-        .bind(area.revision.value() as i64)
+        .bind(area.revision.to_i64()?)
         .bind(utc_to_db(area.updated_at))
         .bind(area.actor.map(|a| *a.as_uuid()))
         .bind(area.id.as_uuid())
@@ -836,9 +836,9 @@ impl SpatialRepository for PostgresSpatialRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

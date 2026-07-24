@@ -1,6 +1,6 @@
 //! PostgreSQL implementation of the `SessionRepository` port.
 
-use crate::{begin_tenant_transaction, db_error, session_version_from_i64};
+use crate::{begin_tenant_transaction, db_error, session_version_from_i64, u64_to_i64};
 use async_trait::async_trait;
 use domain_identity::session::RefreshToken;
 use foundation::{
@@ -44,7 +44,7 @@ impl SessionRepository for PostgresSessionRepository {
         .bind(*token.user_id.as_uuid())
         .bind(token.family_id)
         .bind(&token.token_hash)
-        .bind(token.session_version as i64)
+        .bind(u64_to_i64(token.session_version, "session_version")?)
         .bind(token.used)
         .bind(utc_to_db(token.expires_at))
         .bind(utc_to_db(token.created_at))

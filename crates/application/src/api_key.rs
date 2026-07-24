@@ -2,11 +2,12 @@
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use domain_identity::api_key::ApiKey;
+use domain_identity::user::UserStatus;
 use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp, uuid::Uuid,
 };
 use sha2::{Digest, Sha256};
-use storage_api::{ApiKeyRepository, UserRepository};
+use storage_api::{ApiKeyRepository, TenantRepository, UserRepository};
 
 /// A newly created API key. The raw token is only available here.
 #[derive(Clone)]
@@ -70,7 +71,10 @@ pub async fn create_api_key(
 
 /// Verify a raw API key for `scope` from `source` at `now`.
 /// Records usage on success.
+#[allow(clippy::too_many_arguments)]
 pub async fn verify_api_key(
+    users: &dyn UserRepository,
+    tenants: &dyn TenantRepository,
     repo: &dyn ApiKeyRepository,
     raw_token: &str,
     source: Option<&str>,
@@ -90,6 +94,40 @@ pub async fn verify_api_key(
     };
 
     api_key.verify(source, scope, now)?;
+
+    // Verify the owner is still active and belongs to this tenant before
+    // recording usage; otherwise a key for a deleted/locked/disabled user or
+    // another tenant could still authenticate.
+    let mut owner_ctx = ctx.clone();
+    owner_ctx.tenant_id = Some(api_key.tenant_id);
+    let user = match users.by_id(api_key.owner_id, &owner_ctx).await {
+        Ok(u) => u,
+        Err(e) if e.code() == ErrorCode::NotFound => {
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid api key",
+            ));
+        }
+        Err(e) => return Err(e),
+    };
+    if user.deleted_at.is_some()
+        || user.status != UserStatus::Active
+        || user.tenant_id != api_key.tenant_id
+    {
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid api key",
+        ));
+    }
+
+    let tenant = tenants.by_id(api_key.tenant_id, &owner_ctx).await?;
+    if !tenant.allows_new_sessions() {
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid api key",
+        ));
+    }
+
     let recorded = repo.record_usage(&token_hash, now, ctx).await?;
     if !recorded {
         // The key was revoked or expired between the read and the write.

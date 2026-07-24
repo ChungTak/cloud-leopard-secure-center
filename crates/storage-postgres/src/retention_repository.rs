@@ -1,4 +1,4 @@
-use crate::db_error;
+use crate::{db_error, u64_to_i64};
 use async_trait::async_trait;
 use domain_audit::retention::{
     CleanupBatchResult, LegalHold, RetentionPolicy, RetentionTarget, TenantRetentionOverride,
@@ -343,7 +343,7 @@ impl RetentionRepository for PostgresRetentionRepository {
                 .bind(target.as_str())
                 .bind(partition)
                 .bind(chrono::DateTime::<chrono::Utc>::from(cutoff))
-                .bind(batch_size as i64)
+                .bind(u64_to_i64(batch_size, "batch_size")?)
                 .bind(timestamp)
                 .bind(type_col)
                 .bind(id_col)
@@ -355,7 +355,7 @@ impl RetentionRepository for PostgresRetentionRepository {
                 .bind(target.as_str())
                 .bind(partition)
                 .bind(chrono::DateTime::<chrono::Utc>::from(cutoff))
-                .bind(batch_size as i64)
+                .bind(u64_to_i64(batch_size, "batch_size")?)
                 .bind(timestamp)
                 .fetch_one(&mut *tx)
                 .await
@@ -365,9 +365,11 @@ impl RetentionRepository for PostgresRetentionRepository {
         tx.commit().await.map_err(db_error)?;
 
         let deleted: i64 = row.get("deleted");
+        let rows_deleted = u64::try_from(deleted)
+            .map_err(|_| PlatformError::invalid("deleted", "deleted count cannot be negative"))?;
         Ok(CleanupBatchResult {
-            rows_deleted: deleted as u64,
-            finished: (deleted as u64) < batch_size,
+            rows_deleted,
+            finished: rows_deleted < batch_size,
         })
     }
 

@@ -1,7 +1,10 @@
 //! Per-request context extractor that combines request id, authentication, and tenant scope.
 
-use axum::{extract::FromRequestParts, http::request::Parts};
-use foundation::{MessageId, RequestContext, TenantId};
+use axum::{
+    extract::FromRequestParts,
+    http::{HeaderMap, request::Parts},
+};
+use foundation::{MessageId, OrganizationId, RequestContext, TenantId};
 
 use crate::auth::optional_auth;
 use crate::error::AppError;
@@ -33,6 +36,15 @@ where
         if let Some(id) = request_id {
             ctx = ctx.with_request_id(id);
         }
+        if let Some(id) = header_message_id(&parts.headers, "x-correlation-id") {
+            ctx = ctx.with_correlation_id(id);
+        }
+        if let Some(id) = header_str(&parts.headers, "x-trace-id") {
+            ctx = ctx.with_trace_id(id);
+        }
+        if let Some(id) = header_organization_id(&parts.headers, "x-organization-id") {
+            ctx = ctx.with_organization_id(id);
+        }
         if let Some(auth) = auth {
             ctx = ctx.with_actor(auth.user_id).with_tenant(auth.tenant_id);
         } else if let Some(tenant_id) = tenant {
@@ -49,6 +61,29 @@ fn request_id_from_parts(parts: &Parts) -> Option<MessageId> {
         .get::<tower_http::request_id::RequestId>()
         .and_then(|request_id| request_id.header_value().to_str().ok())
         .and_then(|text| MessageId::parse_str(text).ok())
+        .or_else(|| header_message_id(&parts.headers, "x-request-id"))
+}
+
+fn header_str(headers: &HeaderMap, name: &str) -> Option<String> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .filter(|text| !text.is_empty())
+        .map(|text| text.to_string())
+}
+
+fn header_message_id(headers: &HeaderMap, name: &str) -> Option<MessageId> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|text| MessageId::parse_str(text).ok())
+}
+
+fn header_organization_id(headers: &HeaderMap, name: &str) -> Option<OrganizationId> {
+    headers
+        .get(name)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|text| OrganizationId::parse_str(text).ok())
 }
 
 /// Parse the tenant id from the first `/tenants/<uuid>` segment, if any.

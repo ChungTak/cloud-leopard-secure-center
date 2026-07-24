@@ -1,6 +1,8 @@
 //! Service account and API key aggregate.
 
 use foundation::{ErrorCode, PlatformError, TenantId, UserId, UtcTimestamp, uuid::Uuid};
+use ipnet::IpNet;
+use std::net::IpAddr;
 
 /// An API key tied to a user or service account.
 #[derive(Clone)]
@@ -102,9 +104,14 @@ impl ApiKey {
             ));
         }
         if !self.allowed_sources.is_empty() {
-            let allowed = source
-                .map(|s| self.allowed_sources.iter().any(|a| a == s))
-                .unwrap_or(false);
+            let source_ip = source
+                .and_then(|s| s.trim().parse::<IpAddr>().ok())
+                .ok_or_else(|| {
+                    PlatformError::new(ErrorCode::Denied, "source is not allowed for this key")
+                })?;
+            let allowed = self.allowed_sources.iter().any(|s| {
+                parse_allowed_source(s.trim()).is_some_and(|net| net.contains(&source_ip))
+            });
             if !allowed {
                 return Err(PlatformError::new(
                     ErrorCode::Denied,
@@ -226,7 +233,8 @@ fn validate_scopes(scopes: &[String]) -> Result<(), PlatformError> {
 
 fn validate_allowed_sources(sources: &[String]) -> Result<(), PlatformError> {
     for source in sources {
-        if source.trim().is_empty() {
+        let source = source.trim();
+        if source.is_empty() {
             return Err(PlatformError::invalid(
                 "api_key_allowed_sources",
                 "allowed source must not be empty",
@@ -238,8 +246,28 @@ fn validate_allowed_sources(sources: &[String]) -> Result<(), PlatformError> {
                 "allowed source must be at most 128 characters",
             ));
         }
+        if parse_allowed_source(source).is_none() {
+            return Err(PlatformError::invalid(
+                "api_key_allowed_sources",
+                "allowed source must be a valid IP address or CIDR",
+            ));
+        }
     }
     Ok(())
+}
+
+fn parse_allowed_source(source: &str) -> Option<IpNet> {
+    if let Ok(net) = source.parse::<IpNet>() {
+        Some(net)
+    } else if let Ok(addr) = source.parse::<IpAddr>() {
+        let prefix = match addr {
+            IpAddr::V4(_) => 32,
+            IpAddr::V6(_) => 128,
+        };
+        IpNet::new(addr, prefix).ok()
+    } else {
+        None
+    }
 }
 
 fn validate_token_hash(token_hash: &str) -> Result<(), PlatformError> {

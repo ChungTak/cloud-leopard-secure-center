@@ -372,31 +372,34 @@ pub trait CredentialRepository: Send + Sync {
 /// Repository contract for recording and querying login attempts.
 #[async_trait]
 pub trait LoginAttemptRepository: Send + Sync {
-    /// Record a login attempt for audit and rate-limiting.
+    /// Record a login attempt for audit and rate-limiting at `now`.
     async fn record(
         &self,
         tenant_id: TenantId,
         identity: &str,
         ip: Option<String>,
         success: bool,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
-    /// Count recent failed attempts for the given identity.
+    /// Count recent failed attempts for the given identity up to `now`.
     async fn count_failures_by_identity(
         &self,
         tenant_id: TenantId,
         identity: &str,
         window_seconds: i64,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError>;
 
-    /// Count recent failed attempts from the given source IP.
+    /// Count recent failed attempts from the given source IP up to `now`.
     async fn count_failures_by_source(
         &self,
         tenant_id: TenantId,
         ip: String,
         window_seconds: i64,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError>;
 }

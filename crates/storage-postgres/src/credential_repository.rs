@@ -71,7 +71,7 @@ impl CredentialRepository for PostgresCredentialRepository {
         .bind(credential.credential_type.as_str())
         .bind(&credential.value)
         .bind(&credential.parameters)
-        .bind(credential.revision.value() as i64)
+        .bind(credential.revision.to_i64()?)
         .bind(utc_to_db(credential.created_at))
         .bind(utc_to_db(credential.updated_at))
         .execute(&mut *tx)
@@ -107,7 +107,7 @@ impl CredentialRepository for PostgresCredentialRepository {
                     "credential not found",
                 ));
             }
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict",
@@ -123,11 +123,11 @@ impl CredentialRepository for PostgresCredentialRepository {
         )
         .bind(&credential.value)
         .bind(&credential.parameters)
-        .bind(credential.revision.value() as i64)
+        .bind(credential.revision.to_i64()?)
         .bind(utc_to_db(credential.updated_at))
         .bind(*credential.user_id.as_uuid())
         .bind(credential.credential_type.as_str())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

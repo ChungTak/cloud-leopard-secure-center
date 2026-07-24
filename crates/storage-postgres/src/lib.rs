@@ -80,6 +80,13 @@ pub(crate) fn revision_from_i64(value: i64) -> Result<Revision, PlatformError> {
     Ok(Revision::new(value))
 }
 
+/// Convert a `u64` to an `i64` for PostgreSQL `BIGINT`, rejecting values that
+/// do not fit to prevent silent wrap-around.
+pub(crate) fn u64_to_i64(value: u64, field: &'static str) -> Result<i64, PlatformError> {
+    i64::try_from(value)
+        .map_err(|_| PlatformError::invalid(field, "value is out of the valid database range"))
+}
+
 /// Convert a database `BIGINT` session version to `u64`, rejecting negative
 /// values that would wrap around.
 pub(crate) fn session_version_from_i64(value: i64) -> Result<u64, PlatformError> {
