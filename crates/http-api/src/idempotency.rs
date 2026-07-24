@@ -105,43 +105,56 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     };
     let _guard = claim.lock().await;
 
-    // Execute the request while holding the claim, then remove the claim
-    // entry on every path so failed body collection does not leak the mutex.
-    let result: Result<Response, AppError> = {
+    // Check the cache, run the handler without the cache lock, then insert.
+    // The per-key claim serializes same-key requests; the cache lock is held
+    // only for reads/writes so unrelated requests execute in parallel.
+    let result: Result<Response, AppError> = async {
         {
             let mut cache = state.cache.lock().await;
             let now = Instant::now();
             cache.retain(|_, cached| cached.expires_at > now);
             if let Some(cached) = cache.get(&key).cloned() {
-                if cached.digest == digest {
+                return if cached.digest == digest {
                     Ok(build_response(&cached))
                 } else {
                     Err(AppError::Conflict)
-                }
-            } else {
-                let response = next.run(req).await;
-                let cached = cache_response(response, digest, state.ttl).await?;
-
-                let mut order = state.order.lock().await;
-                cache.retain(|_, cached| cached.expires_at > now);
-                while order.front().is_some_and(|k| !cache.contains_key(k)) {
-                    order.pop_front();
-                }
-                cache.insert(key.clone(), cached.clone());
-                order.push_back(key.clone());
-                while cache.len() > MAX_CACHE_ENTRIES {
-                    match order.pop_front() {
-                        Some(old) => {
-                            cache.remove(&old);
-                        }
-                        None => break,
-                    }
-                }
-
-                Ok(build_response(&cached))
+                };
             }
         }
-    };
+
+        let response = next.run(req).await;
+
+        // Do not cache transient server errors; replaying them could prolong
+        // an outage for the duration of the idempotency TTL.
+        if response.status().is_server_error() {
+            return Ok(response);
+        }
+
+        let cached = cache_response(response, digest, state.ttl).await?;
+
+        {
+            let mut cache = state.cache.lock().await;
+            let mut order = state.order.lock().await;
+            let now = Instant::now();
+            cache.retain(|_, cached| cached.expires_at > now);
+            while order.front().is_some_and(|k| !cache.contains_key(k)) {
+                order.pop_front();
+            }
+            cache.insert(key.clone(), cached.clone());
+            order.push_back(key.clone());
+            while cache.len() > MAX_CACHE_ENTRIES {
+                match order.pop_front() {
+                    Some(old) => {
+                        cache.remove(&old);
+                    }
+                    None => break,
+                }
+            }
+        }
+
+        Ok(build_response(&cached))
+    }
+    .await;
 
     drop(_guard);
     state.claims.lock().await.remove(&key);
