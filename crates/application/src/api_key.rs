@@ -6,10 +6,10 @@ use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp, uuid::Uuid,
 };
 use sha2::{Digest, Sha256};
-use storage_api::ApiKeyRepository;
+use storage_api::{ApiKeyRepository, UserRepository};
 
 /// A newly created API key. The raw token is only available here.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CreatedApiKey {
     /// Persisted API key aggregate.
     pub api_key: ApiKey,
@@ -17,10 +17,20 @@ pub struct CreatedApiKey {
     pub raw_token: String,
 }
 
+impl std::fmt::Debug for CreatedApiKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CreatedApiKey")
+            .field("api_key", &self.api_key)
+            .field("raw_token", &"<redacted>")
+            .finish()
+    }
+}
+
 /// Create a new API key for `owner_id`. The raw token is returned once;
 /// only its hash is persisted.
 #[allow(clippy::too_many_arguments)]
 pub async fn create_api_key(
+    users: &dyn UserRepository,
     repo: &dyn ApiKeyRepository,
     random: &dyn RandomSource,
     clock: &dyn Clock,
@@ -31,6 +41,9 @@ pub async fn create_api_key(
     allowed_sources: Vec<String>,
     expires_at: UtcTimestamp,
 ) -> Result<CreatedApiKey, PlatformError> {
+    // Verify the owner exists in the current tenant before creating the key.
+    users.by_id(owner_id, ctx).await?;
+
     let id = foundation::generate_uuid(clock, random)?;
 
     let raw_token = generate_random_string(random, 32)?;

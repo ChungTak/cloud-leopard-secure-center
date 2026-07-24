@@ -15,6 +15,10 @@ use http_body_util::BodyExt;
 use tower::util::ServiceExt;
 
 fn test_app() -> Router {
+    test_app_with_cors(None)
+}
+
+fn test_app_with_cors(origins: Option<Vec<String>>) -> Router {
     let router = http_api::routes::router()
         .route("/errors/{code}", get(error_handler))
         .route("/echo", post(echo));
@@ -28,7 +32,7 @@ fn test_app() -> Router {
             window_seconds: 60,
         },
     ));
-    http_api::middleware::with_middleware(router, None)
+    http_api::middleware::with_middleware(router, origins)
         .layer(Extension(rate_limit))
         .layer(Extension(TrustedProxyConfig::default()))
 }
@@ -203,6 +207,64 @@ async fn cors_preflight_responds_with_allowed_origin() {
             .headers()
             .get("access-control-allow-methods")
             .is_some()
+    );
+}
+
+#[tokio::test]
+async fn empty_cors_allowed_origins_denies_cross_origin() {
+    let app = test_app_with_cors(Some(vec![]));
+    let request = match Request::builder()
+        .method("OPTIONS")
+        .uri("/health")
+        .header("Origin", "http://example.com")
+        .header("Access-Control-Request-Method", "GET")
+        .body(Body::empty())
+    {
+        Ok(req) => req,
+        Err(e) => panic!("failed to build request: {e}"),
+    };
+
+    let response = match app.oneshot(request).await {
+        Ok(res) => res,
+        Err(e) => panic!("request failed: {e}"),
+    };
+
+    assert_eq!(response.status().as_u16(), 200);
+    assert!(
+        response
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none(),
+        "empty allowed origins must not permit cross-origin requests"
+    );
+}
+
+#[tokio::test]
+async fn wildcard_cors_allowed_origins_is_treated_as_deny() {
+    let app = test_app_with_cors(Some(vec!["*".to_string()]));
+    let request = match Request::builder()
+        .method("OPTIONS")
+        .uri("/health")
+        .header("Origin", "http://example.com")
+        .header("Access-Control-Request-Method", "GET")
+        .body(Body::empty())
+    {
+        Ok(req) => req,
+        Err(e) => panic!("failed to build request: {e}"),
+    };
+
+    let response = match app.oneshot(request).await {
+        Ok(res) => res,
+        Err(e) => panic!("request failed: {e}"),
+    };
+
+    assert_eq!(response.status().as_u16(), 200);
+    assert!(
+        response
+            .headers()
+            .get("access-control-allow-origin")
+            .is_none(),
+        "wildcard must not be accepted as a configured origin"
     );
 }
 

@@ -30,7 +30,7 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
     async fn create(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
-        sqlx::query(
+        let result = sqlx::query(
             "INSERT INTO iam.api_keys
              (id, tenant_id, owner_id, name, scopes, allowed_sources, token_hash, expires_at, revoked_at, created_at, last_used_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -50,6 +50,13 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
+        let rows = result.rows_affected();
+        if rows == 0 {
+            return Err(PlatformError::new(
+                ErrorCode::Conflict,
+                "api key already exists",
+            ));
+        }
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
         Ok(())

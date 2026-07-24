@@ -94,12 +94,13 @@ impl SecretResolver for MemorySecretResolver {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let created = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &SystemClock,
@@ -132,13 +133,14 @@ async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let clock = FakeClock::from_millis(0);
 
     let created = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &clock,
@@ -164,12 +166,13 @@ async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let read_key = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &SystemClock,
@@ -197,6 +200,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
 
     let source_key = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &SystemClock,
@@ -239,12 +243,13 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_raw_value_is_not_stored(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let created = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &SystemClock,
@@ -268,12 +273,13 @@ async fn api_key_raw_value_is_not_stored(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let created = ok_or_panic(
         create_api_key(
+            &user_repo,
             &repo,
             &SystemRandom,
             &SystemClock,
@@ -306,13 +312,14 @@ async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let enrolled = ok_or_panic(
         enroll_totp(
+            &user_repo,
             &mfa_repo,
             &resolver,
             &SystemRandom,
@@ -335,13 +342,14 @@ async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn recovery_code_one_time_use(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, _) = seed_user(pool.clone()).await;
+    let (user, user_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     let enrolled = ok_or_panic(
         enroll_totp(
+            &user_repo,
             &mfa_repo,
             &resolver,
             &SystemRandom,

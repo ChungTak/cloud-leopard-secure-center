@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use application::auth::Authenticator;
 use axum::{Extension, Router};
-use foundation::config::RateLimitConfig;
+use foundation::config::{Port, RateLimitConfig};
 use http_api::auth::DenyAllAuthenticator;
 use http_api::client_ip::TrustedProxyConfig;
 use http_api::idempotency::IdempotencyState;
@@ -42,13 +42,14 @@ fn main() -> ExitCode {
 async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     let port: u16 = env::var("CLSC_HTTP_PORT")
         .ok()
-        .map(|v| v.parse())
+        .map(|v| v.parse::<u16>())
         .transpose()
         .map_err(|_| "CLSC_HTTP_PORT must be a valid u16")?
-        .unwrap_or(8080);
-    if port == 0 {
-        return Err("CLSC_HTTP_PORT must be non-zero".into());
-    }
+        .map(Port::new)
+        .transpose()
+        .map_err(|_| "CLSC_HTTP_PORT must be at least 1024")?
+        .unwrap_or(Port::new(8080).map_err(|_| "default port invalid")?)
+        .value();
     let static_dir: PathBuf = env::var("CLSC_STATIC_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("/var/www/static"));
@@ -79,6 +80,9 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
         .filter(|s| !s.is_empty())
         .map(|s| s.into_bytes())
         .ok_or("CLSC_CURSOR_SECRET must be set to a non-empty value")?;
+    if cursor_secret.len() < 32 {
+        return Err("CLSC_CURSOR_SECRET must be at least 32 bytes".into());
+    }
     let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret)?);
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")

@@ -144,6 +144,22 @@ impl Revision {
     pub const fn value(&self) -> u64 {
         self.0
     }
+
+    /// Convert the revision to an `i64` for database storage, rejecting values
+    /// that do not fit to prevent silent wrap-around in PostgreSQL `BIGINT`.
+    pub fn to_i64(self) -> Result<i64, PlatformError> {
+        i64::try_from(self.0).map_err(|_| {
+            PlatformError::invalid("revision", "revision is out of the valid database range")
+        })
+    }
+
+    /// Return the next revision as an `i64`, failing if it would overflow the
+    /// database `BIGINT` range.
+    pub fn next_i64(self) -> Result<i64, PlatformError> {
+        self.to_i64()?.checked_add(1).ok_or_else(|| {
+            PlatformError::invalid("revision", "revision would overflow the database range")
+        })
+    }
 }
 
 /// UTC timestamp used throughout the platform.

@@ -174,16 +174,16 @@ where
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
 
-        let mut user = self.repo.by_id(request.payload.id, ctx).await?;
-        let user_id = user.id;
-
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
             "tenant:user:write",
-            ResourceRef::User(user_id),
+            ResourceRef::User(request.payload.id),
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut user = self.repo.by_id(request.payload.id, ctx).await?;
+        let user_id = user.id;
 
         user.set_display_name(request.payload.display_name, &self.clock, Some(actor))?;
 
@@ -222,16 +222,16 @@ where
             )
         })?;
 
-        let mut user = self.repo.by_id(request.payload.id, ctx).await?;
-        let user_id = user.id;
-
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
             "tenant:user:write",
-            ResourceRef::User(user_id),
+            ResourceRef::User(request.payload.id),
         );
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut user = self.repo.by_id(request.payload.id, ctx).await?;
+        let user_id = user.id;
 
         match request.payload.status {
             UserStatus::Active => user.activate(&self.clock, Some(actor))?,

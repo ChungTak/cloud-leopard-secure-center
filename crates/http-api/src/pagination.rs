@@ -15,7 +15,7 @@ use crate::error::AppError;
 type HmacSha256 = Hmac<Sha256>;
 
 /// Pagination configuration supplied by the application.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PaginationConfig {
     /// Maximum number of items per page.
     pub max_page_size: u32,
@@ -23,14 +23,24 @@ pub struct PaginationConfig {
     pub cursor_secret: Vec<u8>,
 }
 
+impl std::fmt::Debug for PaginationConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PaginationConfig")
+            .field("max_page_size", &self.max_page_size)
+            .field("cursor_secret", &"<redacted>")
+            .finish()
+    }
+}
+
 impl PaginationConfig {
     /// Create a pagination config. `max_page_size` is clamped to a positive
-    /// value no larger than `10_000`. `cursor_secret` must be non-empty; an
-    /// empty secret would make cursor signing trivially bypassable.
+    /// value no larger than `10_000`. `cursor_secret` must be at least 32 bytes;
+    /// shorter or empty secrets would make cursor signing trivially bypassable.
     pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Result<Self, AppError> {
         const MAX_PAGE_SIZE: u32 = 10_000;
+        const MIN_SECRET_LEN: usize = 32;
         let cursor_secret = cursor_secret.into();
-        if cursor_secret.is_empty() {
+        if cursor_secret.len() < MIN_SECRET_LEN {
             return Err(AppError::Internal);
         }
         Ok(Self {
@@ -215,9 +225,14 @@ where
                 message: "invalid pagination parameters".to_string(),
             })?;
 
+        const MAX_OFFSET: u64 = i64::MAX as u64;
         let (offset, base_limit, sort) = if let Some(token) = query.cursor {
             let cursor = Cursor::parse(&token, &config.cursor_secret)?;
-            (cursor.offset(), cursor.limit(), cursor.sort())
+            (
+                cursor.offset().min(MAX_OFFSET),
+                cursor.limit(),
+                cursor.sort(),
+            )
         } else {
             (0, config.max_page_size, SortOrder::default())
         };
@@ -227,7 +242,7 @@ where
         } else {
             query.limit
         };
-        let limit = requested_limit.min(config.max_page_size);
+        let limit = requested_limit.clamp(1, config.max_page_size);
 
         Ok(Pagination {
             offset,

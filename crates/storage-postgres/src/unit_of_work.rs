@@ -1,14 +1,12 @@
 //! PostgreSQL unit-of-work adapter.
 
 use std::future::Future;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use foundation::{PlatformError, RequestContext};
 use sqlx::PgPool;
-use tokio::sync::Mutex;
 
-use crate::{CURRENT_TX, db_error, set_tenant_context};
+use crate::{CURRENT_TX, begin_tenant_transaction, db_error};
 
 /// PostgreSQL-backed unit of work.
 #[derive(Debug, Clone)]
@@ -35,28 +33,17 @@ impl storage_api::UnitOfWork for PostgresUnitOfWork {
         Fut: Future<Output = Result<T, PlatformError>> + Send,
         T: Send,
     {
-        let mut conn = self.pool.acquire().await.map_err(db_error)?;
-        sqlx::query("BEGIN")
-            .execute(&mut *conn)
-            .await
-            .map_err(db_error)?;
-        set_tenant_context(&mut *conn, ctx).await?;
-
-        let conn = Arc::new(Mutex::new(conn));
-        let result = CURRENT_TX.scope(conn.clone(), operation()).await;
+        let tx = begin_tenant_transaction(&self.pool, ctx).await?;
+        let conn = tx.connection();
+        let result = CURRENT_TX.scope(conn, operation()).await;
 
         match result {
             Ok(value) => {
-                let mut guard = conn.lock().await;
-                sqlx::query("COMMIT")
-                    .execute(&mut **guard)
-                    .await
-                    .map_err(db_error)?;
+                tx.commit().await.map_err(db_error)?;
                 Ok(value)
             }
             Err(error) => {
-                let mut guard = conn.lock().await;
-                let _ = sqlx::query("ROLLBACK").execute(&mut **guard).await;
+                let _ = tx.rollback().await;
                 Err(error)
             }
         }

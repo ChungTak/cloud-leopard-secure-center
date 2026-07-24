@@ -92,29 +92,39 @@ impl LocalMessageBus {
         }
         let filter_parts: Vec<&str> = filter.split('.').collect();
         let topic_parts: Vec<&str> = topic.split('.').collect();
+        Self::topic_matches_inner(&filter_parts, &topic_parts, 0, 0)
+    }
 
-        let mut ti = 0usize;
-        let mut fi = 0usize;
-        while fi < filter_parts.len() && ti <= topic_parts.len() {
-            let is_last_filter_part = fi == filter_parts.len() - 1;
-            match filter_parts[fi] {
-                "**" => return true,
-                "*" if is_last_filter_part => {
-                    // Trailing '*' matches zero or more remaining segments.
-                    return ti <= topic_parts.len();
-                }
-                "*" => {
-                    ti += 1;
-                    fi += 1;
-                }
-                part if ti < topic_parts.len() && part == topic_parts[ti] => {
-                    ti += 1;
-                    fi += 1;
-                }
-                _ => return false,
-            }
+    fn topic_matches_inner(filter: &[&str], topic: &[&str], fi: usize, ti: usize) -> bool {
+        if fi == filter.len() {
+            return ti == topic.len();
         }
-        ti == topic_parts.len() && fi == filter_parts.len()
+        match filter[fi] {
+            "**" => {
+                // '**' matches zero or more topic segments, including all remaining
+                // segments when it is the last filter part.
+                for k in ti..=topic.len() {
+                    if Self::topic_matches_inner(filter, topic, fi + 1, k) {
+                        return true;
+                    }
+                }
+                false
+            }
+            "*" => {
+                if fi == filter.len() - 1 {
+                    // Trailing '*' matches zero or more remaining segments.
+                    return true;
+                }
+                if ti == topic.len() {
+                    return false;
+                }
+                Self::topic_matches_inner(filter, topic, fi + 1, ti + 1)
+            }
+            part if ti < topic.len() && part == topic[ti] => {
+                Self::topic_matches_inner(filter, topic, fi + 1, ti + 1)
+            }
+            _ => false,
+        }
     }
 
     async fn redeliver_unacked(&self, id: MessageId) -> Result<(), MessageError> {
@@ -290,6 +300,75 @@ mod tests {
             Some(v) => v,
             None => panic!("expected Some, got None"),
         }
+    }
+
+    #[test]
+    fn topic_matches_literal_segment() {
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.0"
+        ));
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.1"
+        ));
+    }
+
+    #[test]
+    fn topic_matches_single_wildcard() {
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.*"
+        ));
+        // Trailing '*' matches zero or more remaining segments.
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0.test",
+            "security.v1.event.*"
+        ));
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1.command.0",
+            "security.v1.event.*"
+        ));
+    }
+
+    #[test]
+    fn topic_matches_trailing_star() {
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.*"
+        ));
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0.test",
+            "security.v1.*"
+        ));
+    }
+
+    #[test]
+    fn topic_matches_double_wildcard_infix() {
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.**.event.0"
+        ));
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1.command.0",
+            "security.**.event.0"
+        ));
+    }
+
+    #[test]
+    fn topic_matches_double_wildcard_suffix() {
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.**.0"
+        ));
+    }
+
+    #[test]
+    fn topic_mismatch_on_empty_remaining_filter() {
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1",
+            "security.v1.event"
+        ));
     }
 
     fn make_envelope(kind: EnvelopeKind, topic: &str, payload: &[u8]) -> Envelope {

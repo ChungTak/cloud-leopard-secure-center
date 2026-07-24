@@ -75,6 +75,8 @@ impl Permission {
 const KNOWN_PERMISSIONS: &[(&str, PermissionScope)] = &[
     ("platform:tenant:read", PermissionScope::Platform),
     ("platform:tenant:write", PermissionScope::Platform),
+    ("platform:role:read", PermissionScope::Platform),
+    ("platform:role:write", PermissionScope::Platform),
     ("tenant:user:read", PermissionScope::Tenant),
     ("tenant:user:write", PermissionScope::Tenant),
     ("tenant:role:read", PermissionScope::Tenant),
@@ -89,6 +91,8 @@ const KNOWN_PERMISSIONS: &[(&str, PermissionScope)] = &[
     ("tenant:device:write", PermissionScope::Tenant),
     ("tenant:config:read", PermissionScope::Tenant),
     ("tenant:config:write", PermissionScope::Tenant),
+    ("platform:config:read", PermissionScope::Platform),
+    ("platform:config:write", PermissionScope::Platform),
 ];
 
 #[cfg(test)]

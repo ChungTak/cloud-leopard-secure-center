@@ -50,11 +50,15 @@ const MAX_PAGE_LIMIT: u32 = 10_000;
 /// Trim `items` to `options.limit` and produce a cursor for the next page when
 /// the query returned one extra row.
 pub(crate) fn paginate<T>(mut items: Vec<T>, options: ListOptionsInner) -> Page<T> {
+    let options = options.validate();
     let limit = options.limit.clamp(1, MAX_PAGE_LIMIT) as usize;
     let has_more = items.len() > limit;
     if has_more {
         items.truncate(limit);
-        let next_offset = options.offset.saturating_add(limit as u64);
+        let next_offset = options
+            .offset
+            .saturating_add(limit as u64)
+            .min(i64::MAX as u64);
         Page {
             items,
             next_cursor: Some(next_offset.to_string()),
@@ -113,7 +117,6 @@ tokio::task_local! {
 
 /// A database connection that is either owned by the caller or borrowed from
 /// an active unit of work.
-#[derive(Clone)]
 pub struct ManagedTransaction {
     inner: Arc<Mutex<PoolConnection<Postgres>>>,
     owned: bool,
@@ -133,6 +136,12 @@ impl ManagedTransaction {
     /// be committed/rolled back explicitly.
     pub const fn is_owned(&self) -> bool {
         self.owned
+    }
+
+    /// Clone the underlying shared connection so it can be installed in a
+    /// task-local for nested repository calls inside a unit of work.
+    pub fn connection(&self) -> Arc<Mutex<PoolConnection<Postgres>>> {
+        self.inner.clone()
     }
 
     /// Commit an owned transaction. Does nothing for connections borrowed from a
@@ -267,6 +276,13 @@ fn db_error(e: sqlx::Error) -> PlatformError {
         sqlx::Error::Database(ref db) if db.is_unique_violation() => {
             PlatformError::new(ErrorCode::Conflict, "resource already exists")
         }
+        sqlx::Error::Database(ref db) if db.is_foreign_key_violation() => {
+            PlatformError::invalid("reference", "referenced resource does not exist")
+        }
+        sqlx::Error::Database(ref db) if db.is_check_violation() => PlatformError::invalid(
+            "constraint",
+            "provided values violate a database constraint",
+        ),
         sqlx::Error::RowNotFound => PlatformError::new(ErrorCode::NotFound, "resource not found"),
         _ => PlatformError::new(ErrorCode::Unavailable, "database unavailable"),
     }

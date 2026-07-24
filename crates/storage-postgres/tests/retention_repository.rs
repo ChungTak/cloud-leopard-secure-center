@@ -52,11 +52,12 @@ async fn insert_audit_records(
 #[sqlx::test(migrations = "../../migrations")]
 async fn save_and_retrieve_default_policy(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let repo = PostgresRetentionRepository::new(pool.clone());
-    let policy = ok_or_panic(RetentionPolicy::new(RetentionTarget::AuditEvents, 14, 1000));
+    let policy = ok_or_panic(RetentionPolicy::new(RetentionTarget::AuditEvents, 14, 2500));
     ok_or_panic(repo.save_policy(&policy).await);
 
     let fetched = ok_or_panic(repo.get_policy(RetentionTarget::AuditEvents).await);
     assert_eq!(fetched.days, 14);
+    assert_eq!(fetched.max_batch_size, 2500);
 
     Ok(())
 }

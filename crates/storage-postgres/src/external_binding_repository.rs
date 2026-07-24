@@ -198,23 +198,24 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
 
         let conflicting: Option<(Uuid,)> = sqlx::query_as(
             "SELECT id FROM resource.external_bindings
-             WHERE external_kind = $1 AND external_ref = $2 AND state = 'active'
-               AND deleted_at IS NULL AND id != $3
+             WHERE external_kind = $1 AND external_ref = $2 AND state = $3
+               AND deleted_at IS NULL AND id != $4
              LIMIT 1
              FOR UPDATE",
         )
         .bind(&binding.external_kind)
         .bind(&binding.external_ref)
+        .bind(ExternalBindingState::Active.as_str())
         .bind(binding.id.as_uuid())
         .fetch_optional(&mut *tx)
         .await
         .map_err(db_error)?;
 
         let now = Utc::now();
-        let state = if conflicting.is_some() {
-            "conflict"
+        let next_state = if conflicting.is_some() {
+            ExternalBindingState::Conflict
         } else {
-            "active"
+            ExternalBindingState::Active
         };
 
         let next_revision = binding.revision.next();
@@ -224,7 +225,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
              SET state = $1, activated_at = $2, revision = $3, updated_at = $4
              WHERE id = $5 AND revision = $6 AND deleted_at IS NULL",
         )
-        .bind(state)
+        .bind(next_state.as_str())
         .bind(now)
         .bind(next_revision.value() as i64)
         .bind(now)
@@ -234,7 +235,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         .await
         .map_err(db_error)?;
 
-        if state == "active" {
+        if next_state == ExternalBindingState::Active {
             binding.state = ExternalBindingState::Active;
             binding.activated_at = Some(now.into());
         } else {
@@ -258,13 +259,15 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         let mut tx = tx_managed.lock().await;
         check_revision(&mut *tx, id, expected).await?;
 
+        let now = Utc::now();
         let rows = sqlx::query(
             "UPDATE resource.external_bindings
-             SET state = 'disabled', revision = $1, updated_at = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET state = $1, revision = $2, updated_at = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
+        .bind(ExternalBindingState::Disabled.as_str())
         .bind(expected.value() as i64 + 1)
-        .bind(Utc::now())
+        .bind(now)
         .bind(id.as_uuid())
         .bind(expected.value() as i64)
         .execute(&mut *tx)

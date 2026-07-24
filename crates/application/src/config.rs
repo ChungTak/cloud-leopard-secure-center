@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use domain_audit::audit_record::ActionRisk;
 use domain_authorization::role_binding::ResourceRef;
 use domain_configuration::{ConfigDefinition, ConfigScope, ConfigValue, ConfigValueId};
-use foundation::{Clock, PlatformError, RequestContext, Revision, TenantId, uuid::Uuid};
+use foundation::{Clock, ErrorCode, PlatformError, RequestContext, Revision, TenantId, uuid::Uuid};
 use storage_api::{AuditWriter, ConfigurationRepository};
 
 use crate::authorization::AuthorizationPort;
@@ -128,7 +128,7 @@ where
     ) -> Result<ConfigDefinition, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
+        let auth_req = usecase::platform_authorization(actor, "platform:config:write");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         let definition = ConfigDefinition::new(
@@ -167,22 +167,49 @@ where
     ) -> Result<WriteResponse<ConfigValueDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let tenant_id = request
-            .payload
-            .scope
-            .tenant_id()
-            .or(ctx.tenant_id)
-            .ok_or_else(|| {
-                PlatformError::invalid("tenant_id", "tenant scope is required for config values")
-            })?;
 
-        let auth_req = usecase::tenant_authorization(
-            actor,
-            tenant_id,
-            "tenant:config:write",
-            ResourceRef::User(actor),
-        );
-        usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+        // Authorize according to the value's scope. Platform values require
+        // platform permissions; tenant/module values require the actor's token
+        // tenant to match the target tenant and a tenant config write grant.
+        let tenant_id = match &request.payload.scope {
+            ConfigScope::Platform => {
+                let auth_req = usecase::platform_authorization(actor, "platform:config:write");
+                usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+                TenantId::from_uuid(Uuid::nil())
+            }
+            ConfigScope::Tenant(t) => {
+                if ctx.tenant_id != Some(*t) {
+                    return Err(PlatformError::new(
+                        ErrorCode::Denied,
+                        "tenant scope mismatch",
+                    ));
+                }
+                let auth_req = usecase::tenant_authorization(
+                    actor,
+                    *t,
+                    "tenant:config:write",
+                    ResourceRef::User(actor),
+                );
+                usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+                *t
+            }
+            ConfigScope::Module { tenant_id, .. } => {
+                if ctx.tenant_id != Some(*tenant_id) {
+                    return Err(PlatformError::new(
+                        ErrorCode::Denied,
+                        "tenant scope mismatch",
+                    ));
+                }
+                let auth_req = usecase::tenant_authorization(
+                    actor,
+                    *tenant_id,
+                    "tenant:config:write",
+                    ResourceRef::User(actor),
+                );
+                usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+                *tenant_id
+            }
+        };
 
         let definition = self
             .repo
@@ -257,6 +284,13 @@ where
             )
         })?;
 
+        if request.tenant_id.is_some() && request.tenant_id != ctx.tenant_id {
+            return Err(PlatformError::new(
+                ErrorCode::Denied,
+                "tenant scope mismatch",
+            ));
+        }
+
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
@@ -282,7 +316,7 @@ where
     ) -> Result<Option<ConfigDefinition>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:read");
+        let auth_req = usecase::platform_authorization(actor, "platform:config:read");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         self.repo.get_definition(&config_key).await

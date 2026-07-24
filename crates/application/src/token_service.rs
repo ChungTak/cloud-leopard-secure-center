@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 type HmacSha256 = Hmac<Sha256>;
 
 /// Issues and verifies HMAC-SHA256 access tokens and generates refresh tokens.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TokenService {
     secret: Vec<u8>,
     issuer: String,
@@ -20,9 +20,20 @@ pub struct TokenService {
     access_ttl_seconds: i64,
 }
 
+impl std::fmt::Debug for TokenService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenService")
+            .field("secret", &"<redacted>")
+            .field("issuer", &self.issuer)
+            .field("audience", &self.audience)
+            .field("access_ttl_seconds", &self.access_ttl_seconds)
+            .finish()
+    }
+}
+
 impl TokenService {
-    /// Create a token service. `secret` must not be empty and `access_ttl_seconds`
-    /// must be positive.
+    /// Create a token service. `secret` must be at least 32 bytes and
+    /// `access_ttl_seconds` must be positive.
     pub fn new(
         secret: impl AsRef<[u8]>,
         issuer: impl Into<String>,
@@ -30,8 +41,11 @@ impl TokenService {
         access_ttl_seconds: i64,
     ) -> Result<Self, PlatformError> {
         let secret = secret.as_ref().to_vec();
-        if secret.is_empty() {
-            return Err(PlatformError::new(ErrorCode::Invalid, "empty token secret"));
+        if secret.len() < 32 {
+            return Err(PlatformError::new(
+                ErrorCode::Invalid,
+                "token secret must be at least 32 bytes",
+            ));
         }
         if access_ttl_seconds <= 0 {
             return Err(PlatformError::new(

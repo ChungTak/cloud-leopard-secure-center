@@ -22,6 +22,11 @@ use tower_http::{
     trace::TraceLayer,
 };
 
+/// A CORS layer that denies every cross-origin request.
+fn deny_cors() -> CorsLayer {
+    CorsLayer::new().allow_origin(AllowOrigin::list(Vec::new()))
+}
+
 use crate::error::{ProblemDetails, from_middleware_error};
 
 /// Default request body size limit in bytes (1 MiB).
@@ -173,7 +178,7 @@ fn is_problem_json(headers: &axum::http::HeaderMap) -> bool {
 fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
     match cors_allowed_origins {
         None => CorsLayer::permissive(),
-        Some(origins) if origins.is_empty() => CorsLayer::new(),
+        Some(origins) if origins.is_empty() => deny_cors(),
         Some(origins) => {
             let allowed: Vec<HeaderValue> = origins
                 .iter()
@@ -181,7 +186,7 @@ fn cors_layer(cors_allowed_origins: Option<Vec<String>>) -> CorsLayer {
                 .filter_map(|o| o.trim().parse::<HeaderValue>().ok())
                 .collect();
             if allowed.is_empty() {
-                CorsLayer::new()
+                deny_cors()
             } else {
                 CorsLayer::new()
                     .allow_origin(AllowOrigin::list(allowed))

@@ -3,6 +3,7 @@
 use base64ct::{Base64UrlUnpadded, Encoding};
 use foundation::{PlatformError, RandomSource, TenantId, UserId, UtcTimestamp, uuid::Uuid};
 use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
 
 use crate::totp;
 
@@ -252,11 +253,5 @@ fn time_step(now: UtcTimestamp) -> u64 {
 }
 
 fn constant_time_eq(a: &str, b: &str) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    a.bytes()
-        .zip(b.bytes())
-        .fold(0u8, |acc, (x, y)| acc | (x ^ y))
-        == 0
+    a.as_bytes().ct_eq(b.as_bytes()).into()
 }

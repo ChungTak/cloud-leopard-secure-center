@@ -8,15 +8,36 @@ use domain_identity::user::{User, UserStatus};
 use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp,
 };
+use std::fmt;
+
 use storage_api::{CredentialRepository, SessionRepository, TenantRepository, UserRepository};
 
+/// Return immediately with `Unavailable` when a dependency is down; otherwise
+/// keep going so the caller can be told the token is invalid after any
+/// defensive revocation has been attempted.
+fn fail_on_unavailable(e: PlatformError) -> Result<(), PlatformError> {
+    if e.code() == ErrorCode::Unavailable {
+        return Err(e);
+    }
+    Ok(())
+}
+
 /// A freshly issued token pair.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TokenPair {
     /// JWT access token.
     pub access_token: String,
     /// Opaque refresh token.
     pub refresh_token: String,
+}
+
+impl fmt::Debug for TokenPair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TokenPair")
+            .field("access_token", &"<redacted>")
+            .field("refresh_token", &"<redacted>")
+            .finish()
+    }
 }
 
 /// Issue a new access/refresh token pair for an authenticated user.
@@ -88,7 +109,7 @@ pub async fn refresh_token_pair(
     }
 
     if token.used {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
@@ -97,7 +118,9 @@ pub async fn refresh_token_pair(
 
     let user = match users.by_id(token.user_id, ctx).await {
         Ok(u) => u,
-        Err(_) => {
+        Err(e) => {
+            fail_on_unavailable(e)?;
+            sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -109,7 +132,7 @@ pub async fn refresh_token_pair(
         || user.session_version != token.session_version
         || user.status != UserStatus::Active
     {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
@@ -122,8 +145,9 @@ pub async fn refresh_token_pair(
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
-        Err(_) => {
-            let _ = sessions.revoke_family(token.family_id, ctx).await;
+        Err(e) => {
+            fail_on_unavailable(e)?;
+            sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -131,21 +155,23 @@ pub async fn refresh_token_pair(
         }
     };
     if !tenant.allows_new_sessions() {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
         ));
     }
 
-    if let Err(e) = sessions.mark_refresh_token_used(&token, ctx).await {
-        if matches!(e, PlatformError::Conflict) {
-            let _ = sessions.revoke_family(token.family_id, ctx).await;
+    match sessions.mark_refresh_token_used(&token, ctx).await {
+        Ok(()) => {}
+        Err(PlatformError::Conflict) => {
+            sessions.revoke_family(token.family_id, ctx).await?;
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
         }
-        return Err(PlatformError::new(
-            ErrorCode::Unauthenticated,
-            "invalid token",
-        ));
+        Err(e) => return Err(e),
     }
 
     let access_token = token_service.issue_access_token(

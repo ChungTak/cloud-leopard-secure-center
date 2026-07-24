@@ -8,6 +8,18 @@ use storage_api::{TenantRepository, UserRepository};
 
 use crate::token_service::TokenService;
 
+/// Convert repository errors during authentication into a safe response.
+/// `NotFound`, `Invalid` and other user-side failures become `Unauthenticated`
+/// so the caller cannot distinguish missing users from bad tokens.
+/// `Unavailable` is preserved so load-balancers and clients can react to a
+/// database outage instead of treating it as a credentials failure.
+fn auth_error(e: PlatformError) -> PlatformError {
+    if e.code() == ErrorCode::Unavailable {
+        return e;
+    }
+    PlatformError::new(ErrorCode::Unauthenticated, "invalid token")
+}
+
 /// Authenticated actor context extracted from a valid access token.
 #[derive(Debug, Clone)]
 pub struct AuthContext {
@@ -90,7 +102,7 @@ impl Authenticator for TokenAuthenticator {
             .users
             .by_id(claims.sub, &ctx)
             .await
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+            .map_err(auth_error)?;
         self.user_is_valid(&user)?;
 
         if claims.session_version != user.session_version {
@@ -110,7 +122,7 @@ impl Authenticator for TokenAuthenticator {
             .tenants
             .by_id(user.tenant_id, &ctx)
             .await
-            .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
+            .map_err(auth_error)?;
         if !tenant.allows_new_sessions() {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,

@@ -5,7 +5,7 @@ use base64ct::Encoding;
 use http_body_util::BodyExt;
 use sha2::{Digest, Sha256};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -17,11 +17,16 @@ use crate::{
     error::AppError,
 };
 
+/// Maximum number of completed idempotent responses to keep in memory.
+const MAX_CACHE_ENTRIES: usize = 10_000;
+
 /// In-memory idempotency store keyed by request signature.
 #[derive(Clone)]
 pub struct IdempotencyState {
     /// Completed responses indexed by idempotency key.
     cache: Arc<Mutex<HashMap<IdempotencyKey, CachedResponse>>>,
+    /// Insertion order used for FIFO eviction when the cache exceeds its size cap.
+    order: Arc<Mutex<VecDeque<IdempotencyKey>>>,
     /// Per-key claims used to serialize concurrent requests sharing the same
     /// idempotency key without blocking unrelated requests.
     claims: Arc<Mutex<HashMap<IdempotencyKey, Arc<Mutex<()>>>>>,
@@ -51,6 +56,7 @@ impl IdempotencyState {
     pub fn new(ttl: Duration) -> Self {
         Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
+            order: Arc::new(Mutex::new(VecDeque::new())),
             claims: Arc::new(Mutex::new(HashMap::new())),
             ttl,
         }
@@ -61,6 +67,7 @@ impl std::fmt::Debug for IdempotencyState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IdempotencyState")
             .field("ttl", &self.ttl)
+            .field("max_entries", &MAX_CACHE_ENTRIES)
             .finish_non_exhaustive()
     }
 }
@@ -97,36 +104,47 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     };
     let _guard = claim.lock().await;
 
-    // Check the cache now that we own the claim; remove the claim entry so it
-    // does not leak for keys that are already resolved.
-    {
-        let mut cache = state.cache.lock().await;
-        let now = Instant::now();
-        cache.retain(|_, cached| cached.expires_at > now);
-        if let Some(cached) = cache.get(&key).cloned() {
-            drop(cache);
-            state.claims.lock().await.remove(&key);
-            if cached.digest == digest {
-                return Ok(build_response(&cached));
+    // Execute the request while holding the claim, then remove the claim
+    // entry on every path so failed body collection does not leak the mutex.
+    let result: Result<Response, AppError> = {
+        {
+            let mut cache = state.cache.lock().await;
+            let now = Instant::now();
+            cache.retain(|_, cached| cached.expires_at > now);
+            if let Some(cached) = cache.get(&key).cloned() {
+                if cached.digest == digest {
+                    Ok(build_response(&cached))
+                } else {
+                    Err(AppError::Conflict)
+                }
+            } else {
+                let response = next.run(req).await;
+                let cached = cache_response(response, digest, state.ttl).await?;
+
+                let mut order = state.order.lock().await;
+                cache.retain(|_, cached| cached.expires_at > now);
+                while order.front().is_some_and(|k| !cache.contains_key(k)) {
+                    order.pop_front();
+                }
+                cache.insert(key.clone(), cached.clone());
+                order.push_back(key.clone());
+                while cache.len() > MAX_CACHE_ENTRIES {
+                    match order.pop_front() {
+                        Some(old) => {
+                            cache.remove(&old);
+                        }
+                        None => break,
+                    }
+                }
+
+                Ok(build_response(&cached))
             }
-            return Err(AppError::Conflict);
         }
-    }
+    };
 
-    let response = next.run(req).await;
-    let cached = cache_response(response, digest, state.ttl).await?;
-
-    // Cache the computed response and drop the per-key claim.
-    {
-        let mut cache = state.cache.lock().await;
-        let now = Instant::now();
-        cache.retain(|_, cached| cached.expires_at > now);
-        cache.insert(key.clone(), cached.clone());
-        drop(cache);
-        state.claims.lock().await.remove(&key);
-    }
-
-    Ok(build_response(&cached))
+    drop(_guard);
+    state.claims.lock().await.remove(&key);
+    result
 }
 
 fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {

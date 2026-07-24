@@ -6,7 +6,8 @@ use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::ResourceRef;
 use foundation::{
-    Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid,
+    Clock, ErrorCode, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId,
+    uuid::Uuid,
 };
 use storage_api::{AuditWriter, ListOptions, Page, RoleRepository};
 
@@ -160,10 +161,20 @@ where
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let tenant_id = request.payload.tenant_id;
+
+        if let Some(t) = tenant_id
+            && ctx.tenant_id != Some(t)
+        {
+            return Err(PlatformError::new(
+                ErrorCode::Denied,
+                "tenant scope mismatch",
+            ));
+        }
+
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
@@ -207,20 +218,21 @@ where
     ) -> Result<WriteResponse<RoleDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
+        let tenant_id = ctx.tenant_id;
         let expected = request.expected_revision.ok_or_else(|| {
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
 
-        let mut role = self.repo.by_id(request.payload.id, ctx).await?;
-        let role_id = role.id;
-        let tenant_id = role.tenant_id;
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut role = self.repo.by_id(request.payload.id, ctx).await?;
+        let role_id = role.id;
 
         role.rename(request.payload.name, &self.clock, Some(actor))?;
 
@@ -252,6 +264,7 @@ where
     ) -> Result<WriteResponse<RoleDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
+        let tenant_id = ctx.tenant_id;
         let expected = request.expected_revision.ok_or_else(|| {
             PlatformError::invalid(
                 "expected_revision",
@@ -259,16 +272,16 @@ where
             )
         })?;
 
-        let mut role = self.repo.by_id(request.payload.role_id, ctx).await?;
-        let role_id = role.id;
-        let tenant_id = role.tenant_id;
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut role = self.repo.by_id(request.payload.role_id, ctx).await?;
+        let role_id = role.id;
 
         let permission = Permission::parse(&request.payload.permission)?;
         role.grant_permission(permission, &self.clock, Some(actor))?;
@@ -300,6 +313,7 @@ where
     ) -> Result<WriteResponse<RoleDto>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
+        let tenant_id = ctx.tenant_id;
         let expected = request.expected_revision.ok_or_else(|| {
             PlatformError::invalid(
                 "expected_revision",
@@ -307,16 +321,16 @@ where
             )
         })?;
 
-        let mut role = self.repo.by_id(request.payload.role_id, ctx).await?;
-        let role_id = role.id;
-        let tenant_id = role.tenant_id;
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
+        let mut role = self.repo.by_id(request.payload.role_id, ctx).await?;
+        let role_id = role.id;
 
         role.revoke_permission(&request.payload.permission, &self.clock, Some(actor))?;
 
@@ -343,16 +357,16 @@ where
     async fn get(&self, id: RoleId, ctx: &RequestContext) -> Result<RoleDto, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let role = self.repo.by_id(id, ctx).await?;
-        let tenant_id = role.tenant_id;
+        let tenant_id = ctx.tenant_id;
         let action = if tenant_id.is_some() {
             "tenant:role:read"
         } else {
-            "platform:tenant:read"
+            "platform:role:read"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
+        let role = self.repo.by_id(id, ctx).await?;
         Ok(RoleDto::from(&role))
     }
 
@@ -367,7 +381,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:read"
         } else {
-            "platform:tenant:read"
+            "platform:role:read"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;

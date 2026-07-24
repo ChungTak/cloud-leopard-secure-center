@@ -133,7 +133,7 @@ impl IdempotencyRepository for PostgresIdempotencyRepository {
             return Ok(Some(existing_record));
         }
 
-        sqlx::query(
+        let inserted = sqlx::query(
             "INSERT INTO infra.idempotency_records
              (tenant_id, principal_id, endpoint_scope, idempotency_key,
               request_digest, response_status, response_body, expires_at)
@@ -150,7 +150,33 @@ impl IdempotencyRepository for PostgresIdempotencyRepository {
         .bind(utc_to_db(record.expires_at))
         .execute(&mut *tx)
         .await
-        .map_err(db_error)?;
+        .map_err(db_error)?
+        .rows_affected();
+
+        if inserted == 0 {
+            // A concurrent call committed the same key between the SELECT and INSERT.
+            // Re-read the winning record so the caller can return its cached response.
+            let row = sqlx::query(
+                "SELECT tenant_id, principal_id, endpoint_scope, idempotency_key,
+                        request_digest, response_status, response_body, expires_at
+                 FROM infra.idempotency_records
+                 WHERE tenant_id IS NOT DISTINCT FROM $1
+                   AND principal_id = $2
+                   AND endpoint_scope = $3
+                   AND idempotency_key = $4",
+            )
+            .bind(tenant_uuid)
+            .bind(*record.principal_id.as_uuid())
+            .bind(&record.endpoint_scope)
+            .bind(&record.idempotency_key)
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(db_error)?;
+            let existing = row_to_record(row)?;
+            drop(tx);
+            tx_managed.commit().await.map_err(db_error)?;
+            return Ok(Some(existing));
+        }
 
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;

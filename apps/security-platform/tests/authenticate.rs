@@ -237,3 +237,74 @@ async fn repeated_failures_lock_account(pool: sqlx::PgPool) -> sqlx::Result<()> 
 
     Ok(())
 }
+
+#[sqlx::test(migrations = "../../migrations")]
+async fn failure_count_is_case_insensitive(pool: sqlx::PgPool) -> sqlx::Result<()> {
+    let users = PostgresUserRepository::new(pool.clone());
+    let credentials = PostgresCredentialRepository::new(pool.clone());
+    let tenants = PostgresTenantRepository::new(pool.clone());
+    let attempts = PostgresLoginAttemptRepository::new(pool);
+    let id_gen = generator();
+    let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
+    let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
+    let hasher = Argon2idPasswordHasher::default();
+    let policy = AuthenticationPolicy {
+        max_attempts_per_identity: 2,
+        max_attempts_per_source: 20,
+        window_seconds: 900,
+    };
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
+
+    let mut user = ok_or_panic(User::new(
+        ok_or_panic(UserId::generate(&id_gen)),
+        tenant_id,
+        "victim",
+        "Victim",
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(user.activate(&SystemClock, None));
+    ok_or_panic(users.create(&user, &ctx).await);
+
+    let hash = ok_or_panic(hasher.hash("secret123"));
+    let credential = ok_or_panic(Credential::new_password(
+        tenant_id,
+        user.id,
+        hash,
+        "argon2id",
+        &SystemClock,
+    ));
+    ok_or_panic(credentials.create(&credential, &ctx).await);
+
+    let ip = IpAddr::from_str("192.168.0.1").ok();
+    for username in ["victim", "Victim"] {
+        let _ = authenticate(
+            &users,
+            &credentials,
+            &attempts,
+            &tenants,
+            &hasher,
+            &policy,
+            &ctx,
+            username,
+            "wrong",
+            ip,
+        )
+        .await;
+    }
+
+    let locked = ok_or_panic(users.by_username("victim", &ctx).await);
+    assert_eq!(locked.status, UserStatus::Locked);
+
+    Ok(())
+}
