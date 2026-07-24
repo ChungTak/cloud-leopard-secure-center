@@ -119,7 +119,7 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
             .to_string();
 
         let (id, revision): (foundation::uuid::Uuid, i64) = if let Some(id) = value.id {
-            let current = value.revision.value() as i64;
+            let current = value.revision.to_i64()?;
             let row = sqlx::query(
                 "UPDATE config.values
                  SET tenant_id = $1, scope_type = $2, scope_id = $3, config_key = $4,

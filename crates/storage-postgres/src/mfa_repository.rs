@@ -1,6 +1,6 @@
 //! PostgreSQL implementation of the `MfaRepository` port.
 
-use crate::db_error;
+use crate::{begin_tenant_transaction, db_error, u64_to_i64};
 use async_trait::async_trait;
 use domain_identity::mfa::{MfaFactor, MfaFactorType};
 use foundation::{
@@ -10,8 +10,6 @@ use foundation::{
 };
 use sqlx::Row;
 use storage_api::MfaRepository;
-
-use crate::begin_tenant_transaction;
 
 /// PostgreSQL-backed MFA repository.
 #[derive(Debug, Clone)]
@@ -79,7 +77,12 @@ impl MfaRepository for PostgresMfaRepository {
         .bind(factor.verified_at.map(utc_to_db))
         .bind(factor.recovery_code_hashes())
         .bind(factor.recovery_code_used())
-        .bind(factor.last_used_step.map(|s| s as i64))
+        .bind(
+            factor
+                .last_used_step
+                .map(|s| u64_to_i64(s, "last_used_step"))
+                .transpose()?,
+        )
         .bind(factor.last_used_code.as_deref())
         .execute(&mut *tx)
         .await

@@ -141,7 +141,7 @@ pub async fn refresh_token_pair(
 
     let tenant_ctx = RequestContext {
         tenant_id: Some(user.tenant_id),
-        ..Default::default()
+        ..ctx.clone()
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,

@@ -92,7 +92,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.value() as i64)
+        .bind(unit.revision.to_i64()?)
         .bind(utc_to_db(unit.created_at))
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
@@ -157,7 +157,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                     "organization unit not found".to_string(),
                 ));
             }
-            Some((rev, _parent)) if rev != expected.value() as i64 => {
+            Some((rev, _parent)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -228,7 +228,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.value() as i64)
+        .bind(unit.revision.to_i64()?)
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
         .bind(unit.id.as_uuid())
@@ -274,7 +274,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                     "organization unit not found".to_string(),
                 ));
             }
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -310,9 +310,9 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

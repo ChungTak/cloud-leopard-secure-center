@@ -94,7 +94,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         .bind(&binding.external_kind)
         .bind(binding.state.as_str())
         .bind(binding.activated_at.map(utc_to_db))
-        .bind(binding.revision.value() as i64)
+        .bind(binding.revision.to_i64()?)
         .bind(utc_to_db(binding.created_at))
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
@@ -129,11 +129,11 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         .bind(&binding.external_kind)
         .bind(binding.state.as_str())
         .bind(binding.activated_at.map(utc_to_db))
-        .bind(binding.revision.value() as i64)
+        .bind(binding.revision.to_i64()?)
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
         .bind(binding.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -182,7 +182,7 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
             }
         };
 
-        if binding.revision.value() as i64 != expected.value() as i64 {
+        if binding.revision.to_i64()? != expected.to_i64()? {
             return Err(PlatformError::new(
                 ErrorCode::VersionMismatch,
                 "revision conflict".to_string(),
@@ -227,10 +227,10 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
         )
         .bind(next_state.as_str())
         .bind(now)
-        .bind(next_revision.value() as i64)
+        .bind(next_revision.to_i64()?)
         .bind(now)
         .bind(binding.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -266,10 +266,10 @@ impl ExternalBindingRepositoryPort for PostgresExternalBindingRepository {
              WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
         .bind(ExternalBindingState::Disabled.as_str())
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(now)
         .bind(id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -376,7 +376,7 @@ async fn check_revision(
             ErrorCode::NotFound,
             "external binding not found".to_string(),
         )),
-        Some(rev) if rev != expected.value() as i64 => Err(PlatformError::new(
+        Some(rev) if rev != expected.to_i64()? => Err(PlatformError::new(
             ErrorCode::VersionMismatch,
             "revision conflict".to_string(),
         )),

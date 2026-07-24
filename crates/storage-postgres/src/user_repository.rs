@@ -12,6 +12,7 @@ use storage_api::{ListOptions, Page, UserRepository};
 
 use crate::{
     begin_tenant_transaction, db_error, paginate, revision_from_i64, session_version_from_i64,
+    u64_to_i64,
 };
 
 /// PostgreSQL-backed user repository.
@@ -91,8 +92,8 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.username)
         .bind(&user.display_name)
         .bind(user.status.as_str())
-        .bind(user.session_version as i64)
-        .bind(user.revision.value() as i64)
+        .bind(u64_to_i64(user.session_version, "session_version")?)
+        .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.created_at))
         .bind(utc_to_db(user.updated_at))
         .bind(user.actor.map(|a| *a.as_uuid()))
@@ -122,7 +123,7 @@ impl UserRepository for PostgresUserRepository {
 
         match current {
             None => return Err(PlatformError::new(ErrorCode::NotFound, "user not found")),
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict",
@@ -141,13 +142,13 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.username)
         .bind(&user.display_name)
         .bind(user.status.as_str())
-        .bind(user.session_version as i64)
-        .bind(user.revision.value() as i64)
+        .bind(u64_to_i64(user.session_version, "session_version")?)
+        .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.updated_at))
         .bind(user.actor.map(|a| *a.as_uuid()))
         .bind(deleted_at)
         .bind(*user.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -183,7 +184,7 @@ impl UserRepository for PostgresUserRepository {
 
         match current {
             None => return Err(PlatformError::new(ErrorCode::NotFound, "user not found")),
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict",
@@ -199,9 +200,9 @@ impl UserRepository for PostgresUserRepository {
              WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
         )
         .bind(now)
-        .bind(expected.value() as i64 + 1)
+        .bind(expected.next_i64()?)
         .bind(*id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
