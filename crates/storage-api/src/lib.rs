@@ -395,7 +395,7 @@ pub trait LoginAttemptRepository: Send + Sync {
         &self,
         tenant_id: TenantId,
         identity: &str,
-        window_seconds: i64,
+        window_seconds: u64,
         now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError>;
@@ -405,7 +405,7 @@ pub trait LoginAttemptRepository: Send + Sync {
         &self,
         tenant_id: TenantId,
         ip: String,
-        window_seconds: i64,
+        window_seconds: u64,
         now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError>;

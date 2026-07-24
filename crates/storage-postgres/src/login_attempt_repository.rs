@@ -57,7 +57,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         &self,
         tenant_id: TenantId,
         identity: &str,
-        window_seconds: i64,
+        window_seconds: u64,
         now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
@@ -71,7 +71,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         .bind(*tenant_id.as_uuid())
         .bind(identity)
         .bind(utc_to_db(now))
-        .bind(window_seconds)
+        .bind(window_to_i64(window_seconds)?)
         .fetch_one(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -84,7 +84,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         &self,
         tenant_id: TenantId,
         ip: String,
-        window_seconds: i64,
+        window_seconds: u64,
         now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
@@ -98,7 +98,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         .bind(*tenant_id.as_uuid())
         .bind(ip)
         .bind(utc_to_db(now))
-        .bind(window_seconds)
+        .bind(window_to_i64(window_seconds)?)
         .fetch_one(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -110,4 +110,13 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
     ts.into()
+}
+
+fn window_to_i64(window_seconds: u64) -> Result<i64, PlatformError> {
+    i64::try_from(window_seconds).map_err(|_| {
+        PlatformError::invalid(
+            "window_seconds",
+            "lockout window is out of the valid database range",
+        )
+    })
 }

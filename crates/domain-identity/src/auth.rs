@@ -18,19 +18,24 @@ pub struct AuthenticationPolicy {
     pub max_attempts_per_identity: u32,
     /// Failed attempts allowed per source IP within the window.
     pub max_attempts_per_source: u32,
-    /// Sliding window in seconds.
-    pub window_seconds: i64,
+    /// Sliding window in seconds. `u64` prevents negative values from silently
+    /// disabling the lockout window in the SQL interval expression.
+    pub window_seconds: u64,
 }
 
 impl AuthenticationPolicy {
     /// Return true if the number of failures from one identity exceeds the policy.
+    /// A `max_attempts_per_identity` of `0` is treated as "no limit" rather than
+    /// locking immediately, preventing a misconfigured policy from banning every user.
     pub fn identity_locked(&self, failures: i64) -> bool {
-        failures >= self.max_attempts_per_identity as i64
+        let max = self.max_attempts_per_identity as i64;
+        max > 0 && failures >= max
     }
 
     /// Return true if the number of failures from one source exceeds the policy.
     pub fn source_locked(&self, failures: i64) -> bool {
-        failures >= self.max_attempts_per_source as i64
+        let max = self.max_attempts_per_source as i64;
+        max > 0 && failures >= max
     }
 }
 
