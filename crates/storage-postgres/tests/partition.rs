@@ -1,5 +1,5 @@
-use foundation::chrono::{Duration, Utc};
-use foundation::{RequestContext, TenantId, uuid::Uuid};
+use foundation::chrono::{DateTime, Duration, Utc};
+use foundation::{Clock, RequestContext, SystemClock, TenantId, uuid::Uuid};
 use storage_postgres::begin_tenant_transaction;
 
 fn parse_tenant(s: &str) -> TenantId {
@@ -41,7 +41,7 @@ async fn audit_tables_are_partitioned_and_tenant_isolated(pool: sqlx::PgPool) ->
         "INSERT INTO audit.events (tenant_id, event_type, created_at) VALUES ($1, 'login', $2)",
     )
     .bind(tenant_id)
-    .bind(Utc::now())
+    .bind(DateTime::<Utc>::from(SystemClock.now()))
     .execute(&pool)
     .await?;
 
@@ -71,8 +71,11 @@ async fn audit_tables_are_partitioned_and_tenant_isolated(pool: sqlx::PgPool) ->
 #[sqlx::test(migrations = "../../migrations")]
 async fn purge_partition_removes_old_rows_in_batches(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let tenant_id = parse_uuid("018e1234-5678-7abc-8def-0123456789ab");
-    let partition_name = format!("events_{}", Utc::now().format("%Y_%m"));
-    let old = Utc::now() - Duration::seconds(86400);
+    let partition_name = format!(
+        "events_{}",
+        DateTime::<Utc>::from(SystemClock.now()).format("%Y_%m")
+    );
+    let old = DateTime::<Utc>::from(SystemClock.now()) - Duration::seconds(86400);
 
     for _ in 0..5 {
         sqlx::query(
@@ -91,7 +94,7 @@ async fn purge_partition_removes_old_rows_in_batches(pool: sqlx::PgPool) -> sqlx
 
     let deleted: (i64,) = sqlx::query_as("SELECT audit.purge_partition('events', $1, $2, $3)")
         .bind(&partition_name)
-        .bind(Utc::now())
+        .bind(DateTime::<Utc>::from(SystemClock.now()))
         .bind(2_i64)
         .fetch_one(&pool)
         .await?;

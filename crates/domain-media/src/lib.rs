@@ -214,23 +214,24 @@ mod tests {
     use futures::executor::block_on;
 
     use super::*;
+    use foundation::chrono::{DateTime, Duration, Utc};
     use foundation::{
-        CameraId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId, UtcTimestamp,
+        CameraId, Clock, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId,
+        UtcTimestamp,
     };
 
     #[test]
     fn unsupported_create_entitlement_returns_unsupported() {
         let port = UnsupportedMediaPort;
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
+        let now: DateTime<Utc> = SystemClock.now().into();
         let request = CreateEntitlementRequest {
             tenant_id: TenantId::generate(&generator).expect("generate tenant id"),
             principal_id: UserId::generate(&generator).expect("generate user id"),
             camera_id: CameraId::generate(&generator).expect("generate camera id"),
             actions: vec![MediaAction::Live],
             protocol: "webrtc".to_string(),
-            deadline: Deadline::new(UtcTimestamp::from(
-                foundation::chrono::Utc::now() + foundation::chrono::Duration::seconds(30),
-            )),
+            deadline: Deadline::new(UtcTimestamp::from(now + Duration::seconds(30))),
         };
         match block_on(port.create_entitlement(request)) {
             Ok(_) => panic!("expected unsupported"),

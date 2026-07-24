@@ -7,8 +7,8 @@ use domain_media::{
     MediaPort, PlaybackEntitlement, PlayerPolicy,
 };
 use foundation::{
-    CameraId, Deadline, EntitlementId, PlatformError, RequestContext, TenantId, UserId,
-    UtcTimestamp, chrono,
+    CameraId, Clock, Deadline, EntitlementId, PlatformError, RequestContext, SystemClock, TenantId,
+    UserId, UtcTimestamp, chrono,
 };
 
 use crate::authorization::{AuthorizationPort, AuthorizationRequest};
@@ -109,9 +109,8 @@ impl<M, A> MediaService<M, A> {
             actions,
             protocol,
             deadline: ctx.deadline.unwrap_or_else(|| {
-                Deadline::new(UtcTimestamp::from(
-                    chrono::Utc::now() + chrono::Duration::seconds(30),
-                ))
+                let now: chrono::DateTime<chrono::Utc> = SystemClock.now().into();
+                Deadline::new(UtcTimestamp::from(now + chrono::Duration::seconds(30)))
             }),
         }
     }
