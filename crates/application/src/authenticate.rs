@@ -3,7 +3,7 @@
 use domain_identity::auth::{AuthenticationPolicy, AuthenticationResult};
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus, normalize_username};
-use foundation::{ErrorCode, PlatformError, RequestContext};
+use foundation::{Clock, ErrorCode, PlatformError, RequestContext};
 use std::net::IpAddr;
 use storage_api::{CredentialRepository, LoginAttemptRepository, TenantRepository, UserRepository};
 
@@ -17,6 +17,7 @@ pub async fn authenticate(
     tenants: &dyn TenantRepository,
     hasher: &Argon2idPasswordHasher,
     policy: &AuthenticationPolicy,
+    clock: &dyn Clock,
     ctx: &RequestContext,
     username: &str,
     password: &str,
@@ -136,7 +137,7 @@ pub async fn authenticate(
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             return Ok(AuthenticationResult::InvalidCredentials);
@@ -148,9 +149,7 @@ pub async fn authenticate(
             let mut credential = credential;
             if hasher.needs_rehash(&credential.value).unwrap_or(false)
                 && let Ok(new_hash) = hasher.hash(password)
-                && credential
-                    .rotate(new_hash, "argon2id", &foundation::SystemClock)
-                    .is_ok()
+                && credential.rotate(new_hash, "argon2id", clock).is_ok()
             {
                 let expected = credential.revision.prev();
                 // Rehash persistence is best-effort; do not fail a valid
@@ -197,7 +196,7 @@ pub async fn authenticate(
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             Ok(AuthenticationResult::InvalidCredentials)
@@ -230,7 +229,7 @@ pub async fn authenticate(
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                lock_user(users, user, ctx).await?;
+                lock_user(users, user, clock, ctx).await?;
             }
 
             Ok(AuthenticationResult::InvalidCredentials)
@@ -241,10 +240,11 @@ pub async fn authenticate(
 async fn lock_user(
     users: &dyn UserRepository,
     mut user: User,
+    clock: &dyn Clock,
     ctx: &RequestContext,
 ) -> Result<(), PlatformError> {
     let expected = user.revision;
-    user.lock(&foundation::SystemClock, ctx.actor_id)?;
-    user.bump_session_version(&foundation::SystemClock, ctx.actor_id)?;
+    user.lock(clock, ctx.actor_id)?;
+    user.bump_session_version(clock, ctx.actor_id)?;
     users.update(&user, expected, ctx).await
 }

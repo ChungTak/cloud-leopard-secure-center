@@ -232,18 +232,35 @@ where
 
         let mut user = self.repo.by_id(request.payload.id, ctx).await?;
         let user_id = user.id;
+        let previous_status = user.status;
 
         match request.payload.status {
             UserStatus::Active => user.activate(&self.clock, Some(actor))?,
-            UserStatus::Locked => {
-                user.lock(&self.clock, Some(actor))?;
-                user.bump_session_version(&self.clock, Some(actor))?;
+            UserStatus::Locked => user.lock(&self.clock, Some(actor))?,
+            UserStatus::Disabled => user.disable(&self.clock, Some(actor))?,
+            UserStatus::Pending => {
+                if previous_status == UserStatus::Disabled {
+                    user.enable(&self.clock, Some(actor))?;
+                } else if previous_status != UserStatus::Pending {
+                    return Err(PlatformError::invalid(
+                        "status",
+                        "user can only be set to pending when re-enabling a disabled user",
+                    ));
+                }
             }
-            UserStatus::Disabled => {
-                user.disable(&self.clock, Some(actor))?;
-                user.bump_session_version(&self.clock, Some(actor))?;
-            }
-            UserStatus::Pending => user.enable(&self.clock, Some(actor))?,
+        }
+
+        if user.status == previous_status {
+            return Err(PlatformError::invalid(
+                "status",
+                format!("user status is already {}", request.payload.status.as_str()),
+            ));
+        }
+
+        if request.payload.status == UserStatus::Locked
+            || request.payload.status == UserStatus::Disabled
+        {
+            user.bump_session_version(&self.clock, Some(actor))?;
         }
 
         self.repo.update(&user, expected, ctx).await?;
