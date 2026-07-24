@@ -709,6 +709,7 @@ pub trait ExternalBindingRepository: Send + Sync {
         &self,
         id: ExternalBindingId,
         expected: Revision,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<ExternalBinding, PlatformError>;
 
@@ -717,6 +718,7 @@ pub trait ExternalBindingRepository: Send + Sync {
         &self,
         id: ExternalBindingId,
         expected: Revision,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -751,6 +753,7 @@ pub trait ProjectionRepository: Send + Sync {
     async fn get_device(
         &self,
         external_ref: &str,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<DeviceProjection, PlatformError>;
 
@@ -765,6 +768,7 @@ pub trait ProjectionRepository: Send + Sync {
     async fn get_channel(
         &self,
         external_ref: &str,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<ChannelProjection, PlatformError>;
 
@@ -774,6 +778,7 @@ pub trait ProjectionRepository: Send + Sync {
         &self,
         device_events: Vec<DeviceEvent>,
         channel_events: Vec<ChannelEvent>,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -783,6 +788,7 @@ pub trait ProjectionRepository: Send + Sync {
         worker_id: &str,
         last_event_id: &str,
         observed_at: UtcTimestamp,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 
@@ -790,6 +796,7 @@ pub trait ProjectionRepository: Send + Sync {
     async fn record_failure(
         &self,
         failure: ProjectionFailure,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError>;
 }

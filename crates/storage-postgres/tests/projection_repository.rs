@@ -1,6 +1,8 @@
 use domain_organization::tenant::Tenant;
 use domain_resource::projection::{ChannelEvent, DeviceEvent, ProjectionFailure};
-use foundation::{FakeClock, RequestContext, TenantId, UtcTimestamp, uuid::Uuid};
+use foundation::{
+    Clock, FakeClock, RequestContext, SystemClock, TenantId, UtcTimestamp, uuid::Uuid,
+};
 use storage_api::{ProjectionRepository, TenantRepository};
 use storage_postgres::projection_repository::PostgresProjectionRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -69,7 +71,7 @@ async fn device_projection_returns_observed_fields(pool: sqlx::PgPool) -> sqlx::
     let event = device_event("dev-1", 1, "evt-1", "{\"online\":true}");
     ok_or_panic(repo.apply_device_event(event, &ctx).await);
 
-    let projection = ok_or_panic(repo.get_device("dev-1", &ctx).await);
+    let projection = ok_or_panic(repo.get_device("dev-1", SystemClock.now(), &ctx).await);
     assert_eq!(projection.external_ref, "dev-1");
     assert_eq!(projection.sequence, 1);
     assert_eq!(projection.source_event_id, "evt-1");
@@ -98,7 +100,7 @@ async fn out_of_order_and_duplicate_events_are_ignored(pool: sqlx::PgPool) -> sq
     ok_or_panic(repo.apply_device_event(duplicate, &ctx).await);
     ok_or_panic(repo.apply_device_event(out_of_order, &ctx).await);
 
-    let projection = ok_or_panic(repo.get_device("dev-1", &ctx).await);
+    let projection = ok_or_panic(repo.get_device("dev-1", SystemClock.now(), &ctx).await);
     assert_eq!(projection.sequence, 1);
     assert_eq!(projection.source_event_id, "evt-1");
 
@@ -123,7 +125,7 @@ async fn gap_marks_projection_stale(pool: sqlx::PgPool) -> sqlx::Result<()> {
     ok_or_panic(repo.apply_device_event(first, &ctx).await);
     ok_or_panic(repo.apply_device_event(gap, &ctx).await);
 
-    let projection = ok_or_panic(repo.get_device("dev-1", &ctx).await);
+    let projection = ok_or_panic(repo.get_device("dev-1", SystemClock.now(), &ctx).await);
     assert_eq!(projection.sequence, 3);
     assert!(projection.stale);
 
@@ -150,7 +152,7 @@ async fn mismatched_payload_for_same_sequence_is_quarantined(
     ok_or_panic(repo.apply_device_event(first, &ctx).await);
     ok_or_panic(repo.apply_device_event(mismatch, &ctx).await);
 
-    let projection = ok_or_panic(repo.get_device("dev-1", &ctx).await);
+    let projection = ok_or_panic(repo.get_device("dev-1", SystemClock.now(), &ctx).await);
     assert_eq!(projection.sequence, 1);
     assert_eq!(projection.payload, "{\"online\":true}");
 
@@ -175,16 +177,16 @@ async fn shadow_rebuild_and_atomic_view_swap(pool: sqlx::PgPool) -> sqlx::Result
     let rebuilt = device_event("dev-1", 2, "evt-2", "{\"online\":false}");
     let channel = channel_event("ch-1", 1, "evt-ch-1", "{\"stream\":true}");
     ok_or_panic(
-        repo.rebuild_shadow(vec![rebuilt], vec![channel], &ctx)
+        repo.rebuild_shadow(vec![rebuilt], vec![channel], SystemClock.now(), &ctx)
             .await,
     );
 
-    let device_proj = ok_or_panic(repo.get_device("dev-1", &ctx).await);
+    let device_proj = ok_or_panic(repo.get_device("dev-1", SystemClock.now(), &ctx).await);
     assert_eq!(device_proj.sequence, 2);
     assert_eq!(device_proj.payload, "{\"online\":false}");
     assert!(!device_proj.stale);
 
-    let channel_proj = ok_or_panic(repo.get_channel("ch-1", &ctx).await);
+    let channel_proj = ok_or_panic(repo.get_channel("ch-1", SystemClock.now(), &ctx).await);
     assert_eq!(channel_proj.sequence, 1);
 
     Ok(())
@@ -203,8 +205,14 @@ async fn checkpoint_and_failure_are_persisted(pool: sqlx::PgPool) -> sqlx::Resul
     let repo = PostgresProjectionRepository::new(pool);
 
     ok_or_panic(
-        repo.checkpoint("worker-1", "evt-42", UtcTimestamp::now(), &ctx)
-            .await,
+        repo.checkpoint(
+            "worker-1",
+            "evt-42",
+            SystemClock.now(),
+            SystemClock.now(),
+            &ctx,
+        )
+        .await,
     );
 
     let failure = ProjectionFailure {
@@ -214,7 +222,7 @@ async fn checkpoint_and_failure_are_persisted(pool: sqlx::PgPool) -> sqlx::Resul
         reason: "bad_payload".to_string(),
         payload: "not json".to_string(),
     };
-    ok_or_panic(repo.record_failure(failure, &ctx).await);
+    ok_or_panic(repo.record_failure(failure, SystemClock.now(), &ctx).await);
 
     Ok(())
 }

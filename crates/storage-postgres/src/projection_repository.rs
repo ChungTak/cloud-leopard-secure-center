@@ -51,7 +51,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut *tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid, event.observed_at).await?;
 
         let device_view: (String,) = sqlx::query_as(
             "SELECT device_view FROM projection.active_view WHERE tenant_id = $1 FOR UPDATE",
@@ -89,6 +89,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                         &event.external_ref,
                         "payload_mismatch",
                         &event.payload,
+                        event.observed_at,
                     )
                     .await?;
                     return Ok(());
@@ -107,6 +108,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
     async fn get_device(
         &self,
         external_ref: &str,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<DeviceProjection, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -116,7 +118,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut *tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid, now).await?;
 
         let device_view: (String,) =
             sqlx::query_as("SELECT device_view FROM projection.active_view WHERE tenant_id = $1")
@@ -131,7 +133,6 @@ impl ProjectionRepository for PostgresProjectionRepository {
         let projection = match row {
             Some(proj) => {
                 let mut proj = proj;
-                let now = UtcTimestamp::now();
                 proj.stale =
                     proj.stale || is_projection_stale(proj.observed_at, now, STALE_TTL_MILLIS);
                 proj
@@ -162,7 +163,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut *tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid, event.observed_at).await?;
 
         let channel_view: (String,) = sqlx::query_as(
             "SELECT channel_view FROM projection.active_view WHERE tenant_id = $1 FOR UPDATE",
@@ -198,6 +199,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
                         &event.external_ref,
                         "payload_mismatch",
                         &event.payload,
+                        event.observed_at,
                     )
                     .await?;
                     return Ok(());
@@ -215,6 +217,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
     async fn get_channel(
         &self,
         external_ref: &str,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<ChannelProjection, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -224,7 +227,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut *tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid, now).await?;
 
         let channel_view: (String,) =
             sqlx::query_as("SELECT channel_view FROM projection.active_view WHERE tenant_id = $1")
@@ -239,7 +242,6 @@ impl ProjectionRepository for PostgresProjectionRepository {
         let projection = match row {
             Some(proj) => {
                 let mut proj = proj;
-                let now = UtcTimestamp::now();
                 proj.stale =
                     proj.stale || is_projection_stale(proj.observed_at, now, STALE_TTL_MILLIS);
                 proj
@@ -261,6 +263,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         &self,
         device_events: Vec<DeviceEvent>,
         channel_events: Vec<ChannelEvent>,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -270,7 +273,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
             .map(|t| *t.as_uuid())
             .ok_or_else(missing_tenant)?;
 
-        ensure_active_view(&mut *tx, tenant_uuid).await?;
+        ensure_active_view(&mut *tx, tenant_uuid, now).await?;
 
         let active_view: (String, String, i64) = sqlx::query_as(
             "SELECT device_view, channel_view, generation FROM projection.active_view
@@ -354,7 +357,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .bind(device_shadow)
         .bind(channel_shadow)
         .bind(active_view.2 + 1)
-        .bind(Utc::now())
+        .bind(utc_to_db(now))
         .bind(tenant_uuid)
         .execute(&mut *tx)
         .await
@@ -370,6 +373,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         worker_id: &str,
         last_event_id: &str,
         observed_at: UtcTimestamp,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -391,7 +395,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .bind(tenant_uuid)
         .bind(last_event_id)
         .bind(utc_to_db(observed_at))
-        .bind(Utc::now())
+        .bind(utc_to_db(now))
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -404,6 +408,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
     async fn record_failure(
         &self,
         failure: ProjectionFailure,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -432,7 +437,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
         .bind(&failure.external_ref)
         .bind(&failure.reason)
         .bind(&failure.payload)
-        .bind(Utc::now())
+        .bind(utc_to_db(now))
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -446,6 +451,7 @@ impl ProjectionRepository for PostgresProjectionRepository {
 async fn ensure_active_view(
     tx: &mut sqlx::postgres::PgConnection,
     tenant_uuid: Uuid,
+    now: UtcTimestamp,
 ) -> Result<(), PlatformError> {
     sqlx::query(
         "INSERT INTO projection.active_view (tenant_id, device_view, channel_view, generation, updated_at)
@@ -453,7 +459,7 @@ async fn ensure_active_view(
          ON CONFLICT (tenant_id) DO NOTHING",
     )
     .bind(tenant_uuid)
-    .bind(Utc::now())
+    .bind(utc_to_db(now))
     .execute(&mut *tx)
     .await
     .map_err(db_error)?;
@@ -686,6 +692,7 @@ async fn record_failure_sql(
     external_ref: &str,
     reason: &str,
     payload: &str,
+    now: UtcTimestamp,
 ) -> Result<(), PlatformError> {
     let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
     let id = generator.generate()?;
@@ -700,7 +707,7 @@ async fn record_failure_sql(
     .bind(external_ref)
     .bind(reason)
     .bind(payload)
-    .bind(Utc::now())
+    .bind(utc_to_db(now))
     .execute(&mut *tx)
     .await
     .map_err(db_error)?;
