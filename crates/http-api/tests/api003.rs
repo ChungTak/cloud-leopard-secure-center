@@ -16,7 +16,7 @@ use axum::{
     extract::{Extension, Query},
     http::{Request, StatusCode, header},
     response::{IntoResponse, Response},
-    routing::{get, put},
+    routing::{get, post, put},
 };
 use foundation::Revision;
 use futures::StreamExt;
@@ -57,6 +57,7 @@ fn test_app() -> TestApp {
     let router = Router::new()
         .route("/items", get(get_items).post(create_item))
         .route("/items/{id}", put(update_item))
+        .route("/fail", post(fail_handler))
         .route("/events", get(events))
         .route_layer(axum::middleware::from_fn(idempotency))
         .layer(Extension(config))
@@ -91,6 +92,16 @@ async fn get_items(
 async fn create_item(Extension(counter): Extension<Arc<AtomicU64>>) -> Json<serde_json::Value> {
     let id = counter.fetch_add(1, Ordering::SeqCst);
     Json(json!({"id": id, "created": true}))
+}
+
+async fn fail_handler(
+    Extension(counter): Extension<Arc<AtomicU64>>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let id = counter.fetch_add(1, Ordering::SeqCst);
+    (
+        StatusCode::SERVICE_UNAVAILABLE,
+        Json(json!({"fail_id": id})),
+    )
 }
 
 async fn update_item(
@@ -336,6 +347,33 @@ async fn idempotency_key_returns_same_response_and_rejects_conflicting_body() {
     assert_eq!(response.status(), StatusCode::OK);
     let third = collect_json(response).await;
     assert_eq!(third["id"], 1);
+}
+
+#[tokio::test]
+async fn server_error_is_not_cached_by_idempotency_key() {
+    let app = test_app();
+    let key = "idem-fail-001";
+    let payload = json!({"name": "x"}).to_string();
+
+    for expected_id in [0, 1] {
+        let response = app
+            .router
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/fail")
+                    .header("idempotency-key", key)
+                    .header(header::CONTENT_TYPE, "application/json")
+                    .body(Body::from(payload.clone()))
+                    .unwrap(),
+            )
+            .await
+            .expect("request failed");
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let body = collect_json(response).await;
+        assert_eq!(body["fail_id"], expected_id);
+    }
 }
 
 #[tokio::test]
