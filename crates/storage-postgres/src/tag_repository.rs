@@ -81,6 +81,10 @@ impl TagRepository for PostgresTagRepository {
         .await
         .map_err(db_error)?;
 
+        let count = u64::try_from(count).map_err(|_| {
+            PlatformError::invalid("tag_count", "stored tag count is out of valid range")
+        })?;
+
         if count as usize >= domain_resource::tag::MAX_TAGS_PER_RESOURCE {
             return Err(PlatformError::new(
                 ErrorCode::Invalid,
