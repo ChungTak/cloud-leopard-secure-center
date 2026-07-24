@@ -12,6 +12,7 @@ use storage_api::{ListOptions, Page, UserRepository};
 
 use crate::{
     begin_tenant_transaction, db_error, paginate, revision_from_i64, session_version_from_i64,
+    u64_to_i64,
 };
 
 /// PostgreSQL-backed user repository.
@@ -91,7 +92,7 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.username)
         .bind(&user.display_name)
         .bind(user.status.as_str())
-        .bind(user.session_version as i64)
+        .bind(u64_to_i64(user.session_version, "session_version")?)
         .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.created_at))
         .bind(utc_to_db(user.updated_at))
@@ -141,7 +142,7 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.username)
         .bind(&user.display_name)
         .bind(user.status.as_str())
-        .bind(user.session_version as i64)
+        .bind(u64_to_i64(user.session_version, "session_version")?)
         .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.updated_at))
         .bind(user.actor.map(|a| *a.as_uuid()))
