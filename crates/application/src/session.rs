@@ -8,15 +8,26 @@ use domain_identity::user::{User, UserStatus};
 use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp,
 };
+use std::fmt;
+
 use storage_api::{CredentialRepository, SessionRepository, TenantRepository, UserRepository};
 
 /// A freshly issued token pair.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TokenPair {
     /// JWT access token.
     pub access_token: String,
     /// Opaque refresh token.
     pub refresh_token: String,
+}
+
+impl fmt::Debug for TokenPair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TokenPair")
+            .field("access_token", &"<redacted>")
+            .field("refresh_token", &"<redacted>")
+            .finish()
+    }
 }
 
 /// Issue a new access/refresh token pair for an authenticated user.

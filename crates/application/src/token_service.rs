@@ -12,12 +12,23 @@ use sha2::{Digest, Sha256};
 type HmacSha256 = Hmac<Sha256>;
 
 /// Issues and verifies HMAC-SHA256 access tokens and generates refresh tokens.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TokenService {
     secret: Vec<u8>,
     issuer: String,
     audience: String,
     access_ttl_seconds: i64,
+}
+
+impl std::fmt::Debug for TokenService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenService")
+            .field("secret", &"<redacted>")
+            .field("issuer", &self.issuer)
+            .field("audience", &self.audience)
+            .field("access_ttl_seconds", &self.access_ttl_seconds)
+            .finish()
+    }
 }
 
 impl TokenService {

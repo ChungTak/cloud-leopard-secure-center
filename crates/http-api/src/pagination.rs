@@ -15,12 +15,21 @@ use crate::error::AppError;
 type HmacSha256 = Hmac<Sha256>;
 
 /// Pagination configuration supplied by the application.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PaginationConfig {
     /// Maximum number of items per page.
     pub max_page_size: u32,
     /// Secret used to sign cursors.
     pub cursor_secret: Vec<u8>,
+}
+
+impl std::fmt::Debug for PaginationConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PaginationConfig")
+            .field("max_page_size", &self.max_page_size)
+            .field("cursor_secret", &"<redacted>")
+            .finish()
+    }
 }
 
 impl PaginationConfig {
