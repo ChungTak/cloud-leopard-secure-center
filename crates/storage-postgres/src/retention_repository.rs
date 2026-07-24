@@ -265,6 +265,7 @@ impl RetentionRepository for PostgresRetentionRepository {
         .map_err(db_error)?;
 
         let now_dt: chrono::DateTime<chrono::Utc> = now.into();
+        let now_db = chrono::DateTime::<chrono::Utc>::from(now);
         if let Some(r) = existing {
             let lease: Option<chrono::DateTime<chrono::Utc>> = r.get("lease_until");
             let owner: Option<String> = r.get("worker_id");
@@ -277,13 +278,14 @@ impl RetentionRepository for PostgresRetentionRepository {
             }
             sqlx::query(
                 "UPDATE audit.cleanup_checkpoint
-                 SET lease_until = $1, worker_id = $2, started_at = now(), completed_at = NULL
+                 SET lease_until = $1, worker_id = $2, started_at = $5, completed_at = NULL
                  WHERE table_name = $3 AND partition_name = $4",
             )
             .bind(chrono::DateTime::<chrono::Utc>::from(lease_until))
             .bind(worker_id)
             .bind(target.as_str())
             .bind(partition)
+            .bind(now_db)
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
@@ -291,12 +293,14 @@ impl RetentionRepository for PostgresRetentionRepository {
             sqlx::query(
                 "INSERT INTO audit.cleanup_checkpoint
                  (table_name, partition_name, cutoff, last_id, lease_until, worker_id, started_at)
-                 VALUES ($1, $2, now(), 0, $3, $4, now())",
+                 VALUES ($1, $2, $5, 0, $3, $4, $6)",
             )
             .bind(target.as_str())
             .bind(partition)
             .bind(chrono::DateTime::<chrono::Utc>::from(lease_until))
             .bind(worker_id)
+            .bind(now_db)
+            .bind(now_db)
             .execute(&mut *tx)
             .await
             .map_err(db_error)?;
