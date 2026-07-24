@@ -50,11 +50,15 @@ const MAX_PAGE_LIMIT: u32 = 10_000;
 /// Trim `items` to `options.limit` and produce a cursor for the next page when
 /// the query returned one extra row.
 pub(crate) fn paginate<T>(mut items: Vec<T>, options: ListOptionsInner) -> Page<T> {
+    let options = options.validate();
     let limit = options.limit.clamp(1, MAX_PAGE_LIMIT) as usize;
     let has_more = items.len() > limit;
     if has_more {
         items.truncate(limit);
-        let next_offset = options.offset.saturating_add(limit as u64);
+        let next_offset = options
+            .offset
+            .saturating_add(limit as u64)
+            .min(i64::MAX as u64);
         Page {
             items,
             next_cursor: Some(next_offset.to_string()),
