@@ -99,7 +99,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         .bind(scope_ref)
         .bind(utc_to_db(binding.valid_from))
         .bind(binding.valid_until.map(utc_to_db))
-        .bind(binding.revision.value() as i64)
+        .bind(binding.revision.to_i64()?)
         .bind(utc_to_db(binding.created_at))
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
@@ -138,7 +138,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
                     "role binding not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.value() as i64 => {
+            Some(rev) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -161,11 +161,11 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         .bind(scope_ref)
         .bind(utc_to_db(binding.valid_from))
         .bind(binding.valid_until.map(utc_to_db))
-        .bind(binding.revision.value() as i64)
+        .bind(binding.revision.to_i64()?)
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
         .bind(binding.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

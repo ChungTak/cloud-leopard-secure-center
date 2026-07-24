@@ -94,7 +94,7 @@ impl DeviceRepository for PostgresDeviceRepository {
         .bind(&device.serial)
         .bind(device.lifecycle.as_str())
         .bind(device.online_state.as_str())
-        .bind(device.revision.value() as i64)
+        .bind(device.revision.to_i64()?)
         .bind(utc_to_db(device.created_at))
         .bind(utc_to_db(device.updated_at))
         .bind(device.actor.map(|a| *a.as_uuid()))
@@ -131,7 +131,7 @@ impl DeviceRepository for PostgresDeviceRepository {
                     "managed device not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.value() as i64 => {
+            Some(rev) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -153,11 +153,11 @@ impl DeviceRepository for PostgresDeviceRepository {
         .bind(&device.serial)
         .bind(device.lifecycle.as_str())
         .bind(device.online_state.as_str())
-        .bind(device.revision.value() as i64)
+        .bind(device.revision.to_i64()?)
         .bind(utc_to_db(device.updated_at))
         .bind(device.actor.map(|a| *a.as_uuid()))
         .bind(device.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

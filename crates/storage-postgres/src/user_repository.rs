@@ -92,7 +92,7 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.display_name)
         .bind(user.status.as_str())
         .bind(user.session_version as i64)
-        .bind(user.revision.value() as i64)
+        .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.created_at))
         .bind(utc_to_db(user.updated_at))
         .bind(user.actor.map(|a| *a.as_uuid()))
@@ -122,7 +122,7 @@ impl UserRepository for PostgresUserRepository {
 
         match current {
             None => return Err(PlatformError::new(ErrorCode::NotFound, "user not found")),
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict",
@@ -142,12 +142,12 @@ impl UserRepository for PostgresUserRepository {
         .bind(&user.display_name)
         .bind(user.status.as_str())
         .bind(user.session_version as i64)
-        .bind(user.revision.value() as i64)
+        .bind(user.revision.to_i64()?)
         .bind(utc_to_db(user.updated_at))
         .bind(user.actor.map(|a| *a.as_uuid()))
         .bind(deleted_at)
         .bind(*user.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

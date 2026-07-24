@@ -62,7 +62,7 @@ impl TenantRepository for PostgresTenantRepository {
         .bind(&tenant.locale)
         .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
-        .bind(tenant.revision.value() as i64)
+        .bind(tenant.revision.to_i64()?)
         .bind(utc_to_db(tenant.created_at))
         .bind(utc_to_db(tenant.updated_at))
         .bind(tenant.actor.map(|a| *a.as_uuid()))
@@ -97,7 +97,7 @@ impl TenantRepository for PostgresTenantRepository {
                     "tenant not found".to_string(),
                 ));
             }
-            Some((rev,)) if rev != expected.value() as i64 => {
+            Some((rev,)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -115,11 +115,11 @@ impl TenantRepository for PostgresTenantRepository {
         .bind(&tenant.locale)
         .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
-        .bind(tenant.revision.value() as i64)
+        .bind(tenant.revision.to_i64()?)
         .bind(utc_to_db(tenant.updated_at))
         .bind(tenant.actor.map(|a| *a.as_uuid()))
         .bind(tenant.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

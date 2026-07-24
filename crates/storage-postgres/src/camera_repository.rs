@@ -85,7 +85,7 @@ impl CameraRepository for PostgresCameraRepository {
         .bind(&camera.name)
         .bind(camera.sensitivity.as_str())
         .bind(camera.is_enabled)
-        .bind(camera.revision.value() as i64)
+        .bind(camera.revision.to_i64()?)
         .bind(utc_to_db(camera.created_at))
         .bind(utc_to_db(camera.updated_at))
         .bind(camera.actor.map(|a| *a.as_uuid()))
@@ -122,7 +122,7 @@ impl CameraRepository for PostgresCameraRepository {
                     "camera not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.value() as i64 => {
+            Some(rev) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -143,11 +143,11 @@ impl CameraRepository for PostgresCameraRepository {
         .bind(&camera.name)
         .bind(camera.sensitivity.as_str())
         .bind(camera.is_enabled)
-        .bind(camera.revision.value() as i64)
+        .bind(camera.revision.to_i64()?)
         .bind(utc_to_db(camera.updated_at))
         .bind(camera.actor.map(|a| *a.as_uuid()))
         .bind(camera.id.as_uuid())
-        .bind(expected.value() as i64)
+        .bind(expected.to_i64()?)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?

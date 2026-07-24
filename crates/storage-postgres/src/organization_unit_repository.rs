@@ -92,7 +92,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.value() as i64)
+        .bind(unit.revision.to_i64()?)
         .bind(utc_to_db(unit.created_at))
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
@@ -157,7 +157,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                     "organization unit not found".to_string(),
                 ));
             }
-            Some((rev, _parent)) if rev != expected.value() as i64 => {
+            Some((rev, _parent)) if rev != expected.to_i64()? => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -228,7 +228,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.value() as i64)
+        .bind(unit.revision.to_i64()?)
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
         .bind(unit.id.as_uuid())
