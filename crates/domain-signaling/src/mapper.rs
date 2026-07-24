@@ -16,13 +16,14 @@ pub fn rest_to_create_operation(
     tenant_id: TenantId,
     body: CreateOperationRestDto,
     deadline: Deadline,
-) -> CreateOperationRequest {
-    CreateOperationRequest {
+) -> Result<CreateOperationRequest, SignalingError> {
+    body.validate()?;
+    Ok(CreateOperationRequest {
         tenant_id,
         device_id: body.device_id,
         deadline,
         parameters: body.parameters,
-    }
+    })
 }
 
 /// Map a REST create-media-session body to the domain request.
@@ -30,13 +31,14 @@ pub fn rest_to_create_media_session(
     tenant_id: TenantId,
     body: CreateMediaSessionRestDto,
     deadline: Deadline,
-) -> CreateMediaSessionRequest {
-    CreateMediaSessionRequest {
+) -> Result<CreateMediaSessionRequest, SignalingError> {
+    body.validate()?;
+    Ok(CreateMediaSessionRequest {
         tenant_id,
         operation_id: body.operation_id,
         deadline,
         parameters: body.parameters,
-    }
+    })
 }
 
 /// Map a domain operation to its REST DTO.
@@ -74,6 +76,7 @@ pub fn proto_to_device(_payload: &[u8]) -> Result<SignalingDeviceDto, SignalingE
 
 /// Map a typed device DTO to the platform projection payload.
 pub fn device_to_snapshot_payload(device: &SignalingDeviceDto) -> Result<String, SignalingError> {
+    device.validate()?;
     serde_json::to_string(device).map_err(|e| {
         SignalingError::new(
             SignalingErrorKind::Invalid,
