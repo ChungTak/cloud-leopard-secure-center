@@ -16,6 +16,7 @@ const MAX_EVIDENCE_CHECKSUM_LEN: usize = 1024;
 const MAX_EVIDENCE_REFS: usize = 64;
 const MAX_ACTION_STRING_LEN: usize = 1024;
 const MAX_ASSIGNED_TO_LEN: usize = 256;
+const MAX_PAYLOAD_BYTES: usize = 256 * 1024;
 
 /// Alarm severity with explicit upper bounds per tenant policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -150,6 +151,18 @@ impl Alarm {
                     format!("evidence[{i}] object_key is empty"),
                 ));
             }
+        }
+        let payload_bytes = serde_json::to_vec(&event.payload).map_err(|e| {
+            AlarmError::new(
+                AlarmErrorKind::Invalid,
+                format!("payload is not serializable: {e}"),
+            )
+        })?;
+        if payload_bytes.len() > MAX_PAYLOAD_BYTES {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "payload exceeds maximum size",
+            ));
         }
         Ok(Self {
             id,
