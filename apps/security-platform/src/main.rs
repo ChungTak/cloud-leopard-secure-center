@@ -88,7 +88,7 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
             .map_err(|e| format!("failed to generate pagination secret: {e}"))?;
         buf.to_vec()
     };
-    let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret));
+    let pagination_config = Arc::new(PaginationConfig::new(100, cursor_secret)?);
 
     let cors_allowed_origins = env::var("CLSC_CORS_ALLOWED_ORIGINS")
         .ok()

@@ -25,13 +25,18 @@ pub struct PaginationConfig {
 
 impl PaginationConfig {
     /// Create a pagination config. `max_page_size` is clamped to a positive
-    /// value no larger than `10_000`.
-    pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Self {
+    /// value no larger than `10_000`. `cursor_secret` must be non-empty; an
+    /// empty secret would make cursor signing trivially bypassable.
+    pub fn new(max_page_size: u32, cursor_secret: impl Into<Vec<u8>>) -> Result<Self, AppError> {
         const MAX_PAGE_SIZE: u32 = 10_000;
-        Self {
-            max_page_size: max_page_size.clamp(1, MAX_PAGE_SIZE),
-            cursor_secret: cursor_secret.into(),
+        let cursor_secret = cursor_secret.into();
+        if cursor_secret.is_empty() {
+            return Err(AppError::Internal);
         }
+        Ok(Self {
+            max_page_size: max_page_size.clamp(1, MAX_PAGE_SIZE),
+            cursor_secret,
+        })
     }
 }
 
