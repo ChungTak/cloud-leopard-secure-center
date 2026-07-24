@@ -36,6 +36,7 @@ impl ApiKey {
         validate_name(&name)?;
         validate_scopes(&scopes)?;
         validate_allowed_sources(&allowed_sources)?;
+        validate_token_hash(&token_hash)?;
         if expires_at <= created_at {
             return Err(PlatformError::invalid(
                 "expires_at",
@@ -161,6 +162,22 @@ fn validate_allowed_sources(sources: &[String]) -> Result<(), PlatformError> {
                 "allowed source must be at most 128 characters",
             ));
         }
+    }
+    Ok(())
+}
+
+fn validate_token_hash(token_hash: &str) -> Result<(), PlatformError> {
+    if token_hash.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "token_hash",
+            "api key token hash must not be empty",
+        ));
+    }
+    if token_hash.len() > 256 {
+        return Err(PlatformError::invalid(
+            "token_hash",
+            "api key token hash must be at most 256 characters",
+        ));
     }
     Ok(())
 }
