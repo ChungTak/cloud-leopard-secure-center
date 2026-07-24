@@ -225,9 +225,14 @@ where
                 message: "invalid pagination parameters".to_string(),
             })?;
 
+        const MAX_OFFSET: u64 = i64::MAX as u64;
         let (offset, base_limit, sort) = if let Some(token) = query.cursor {
             let cursor = Cursor::parse(&token, &config.cursor_secret)?;
-            (cursor.offset(), cursor.limit(), cursor.sort())
+            (
+                cursor.offset().min(MAX_OFFSET),
+                cursor.limit(),
+                cursor.sort(),
+            )
         } else {
             (0, config.max_page_size, SortOrder::default())
         };
