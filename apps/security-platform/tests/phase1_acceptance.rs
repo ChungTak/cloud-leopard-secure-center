@@ -12,9 +12,10 @@ use domain_signaling::{
     CreateMediaSessionRequest, CreateOperationRequest, SignalingErrorKind, SignalingPort,
     UnsupportedSignalingPort,
 };
+use foundation::chrono::{DateTime, Duration, Utc};
 use foundation::{
-    CameraId, Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UserId,
-    UtcTimestamp,
+    CameraId, Clock, Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId,
+    UserId, UtcTimestamp,
 };
 use signaling_adapter::RestSignalingAdapter;
 use signaling_adapter::reconciler::SignalingReconciler;
@@ -47,9 +48,8 @@ fn principal() -> UserId {
 }
 
 fn deadline() -> Deadline {
-    Deadline::new(UtcTimestamp::from(
-        foundation::chrono::Utc::now() + foundation::chrono::Duration::seconds(30),
-    ))
+    let now: DateTime<Utc> = SystemClock.now().into();
+    Deadline::new(UtcTimestamp::from(now + Duration::seconds(30)))
 }
 
 #[tokio::test]

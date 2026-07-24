@@ -1,6 +1,9 @@
 #![allow(clippy::expect_used, clippy::unwrap_used)]
 
-use foundation::{Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId};
+use foundation::chrono::{DateTime, Duration, Utc};
+use foundation::{
+    Clock, Deadline, DeviceId, SystemClock, SystemIdGenerator, SystemRandom, TenantId, UtcTimestamp,
+};
 use futures::executor::block_on;
 
 use crate::{
@@ -19,9 +22,8 @@ fn device() -> DeviceId {
 }
 
 fn deadline() -> Deadline {
-    Deadline::new(foundation::UtcTimestamp::from(
-        foundation::chrono::Utc::now() + foundation::chrono::Duration::seconds(30),
-    ))
+    let now: DateTime<Utc> = SystemClock.now().into();
+    Deadline::new(UtcTimestamp::from(now + Duration::seconds(30)))
 }
 
 #[test]
