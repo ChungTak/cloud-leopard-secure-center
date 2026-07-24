@@ -199,10 +199,16 @@ fn digest_bytes(bytes: &axum::body::Bytes) -> String {
 }
 
 async fn collect_body(body: Body) -> Result<axum::body::Bytes, AppError> {
-    let collected = body
-        .collect()
-        .await
-        .map_err(|_| AppError::ServiceUnavailable)?;
+    let collected = body.collect().await.map_err(|err| {
+        // RequestBodyLimitLayer returns a Limited body; collecting past the
+        // limit yields a LengthLimitError that we surface as 413 instead of
+        // the generic 503 used for other body-stream failures.
+        if err.to_string().to_lowercase().contains("length limit") {
+            AppError::PayloadTooLarge
+        } else {
+            AppError::ServiceUnavailable
+        }
+    })?;
     Ok(collected.to_bytes())
 }
 
