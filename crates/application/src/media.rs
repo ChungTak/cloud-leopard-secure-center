@@ -100,21 +100,21 @@ impl<M, A, C: Clock> MediaService<M, A, C> {
         principal_id: UserId,
         camera_id: CameraId,
         actions: Vec<MediaAction>,
-        protocol: String,
+        protocol: impl AsRef<str>,
         ctx: &RequestContext,
         clock: &dyn Clock,
-    ) -> DomainCreateRequest {
-        DomainCreateRequest {
+    ) -> Result<DomainCreateRequest, MediaError> {
+        DomainCreateRequest::new(
             tenant_id,
             principal_id,
             camera_id,
             actions,
             protocol,
-            deadline: ctx.deadline.unwrap_or_else(|| {
+            ctx.deadline.unwrap_or_else(|| {
                 let now: chrono::DateTime<chrono::Utc> = clock.now().into();
                 Deadline::new(UtcTimestamp::from(now + chrono::Duration::seconds(30)))
             }),
-        }
+        )
     }
 }
 
@@ -139,17 +139,19 @@ where
         };
         crate::usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
+        let domain_request = Self::build_request(
+            request.tenant_id,
+            actor,
+            request.camera_id,
+            request.actions,
+            &request.protocol,
+            ctx,
+            &self.clock,
+        )
+        .map_err(map_media_error)?;
         let entitlement = self
             .port
-            .create_entitlement(Self::build_request(
-                request.tenant_id,
-                actor,
-                request.camera_id,
-                request.actions,
-                request.protocol,
-                ctx,
-                &self.clock,
-            ))
+            .create_entitlement(domain_request)
             .await
             .map_err(map_media_error)?;
 
