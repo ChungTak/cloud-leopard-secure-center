@@ -116,6 +116,7 @@ async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
     let verified = ok_or_panic(
         verify_api_key(
+            &user_repo,
             &repo,
             &created.raw_token,
             None,
@@ -156,9 +157,17 @@ async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
     let later = FakeClock::from_millis(5000);
     assert!(
-        verify_api_key(&repo, &created.raw_token, None, "read", later.now(), &ctx)
-            .await
-            .is_err()
+        verify_api_key(
+            &user_repo,
+            &repo,
+            &created.raw_token,
+            None,
+            "read",
+            later.now(),
+            &ctx
+        )
+        .await
+        .is_err()
     );
 
     Ok(())
@@ -187,6 +196,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     );
     assert!(
         verify_api_key(
+            &user_repo,
             &repo,
             &read_key.raw_token,
             None,
@@ -215,6 +225,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     );
     assert!(
         verify_api_key(
+            &user_repo,
             &repo,
             &source_key.raw_token,
             Some("10.0.0.2"),
@@ -227,6 +238,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     );
     assert!(
         verify_api_key(
+            &user_repo,
             &repo,
             &source_key.raw_token,
             Some("10.0.0.1"),
@@ -296,6 +308,7 @@ async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()>
     ok_or_panic(revoke_api_key(&repo, created.api_key.id, &SystemClock, &ctx).await);
     assert!(
         verify_api_key(
+            &user_repo,
             &repo,
             &created.raw_token,
             None,
