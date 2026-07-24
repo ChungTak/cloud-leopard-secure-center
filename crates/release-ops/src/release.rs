@@ -4,6 +4,14 @@
 //! pipelines, OCI image creation, SBOM generation, signing, and offline package
 //! validation are deferred.
 
+const MAX_PRERELEASE_LEN: usize = 64;
+const MAX_ARTIFACT_NAME_LEN: usize = 256;
+const MAX_DIGEST_LEN: usize = 1024;
+const MAX_SIGNATURE_LEN: usize = 4096;
+const MAX_CHECKSUM_LEN: usize = 1024;
+const MAX_ARTIFACT_PATH_LEN: usize = 4096;
+const MAX_ARTIFACTS: usize = 256;
+
 /// Semantic version for platform/API/proto/WIT/plugins.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SemanticVersion {
@@ -26,6 +34,19 @@ impl SemanticVersion {
     /// Whether `self` is backwards-compatible with `other` for v1 public API.
     pub fn is_compatible_with(&self, other: &Self) -> bool {
         self.major == other.major && self.major >= 1
+    }
+
+    /// Validate the version, including prerelease string length.
+    pub fn validate(&self) -> Result<(), ReleaseError> {
+        if let Some(prerelease) = &self.prerelease
+            && (prerelease.trim().is_empty() || prerelease.len() > MAX_PRERELEASE_LEN)
+        {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "prerelease is empty or exceeds maximum length",
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -58,6 +79,48 @@ pub struct ReleaseArtifact {
     pub path: String,
 }
 
+impl ReleaseArtifact {
+    /// Validate the artifact fields and version.
+    pub fn validate(&self) -> Result<(), ReleaseError> {
+        if self.name.trim().is_empty() || self.name.len() > MAX_ARTIFACT_NAME_LEN {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "artifact name is empty or exceeds maximum length",
+            ));
+        }
+        self.version.validate()?;
+        if self.digest.trim().is_empty() || self.digest.len() > MAX_DIGEST_LEN {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "artifact digest is empty or exceeds maximum length",
+            ));
+        }
+        if let Some(signature) = &self.signature
+            && signature.len() > MAX_SIGNATURE_LEN
+        {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "artifact signature exceeds maximum length",
+            ));
+        }
+        if let Some(checksum) = &self.checksum
+            && checksum.len() > MAX_CHECKSUM_LEN
+        {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "artifact checksum exceeds maximum length",
+            ));
+        }
+        if self.path.trim().is_empty() || self.path.len() > MAX_ARTIFACT_PATH_LEN {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "artifact path is empty or exceeds maximum length",
+            ));
+        }
+        Ok(())
+    }
+}
+
 /// Release manifest for an offline installable package.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReleaseManifest {
@@ -73,6 +136,16 @@ pub struct ReleaseManifest {
 impl ReleaseManifest {
     /// Validate that all required artifact kinds are present and versioned.
     pub fn validate(&self) -> Result<(), ReleaseError> {
+        self.platform_version.validate()?;
+        self.api_version.validate()?;
+        self.proto_version.validate()?;
+        self.wit_version.validate()?;
+        if self.artifacts.len() > MAX_ARTIFACTS {
+            return Err(ReleaseError::new(
+                ReleaseErrorKind::Invalid,
+                "too many release artifacts",
+            ));
+        }
         let required = [
             ArtifactKind::PlatformBinary,
             ArtifactKind::Migration,
@@ -86,6 +159,9 @@ impl ReleaseManifest {
                     format!("missing required artifact kind: {kind:?}"),
                 ));
             }
+        }
+        for artifact in &self.artifacts {
+            artifact.validate()?;
         }
         if !self.offline_capable {
             return Err(ReleaseError::new(
@@ -145,7 +221,8 @@ impl UnsupportedArtifactVerifier {
 
 #[async_trait::async_trait]
 impl ArtifactVerifier for UnsupportedArtifactVerifier {
-    async fn verify(&self, _manifest: &ReleaseManifest) -> Result<(), ReleaseError> {
+    async fn verify(&self, manifest: &ReleaseManifest) -> Result<(), ReleaseError> {
+        manifest.validate()?;
         if self.enabled {
             Err(ReleaseError::new(
                 ReleaseErrorKind::Unsupported,
