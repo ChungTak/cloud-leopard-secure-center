@@ -194,12 +194,12 @@ where
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
 
+        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
+        usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
         let tenant_ctx = with_tenant(ctx, request.payload.id);
         let mut tenant = self.repo.by_id(request.payload.id, &tenant_ctx).await?;
         let tenant_id = tenant.id;
-
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
-        usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         if let Some(locale) = request.payload.locale {
             tenant.set_locale(locale, &self.clock, Some(actor))?;
@@ -246,12 +246,12 @@ where
             )
         })?;
 
+        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
+        usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
+
         let tenant_ctx = with_tenant(ctx, request.payload.id);
         let mut tenant = self.repo.by_id(request.payload.id, &tenant_ctx).await?;
         let tenant_id = tenant.id;
-
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
-        usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         match request.payload.status {
             TenantStatus::Suspended => tenant.suspend(&self.clock, Some(actor))?,
