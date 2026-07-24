@@ -11,6 +11,12 @@ pub fn version() -> &'static str {
 }
 
 use foundation::{Clock, Deadline, MessageId, TenantId, UtcTimestamp};
+
+const MAX_TOPIC_LEN: usize = 256;
+const MAX_PAYLOAD_BYTES: usize = 1024 * 1024;
+const MAX_HEADER_KEY_LEN: usize = 256;
+const MAX_HEADER_VALUE_LEN: usize = 4096;
+const MAX_HEADERS: usize = 64;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 
@@ -87,40 +93,48 @@ impl Envelope {
     pub fn command(
         id: MessageId,
         tenant_id: TenantId,
-        topic: impl Into<String>,
-        payload: impl Into<Vec<u8>>,
+        topic: impl AsRef<str>,
+        payload: impl AsRef<[u8]>,
         clock: &dyn Clock,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MessageError> {
+        let topic = topic.as_ref();
+        validate_topic(topic)?;
+        let payload = payload.as_ref();
+        validate_payload(payload)?;
+        Ok(Self {
             id,
             kind: EnvelopeKind::Command,
             tenant_id,
-            topic: topic.into(),
-            payload: payload.into(),
+            topic: topic.to_string(),
+            payload: payload.to_vec(),
             headers: HashMap::new(),
             timestamp: clock.now(),
             deadline: None,
-        }
+        })
     }
 
     /// Create a new event envelope.
     pub fn event(
         id: MessageId,
         tenant_id: TenantId,
-        topic: impl Into<String>,
-        payload: impl Into<Vec<u8>>,
+        topic: impl AsRef<str>,
+        payload: impl AsRef<[u8]>,
         clock: &dyn Clock,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, MessageError> {
+        let topic = topic.as_ref();
+        validate_topic(topic)?;
+        let payload = payload.as_ref();
+        validate_payload(payload)?;
+        Ok(Self {
             id,
             kind: EnvelopeKind::Event,
             tenant_id,
-            topic: topic.into(),
-            payload: payload.into(),
+            topic: topic.to_string(),
+            payload: payload.to_vec(),
             headers: HashMap::new(),
             timestamp: clock.now(),
             deadline: None,
-        }
+        })
     }
 
     /// Set the optional processing deadline.
@@ -130,9 +144,33 @@ impl Envelope {
     }
 
     /// Set a header.
-    pub fn with_header(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
-        self.headers.insert(key.into(), value.into());
-        self
+    pub fn with_header(
+        mut self,
+        key: impl AsRef<str>,
+        value: impl AsRef<str>,
+    ) -> Result<Self, MessageError> {
+        let key = key.as_ref();
+        let value = value.as_ref();
+        if key.trim().is_empty() || key.len() > MAX_HEADER_KEY_LEN {
+            return Err(MessageError::new(
+                MessageErrorKind::Invalid,
+                "message header key is empty or too long",
+            ));
+        }
+        if value.len() > MAX_HEADER_VALUE_LEN {
+            return Err(MessageError::new(
+                MessageErrorKind::Invalid,
+                "message header value is too long",
+            ));
+        }
+        if self.headers.len() >= MAX_HEADERS && !self.headers.contains_key(key) {
+            return Err(MessageError::new(
+                MessageErrorKind::Invalid,
+                "message has too many headers",
+            ));
+        }
+        self.headers.insert(key.to_string(), value.to_string());
+        Ok(self)
     }
 
     /// Decode the payload as JSON.
@@ -166,11 +204,11 @@ impl CommandEnvelope {
     pub fn new<T: Serialize>(
         id: MessageId,
         tenant_id: TenantId,
-        topic: impl Into<String>,
+        topic: impl AsRef<str>,
         payload: &T,
         clock: &dyn Clock,
     ) -> Result<Self, MessageError> {
-        let mut envelope = Envelope::command(id, tenant_id, topic, vec![], clock);
+        let mut envelope = Envelope::command(id, tenant_id, topic, vec![], clock)?;
         envelope.set_json_payload(payload)?;
         Ok(Self(envelope))
     }
@@ -185,11 +223,11 @@ impl EventEnvelope {
     pub fn new<T: Serialize>(
         id: MessageId,
         tenant_id: TenantId,
-        topic: impl Into<String>,
+        topic: impl AsRef<str>,
         payload: &T,
         clock: &dyn Clock,
     ) -> Result<Self, MessageError> {
-        let mut envelope = Envelope::event(id, tenant_id, topic, vec![], clock);
+        let mut envelope = Envelope::event(id, tenant_id, topic, vec![], clock)?;
         envelope.set_json_payload(payload)?;
         Ok(Self(envelope))
     }
@@ -254,6 +292,32 @@ impl MessageBus for UnsupportedMessageBus {
     }
 }
 
+fn validate_topic(topic: &str) -> Result<(), MessageError> {
+    if topic.trim().is_empty() {
+        return Err(MessageError::new(
+            MessageErrorKind::Invalid,
+            "message topic must not be empty",
+        ));
+    }
+    if topic.len() > MAX_TOPIC_LEN {
+        return Err(MessageError::new(
+            MessageErrorKind::Invalid,
+            "message topic exceeds maximum length",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_payload(payload: &[u8]) -> Result<(), MessageError> {
+    if payload.len() > MAX_PAYLOAD_BYTES {
+        return Err(MessageError::new(
+            MessageErrorKind::Invalid,
+            "message payload exceeds maximum size",
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 #[allow(clippy::expect_used, clippy::unwrap_used)]
 mod tests {
@@ -271,20 +335,22 @@ mod tests {
             id,
             tenant_id,
             "security.v1.command.0.test",
-            b"{}".to_vec(),
+            b"{}",
             &SystemClock,
-        );
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
         let evt = Envelope::event(
             id,
             tenant_id,
             "security.v1.event.0.test",
-            b"{}".to_vec(),
+            b"{}",
             &SystemClock,
-        );
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
 
         assert_eq!(cmd.kind, EnvelopeKind::Command);
         assert_eq!(evt.kind, EnvelopeKind::Event);
-        assert_eq!(cmd.payload, b"{}".to_vec());
+        assert_eq!(cmd.payload, b"{}");
     }
 
     #[test]
@@ -319,7 +385,8 @@ mod tests {
             foundation::SystemIdGenerator::new(foundation::SystemClock, foundation::SystemRandom);
         let id = MessageId::generate(&generator).expect("generate message id");
         let tenant_id = TenantId::generate(&generator).expect("generate tenant id");
-        let envelope = Envelope::command(id, tenant_id, "test", b"x".to_vec(), &SystemClock);
+        let envelope =
+            Envelope::command(id, tenant_id, "test", b"x", &SystemClock).expect("valid envelope");
 
         let mut runtime = futures::executor::LocalPool::new();
         match runtime.run_until(bus.publish(envelope)) {

@@ -113,13 +113,13 @@ mod tests {
     async fn unconfigured_nats_returns_unavailable() {
         let bus = NatsMessageBus::new(NatsMessageBusConfig::security_defaults());
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let envelope = Envelope::command(
+        let envelope = ok_or_panic(Envelope::command(
             ok_or_panic(MessageId::generate(&generator)),
             ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
-            b"{}".to_vec(),
+            b"{}",
             &SystemClock,
-        );
+        ));
         match bus.publish(envelope).await {
             Ok(_) => panic!("expected unavailable"),
             Err(e) => assert_eq!(e.kind, MessageErrorKind::Unavailable),
@@ -132,13 +132,13 @@ mod tests {
         config.servers = Some("nats://localhost:4222".to_string());
         let bus = NatsMessageBus::new(config);
         let generator = SystemIdGenerator::new(SystemClock, SystemRandom);
-        let envelope = Envelope::command(
+        let envelope = ok_or_panic(Envelope::command(
             ok_or_panic(MessageId::generate(&generator)),
             ok_or_panic(TenantId::generate(&generator)),
             "security.v1.command.0.test",
-            b"{}".to_vec(),
+            b"{}",
             &SystemClock,
-        );
+        ));
         match bus.publish(envelope).await {
             Ok(_) => panic!("expected unsupported"),
             Err(e) => assert_eq!(e.kind, MessageErrorKind::Unsupported),
