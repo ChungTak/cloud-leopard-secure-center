@@ -95,12 +95,7 @@ impl LocalMessageBus {
         Self::topic_matches_inner(&filter_parts, &topic_parts, 0, 0)
     }
 
-    fn topic_matches_inner(
-        filter: &[&str],
-        topic: &[&str],
-        fi: usize,
-        ti: usize,
-    ) -> bool {
+    fn topic_matches_inner(filter: &[&str], topic: &[&str], fi: usize, ti: usize) -> bool {
         if fi == filter.len() {
             return ti == topic.len();
         }
@@ -309,13 +304,22 @@ mod tests {
 
     #[test]
     fn topic_matches_literal_segment() {
-        assert!(LocalMessageBus::topic_matches("security.v1.event.0", "security.v1.event.0"));
-        assert!(!LocalMessageBus::topic_matches("security.v1.event.0", "security.v1.event.1"));
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.0"
+        ));
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.1"
+        ));
     }
 
     #[test]
     fn topic_matches_single_wildcard() {
-        assert!(LocalMessageBus::topic_matches("security.v1.event.0", "security.v1.event.*"));
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.event.*"
+        ));
         // Trailing '*' matches zero or more remaining segments.
         assert!(LocalMessageBus::topic_matches(
             "security.v1.event.0.test",
@@ -329,7 +333,10 @@ mod tests {
 
     #[test]
     fn topic_matches_trailing_star() {
-        assert!(LocalMessageBus::topic_matches("security.v1.event.0", "security.v1.*"));
+        assert!(LocalMessageBus::topic_matches(
+            "security.v1.event.0",
+            "security.v1.*"
+        ));
         assert!(LocalMessageBus::topic_matches(
             "security.v1.event.0.test",
             "security.v1.*"
@@ -358,7 +365,10 @@ mod tests {
 
     #[test]
     fn topic_mismatch_on_empty_remaining_filter() {
-        assert!(!LocalMessageBus::topic_matches("security.v1", "security.v1.event"));
+        assert!(!LocalMessageBus::topic_matches(
+            "security.v1",
+            "security.v1.event"
+        ));
     }
 
     fn make_envelope(kind: EnvelopeKind, topic: &str, payload: &[u8]) -> Envelope {

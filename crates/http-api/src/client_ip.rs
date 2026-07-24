@@ -107,15 +107,21 @@ pub fn resolve_client_ip(
         return Some(peer);
     }
 
-    let forwarded_ips: Vec<IpAddr> = forwarded
-        .map(parse_forwarded_ips)
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|ip| !config.is_trusted(*ip))
-        .collect();
+    let forwarded_ips: Vec<IpAddr> = forwarded.map(parse_forwarded_ips).unwrap_or_default();
 
-    // Walk from right (closest to the server) to left (original client).
-    forwarded_ips.into_iter().next_back().or(Some(peer))
+    // Walk from right (closest to the server) to left (original client),
+    // skipping only the consecutive trusted proxies at the end. This
+    // prevents an untrusted IP that appears between trusted proxies from
+    // being chosen as the client address.
+    for ip in forwarded_ips.iter().copied().rev() {
+        if !config.is_trusted(ip) {
+            return Some(ip);
+        }
+    }
+
+    // Every proxy in the chain is trusted; the leftmost value is the
+    // original client. If the header is empty, the immediate peer wins.
+    forwarded_ips.first().copied().or(Some(peer))
 }
 
 fn parse_forwarded_ips(text: &str) -> Vec<IpAddr> {
