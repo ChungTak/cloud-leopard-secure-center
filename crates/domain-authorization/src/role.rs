@@ -106,6 +106,12 @@ impl Role {
                 "tenant-scoped roles cannot be granted platform permissions",
             ));
         }
+        if self.tenant_id.is_none() && permission.scope == PermissionScope::Tenant {
+            return Err(PlatformError::invalid(
+                "permission",
+                "platform-scoped roles cannot be granted tenant permissions",
+            ));
+        }
         if self.permissions.contains(&permission.key) {
             return Err(PlatformError::invalid(
                 "permission",
@@ -224,6 +230,27 @@ mod tests {
             "admin",
             false,
             perms,
+            &clock,
+            None,
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn platform_role_cannot_hold_tenant_permission() {
+        let clock = FakeClock::from_millis(1_000_000_000_000);
+        let mut role = Role::new(
+            role_id(),
+            None,
+            "platform-admin",
+            false,
+            vec![],
+            &clock,
+            None,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let result = role.grant_permission(
+            Permission::parse("tenant:user:read").unwrap_or_else(|e| panic!("{e}")),
             &clock,
             None,
         );
