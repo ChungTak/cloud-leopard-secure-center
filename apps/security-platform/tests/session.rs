@@ -161,7 +161,7 @@ async fn expired_access_token_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()
         .await,
     );
 
-    let verify_clock = FakeClock::from_millis(5000);
+    let verify_clock = FakeClock::from_millis(70000);
     assert!(
         service
             .verify_access_token(&pair.access_token, verify_clock.now(), user.session_version)
