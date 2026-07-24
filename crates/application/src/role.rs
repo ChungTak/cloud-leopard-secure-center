@@ -343,16 +343,16 @@ where
     async fn get(&self, id: RoleId, ctx: &RequestContext) -> Result<RoleDto, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let role = self.repo.by_id(id, ctx).await?;
-        let tenant_id = role.tenant_id;
+        let tenant_id = ctx.tenant_id;
         let action = if tenant_id.is_some() {
             "tenant:role:read"
         } else {
-            "platform:tenant:read"
+            "platform:role:read"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
+        let role = self.repo.by_id(id, ctx).await?;
         Ok(RoleDto::from(&role))
     }
 
@@ -367,7 +367,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:read"
         } else {
-            "platform:tenant:read"
+            "platform:role:read"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;

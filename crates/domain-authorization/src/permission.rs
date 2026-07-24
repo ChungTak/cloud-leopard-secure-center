@@ -91,6 +91,8 @@ const KNOWN_PERMISSIONS: &[(&str, PermissionScope)] = &[
     ("tenant:device:write", PermissionScope::Tenant),
     ("tenant:config:read", PermissionScope::Tenant),
     ("tenant:config:write", PermissionScope::Tenant),
+    ("platform:config:read", PermissionScope::Platform),
+    ("platform:config:write", PermissionScope::Platform),
 ];
 
 #[cfg(test)]

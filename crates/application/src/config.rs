@@ -128,7 +128,7 @@ where
     ) -> Result<ConfigDefinition, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
+        let auth_req = usecase::platform_authorization(actor, "platform:config:write");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         let definition = ConfigDefinition::new(
@@ -282,7 +282,7 @@ where
     ) -> Result<Option<ConfigDefinition>, PlatformError> {
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
-        let auth_req = usecase::platform_authorization(actor, "platform:tenant:read");
+        let auth_req = usecase::platform_authorization(actor, "platform:config:read");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
         self.repo.get_definition(&config_key).await
