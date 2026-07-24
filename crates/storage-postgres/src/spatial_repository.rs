@@ -81,7 +81,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&site.name)
         .bind(&site.address)
         .bind(&site.timezone)
-        .bind(site.revision.to_i64()?)
+        .bind(site.revision.value() as i64)
         .bind(utc_to_db(site.created_at))
         .bind(utc_to_db(site.updated_at))
         .bind(site.actor.map(|a| *a.as_uuid()))
@@ -127,11 +127,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&site.name)
         .bind(&site.address)
         .bind(&site.timezone)
-        .bind(site.revision.to_i64()?)
+        .bind(site.revision.value() as i64)
         .bind(utc_to_db(site.updated_at))
         .bind(site.actor.map(|a| *a.as_uuid()))
         .bind(site.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -151,6 +151,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         &self,
         id: SiteId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -174,13 +175,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "site has buildings".to_string(),
             ));
         }
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
-            "UPDATE org.sites SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+            "UPDATE org.sites SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)
@@ -283,7 +285,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(building.site_id.as_uuid())
         .bind(&building.code)
         .bind(&building.name)
-        .bind(building.revision.to_i64()?)
+        .bind(building.revision.value() as i64)
         .bind(utc_to_db(building.created_at))
         .bind(utc_to_db(building.updated_at))
         .bind(building.actor.map(|a| *a.as_uuid()))
@@ -323,11 +325,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(building.site_id.as_uuid())
         .bind(&building.code)
         .bind(&building.name)
-        .bind(building.revision.to_i64()?)
+        .bind(building.revision.value() as i64)
         .bind(utc_to_db(building.updated_at))
         .bind(building.actor.map(|a| *a.as_uuid()))
         .bind(building.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -347,6 +349,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         &self,
         id: BuildingId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -370,13 +373,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "building has floors".to_string(),
             ));
         }
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
-            "UPDATE org.buildings SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+            "UPDATE org.buildings SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)
@@ -470,7 +474,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&floor.code)
         .bind(&floor.name)
         .bind(floor.level)
-        .bind(floor.revision.to_i64()?)
+        .bind(floor.revision.value() as i64)
         .bind(utc_to_db(floor.created_at))
         .bind(utc_to_db(floor.updated_at))
         .bind(floor.actor.map(|a| *a.as_uuid()))
@@ -512,11 +516,11 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(&floor.code)
         .bind(&floor.name)
         .bind(floor.level)
-        .bind(floor.revision.to_i64()?)
+        .bind(floor.revision.value() as i64)
         .bind(utc_to_db(floor.updated_at))
         .bind(floor.actor.map(|a| *a.as_uuid()))
         .bind(floor.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -536,6 +540,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         &self,
         id: FloorId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -559,13 +564,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "floor has areas".to_string(),
             ));
         }
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
-            "UPDATE org.floors SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+            "UPDATE org.floors SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)
@@ -657,7 +663,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(area.latitude)
         .bind(area.longitude)
         .bind(area.altitude)
-        .bind(area.revision.to_i64()?)
+        .bind(area.revision.value() as i64)
         .bind(utc_to_db(area.created_at))
         .bind(utc_to_db(area.updated_at))
         .bind(area.actor.map(|a| *a.as_uuid()))
@@ -722,7 +728,7 @@ impl SpatialRepository for PostgresSpatialRepository {
                     "area not found".to_string(),
                 ));
             }
-            Some((rev, _parent)) if rev != expected.to_i64()? => {
+            Some((rev, _parent)) if rev != expected.value() as i64 => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -781,7 +787,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         .bind(area.latitude)
         .bind(area.longitude)
         .bind(area.altitude)
-        .bind(area.revision.to_i64()?)
+        .bind(area.revision.value() as i64)
         .bind(utc_to_db(area.updated_at))
         .bind(area.actor.map(|a| *a.as_uuid()))
         .bind(area.id.as_uuid())
@@ -807,6 +813,7 @@ impl SpatialRepository for PostgresSpatialRepository {
         &self,
         id: AreaId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -830,13 +837,14 @@ impl SpatialRepository for PostgresSpatialRepository {
                 "area has children".to_string(),
             ));
         }
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
-            "UPDATE org.areas SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+            "UPDATE org.areas SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

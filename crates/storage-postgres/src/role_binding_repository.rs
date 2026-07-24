@@ -99,7 +99,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         .bind(scope_ref)
         .bind(utc_to_db(binding.valid_from))
         .bind(binding.valid_until.map(utc_to_db))
-        .bind(binding.revision.to_i64()?)
+        .bind(binding.revision.value() as i64)
         .bind(utc_to_db(binding.created_at))
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
@@ -138,7 +138,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
                     "role binding not found".to_string(),
                 ));
             }
-            Some(rev) if rev != expected.to_i64()? => {
+            Some(rev) if rev != expected.value() as i64 => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -161,11 +161,11 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         .bind(scope_ref)
         .bind(utc_to_db(binding.valid_from))
         .bind(binding.valid_until.map(utc_to_db))
-        .bind(binding.revision.to_i64()?)
+        .bind(binding.revision.value() as i64)
         .bind(utc_to_db(binding.updated_at))
         .bind(binding.actor.map(|a| *a.as_uuid()))
         .bind(binding.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -194,6 +194,7 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
         &self,
         id: BindingId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -223,14 +224,15 @@ impl RoleBindingRepository for PostgresRoleBindingRepository {
             Some(_) => {}
         }
 
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
             "UPDATE authz.role_bindings
-             SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

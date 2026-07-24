@@ -1,5 +1,5 @@
 use domain_organization::tenant::{Tenant, TenantStatus};
-use foundation::{RequestContext, Revision, SystemClock, TenantId, UserId, uuid::Uuid};
+use foundation::{Clock, RequestContext, Revision, SystemClock, TenantId, UserId, uuid::Uuid};
 use storage_api::TenantRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
 
@@ -96,7 +96,10 @@ async fn delete_with_expected_revision_succeeds(pool: sqlx::PgPool) -> sqlx::Res
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
     ok_or_panic(repo.create(&tenant, &ctx).await);
-    ok_or_panic(repo.delete(tenant.id, Revision::initial(), &ctx).await);
+    ok_or_panic(
+        repo.delete(tenant.id, Revision::initial(), SystemClock.now(), &ctx)
+            .await,
+    );
 
     let not_found = repo.by_id(tenant.id, &ctx).await;
     assert!(not_found.is_err());

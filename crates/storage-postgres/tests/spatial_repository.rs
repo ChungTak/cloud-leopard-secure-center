@@ -1,7 +1,7 @@
 use domain_organization::spatial::{Area, Building, Floor, Site};
 use domain_organization::tenant::Tenant;
 use foundation::{
-    AreaId, BuildingId, FloorId, RequestContext, Revision, SiteId, SystemClock, TenantId,
+    AreaId, BuildingId, Clock, FloorId, RequestContext, Revision, SiteId, SystemClock, TenantId,
     uuid::Uuid,
 };
 use storage_api::{ListOptions, SpatialRepository, TenantRepository};
@@ -355,6 +355,7 @@ async fn delete_floor_with_area_fails(pool: sqlx::PgPool) -> sqlx::Result<()> {
         .delete_floor(
             parse_floor(&floor_id.to_string()),
             Revision::initial(),
+            SystemClock.now(),
             &ctx,
         )
         .await;
@@ -608,7 +609,12 @@ async fn delete_area_with_children_fails(pool: sqlx::PgPool) -> sqlx::Result<()>
     ok_or_panic(repo.create_area(&child_area, &ctx).await);
 
     let result = repo
-        .delete_area(parse_area(&parent.to_string()), Revision::initial(), &ctx)
+        .delete_area(
+            parse_area(&parent.to_string()),
+            Revision::initial(),
+            SystemClock.now(),
+            &ctx,
+        )
         .await;
     assert!(result.is_err());
 

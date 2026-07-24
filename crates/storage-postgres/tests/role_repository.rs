@@ -1,7 +1,7 @@
 use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_organization::tenant::Tenant;
-use foundation::{RequestContext, Revision, RoleId, SystemClock, TenantId, uuid::Uuid};
+use foundation::{Clock, RequestContext, Revision, RoleId, SystemClock, TenantId, uuid::Uuid};
 use storage_api::{ListOptions, RoleRepository, TenantRepository};
 use storage_postgres::role_repository::PostgresRoleRepository;
 use storage_postgres::tenant_repository::PostgresTenantRepository;
@@ -214,7 +214,12 @@ async fn builtin_role_cannot_be_modified_or_deleted(pool: sqlx::PgPool) -> sqlx:
     assert!(update_result.is_err());
 
     let delete_result = repo
-        .delete(parse_role(&role_id.to_string()), Revision::initial(), &ctx)
+        .delete(
+            parse_role(&role_id.to_string()),
+            Revision::initial(),
+            SystemClock.now(),
+            &ctx,
+        )
         .await;
     assert!(delete_result.is_err());
 

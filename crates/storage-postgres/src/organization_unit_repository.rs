@@ -92,7 +92,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.to_i64()?)
+        .bind(unit.revision.value() as i64)
         .bind(utc_to_db(unit.created_at))
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
@@ -157,7 +157,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
                     "organization unit not found".to_string(),
                 ));
             }
-            Some((rev, _parent)) if rev != expected.to_i64()? => {
+            Some((rev, _parent)) if rev != expected.value() as i64 => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -228,7 +228,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         .bind(unit.parent_id.map(|p| *p.as_uuid()))
         .bind(&unit.code)
         .bind(&unit.name)
-        .bind(unit.revision.to_i64()?)
+        .bind(unit.revision.value() as i64)
         .bind(utc_to_db(unit.updated_at))
         .bind(unit.actor.map(|a| *a.as_uuid()))
         .bind(unit.id.as_uuid())
@@ -254,6 +254,7 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
         &self,
         id: OrganizationId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -303,14 +304,15 @@ impl OrganizationUnitRepository for PostgresOrganizationUnitRepository {
             ));
         }
 
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
             "UPDATE org.organization_units
-             SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

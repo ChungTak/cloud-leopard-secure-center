@@ -79,7 +79,7 @@ impl RoleRepository for PostgresRoleRepository {
         .bind(tenant_uuid)
         .bind(&role.name)
         .bind(role.is_builtin)
-        .bind(role.revision.to_i64()?)
+        .bind(role.revision.value() as i64)
         .bind(utc_to_db(role.created_at))
         .bind(utc_to_db(role.updated_at))
         .bind(role.actor.map(|a| *a.as_uuid()))
@@ -121,7 +121,7 @@ impl RoleRepository for PostgresRoleRepository {
             }
         };
 
-        if rev != expected.to_i64()? {
+        if rev != expected.value() as i64 {
             return Err(PlatformError::new(
                 ErrorCode::VersionMismatch,
                 "revision conflict".to_string(),
@@ -141,11 +141,11 @@ impl RoleRepository for PostgresRoleRepository {
              WHERE id = $5 AND revision = $6 AND deleted_at IS NULL",
         )
         .bind(&role.name)
-        .bind(role.revision.to_i64()?)
+        .bind(role.revision.value() as i64)
         .bind(utc_to_db(role.updated_at))
         .bind(role.actor.map(|a| *a.as_uuid()))
         .bind(role.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -174,6 +174,7 @@ impl RoleRepository for PostgresRoleRepository {
         &self,
         id: RoleId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -211,13 +212,15 @@ impl RoleRepository for PostgresRoleRepository {
             ));
         }
 
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
             "UPDATE authz.roles
-             SET deleted_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(Utc::now())
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)

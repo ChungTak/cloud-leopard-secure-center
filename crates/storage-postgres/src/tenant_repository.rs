@@ -62,7 +62,7 @@ impl TenantRepository for PostgresTenantRepository {
         .bind(&tenant.locale)
         .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
-        .bind(tenant.revision.to_i64()?)
+        .bind(tenant.revision.value() as i64)
         .bind(utc_to_db(tenant.created_at))
         .bind(utc_to_db(tenant.updated_at))
         .bind(tenant.actor.map(|a| *a.as_uuid()))
@@ -97,7 +97,7 @@ impl TenantRepository for PostgresTenantRepository {
                     "tenant not found".to_string(),
                 ));
             }
-            Some((rev,)) if rev != expected.to_i64()? => {
+            Some((rev,)) if rev != expected.value() as i64 => {
                 return Err(PlatformError::new(
                     ErrorCode::VersionMismatch,
                     "revision conflict".to_string(),
@@ -115,11 +115,11 @@ impl TenantRepository for PostgresTenantRepository {
         .bind(&tenant.locale)
         .bind(&tenant.timezone)
         .bind(tenant.status.as_str())
-        .bind(tenant.revision.to_i64()?)
+        .bind(tenant.revision.value() as i64)
         .bind(utc_to_db(tenant.updated_at))
         .bind(tenant.actor.map(|a| *a.as_uuid()))
         .bind(tenant.id.as_uuid())
-        .bind(expected.to_i64()?)
+        .bind(expected.value() as i64)
         .execute(&mut *tx)
         .await
         .map_err(db_error)?
@@ -141,6 +141,7 @@ impl TenantRepository for PostgresTenantRepository {
         &self,
         id: TenantId,
         expected: Revision,
+        deleted_at: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -169,14 +170,15 @@ impl TenantRepository for PostgresTenantRepository {
             Some(_) => {}
         }
 
-        let now = Utc::now();
+        let deleted = utc_to_db(deleted_at);
         let rows = sqlx::query(
             "UPDATE org.tenants
-             SET deleted_at = $1, updated_at = $1, revision = $2
-             WHERE id = $3 AND revision = $4 AND deleted_at IS NULL",
+             SET deleted_at = $1, updated_at = $1, revision = $2, actor = $3
+             WHERE id = $4 AND revision = $5 AND deleted_at IS NULL",
         )
-        .bind(now)
+        .bind(deleted)
         .bind(expected.next_i64()?)
+        .bind(ctx.actor_id.map(|a| *a.as_uuid()))
         .bind(id.as_uuid())
         .bind(expected.to_i64()?)
         .execute(&mut *tx)
