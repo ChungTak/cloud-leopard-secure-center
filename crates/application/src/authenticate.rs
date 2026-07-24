@@ -121,9 +121,9 @@ pub async fn authenticate(
                 let mut credential = credential;
                 credential.rotate(new_hash, "argon2id", &foundation::SystemClock)?;
                 let expected = credential.revision.prev();
-                let _ = credentials.update(&credential, expected, ctx).await;
+                credentials.update(&credential, expected, ctx).await?;
             }
-            let _ = attempts
+            attempts
                 .record(
                     tenant_id,
                     &normalized_username,
@@ -131,11 +131,11 @@ pub async fn authenticate(
                     true,
                     ctx,
                 )
-                .await;
+                .await?;
             Ok(AuthenticationResult::Authenticated)
         }
         Ok(false) => {
-            let _ = attempts
+            attempts
                 .record(
                     tenant_id,
                     &normalized_username,
@@ -143,7 +143,7 @@ pub async fn authenticate(
                     false,
                     ctx,
                 )
-                .await;
+                .await?;
 
             let identity_count = attempts
                 .count_failures_by_identity(
@@ -152,27 +152,25 @@ pub async fn authenticate(
                     policy.window_seconds,
                     ctx,
                 )
-                .await
-                .unwrap_or(0);
+                .await?;
             let source_count = if let Some(ip) = ip_string.clone() {
                 attempts
                     .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
-                    .await
-                    .unwrap_or(0)
+                    .await?
             } else {
                 0
             };
 
             if policy.identity_locked(identity_count) || policy.source_locked(source_count) {
-                let _ = lock_user(users, user, ctx).await;
+                lock_user(users, user, ctx).await?;
             }
 
             Ok(AuthenticationResult::InvalidCredentials)
         }
         Err(_) => {
-            let _ = attempts
+            attempts
                 .record(tenant_id, &normalized_username, ip_string, false, ctx)
-                .await;
+                .await?;
             Ok(AuthenticationResult::InvalidCredentials)
         }
     }

@@ -88,7 +88,7 @@ pub async fn refresh_token_pair(
     }
 
     if token.used {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
@@ -98,6 +98,7 @@ pub async fn refresh_token_pair(
     let user = match users.by_id(token.user_id, ctx).await {
         Ok(u) => u,
         Err(_) => {
+            sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -109,7 +110,7 @@ pub async fn refresh_token_pair(
         || user.session_version != token.session_version
         || user.status != UserStatus::Active
     {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
@@ -123,7 +124,7 @@ pub async fn refresh_token_pair(
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
         Err(_) => {
-            let _ = sessions.revoke_family(token.family_id, ctx).await;
+            sessions.revoke_family(token.family_id, ctx).await?;
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
@@ -131,21 +132,23 @@ pub async fn refresh_token_pair(
         }
     };
     if !tenant.allows_new_sessions() {
-        let _ = sessions.revoke_family(token.family_id, ctx).await;
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
         ));
     }
 
-    if let Err(e) = sessions.mark_refresh_token_used(&token, ctx).await {
-        if matches!(e, PlatformError::Conflict) {
-            let _ = sessions.revoke_family(token.family_id, ctx).await;
+    match sessions.mark_refresh_token_used(&token, ctx).await {
+        Ok(()) => {}
+        Err(PlatformError::Conflict) => {
+            sessions.revoke_family(token.family_id, ctx).await?;
+            return Err(PlatformError::new(
+                ErrorCode::Unauthenticated,
+                "invalid token",
+            ));
         }
-        return Err(PlatformError::new(
-            ErrorCode::Unauthenticated,
-            "invalid token",
-        ));
+        Err(e) => return Err(e),
     }
 
     let access_token = token_service.issue_access_token(
