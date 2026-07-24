@@ -284,6 +284,13 @@ where
             )
         })?;
 
+        if request.tenant_id.is_some() && request.tenant_id != ctx.tenant_id {
+            return Err(PlatformError::new(
+                ErrorCode::Denied,
+                "tenant scope mismatch",
+            ));
+        }
+
         let auth_req = usecase::tenant_authorization(
             actor,
             tenant_id,
