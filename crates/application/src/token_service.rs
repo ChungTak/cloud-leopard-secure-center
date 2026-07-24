@@ -191,17 +191,17 @@ impl TokenService {
         let id = foundation::generate_uuid(clock, random)?;
 
         let created_at = clock.now();
-        let token = RefreshToken {
+        let token = RefreshToken::from_parts(
             id,
             tenant_id,
             user_id,
             family_id,
             token_hash,
             session_version,
-            used: false,
+            false,
             expires_at,
             created_at,
-        };
+        )?;
         Ok((raw, token))
     }
 

@@ -25,3 +25,50 @@ pub struct RefreshToken {
     /// Creation timestamp.
     pub created_at: UtcTimestamp,
 }
+
+impl RefreshToken {
+    /// Reconstruct a refresh token from persisted parts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        id: Uuid,
+        tenant_id: TenantId,
+        user_id: UserId,
+        family_id: Uuid,
+        token_hash: impl Into<String>,
+        session_version: u64,
+        used: bool,
+        expires_at: UtcTimestamp,
+        created_at: UtcTimestamp,
+    ) -> Result<Self, foundation::PlatformError> {
+        let token_hash = token_hash.into();
+        if token_hash.trim().is_empty() {
+            return Err(foundation::PlatformError::invalid(
+                "token_hash",
+                "refresh token hash must not be empty",
+            ));
+        }
+        if token_hash.len() > 512 {
+            return Err(foundation::PlatformError::invalid(
+                "token_hash",
+                "refresh token hash must be at most 512 characters",
+            ));
+        }
+        if expires_at <= created_at {
+            return Err(foundation::PlatformError::invalid(
+                "expires_at",
+                "refresh token expiration must be after creation time",
+            ));
+        }
+        Ok(Self {
+            id,
+            tenant_id,
+            user_id,
+            family_id,
+            token_hash,
+            session_version,
+            used,
+            expires_at,
+            created_at,
+        })
+    }
+}
