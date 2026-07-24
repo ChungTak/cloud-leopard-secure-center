@@ -48,7 +48,10 @@ pub(crate) async fn health() -> Json<HealthDto> {
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn get_tenant(Path(_id): Path<String>) -> Result<Json<TenantDto>, AppError> {
+pub(crate) async fn get_tenant(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<Json<TenantDto>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -62,6 +65,7 @@ pub(crate) async fn get_tenant(Path(_id): Path<String>) -> Result<Json<TenantDto
     )
 )]
 pub(crate) async fn get_organization_unit(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<OrganizationUnitDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -76,7 +80,10 @@ pub(crate) async fn get_organization_unit(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn get_user(Path(_id): Path<String>) -> Result<Json<UserDto>, AppError> {
+pub(crate) async fn get_user(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<Json<UserDto>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -89,7 +96,10 @@ pub(crate) async fn get_user(Path(_id): Path<String>) -> Result<Json<UserDto>, A
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn get_role(Path(_id): Path<String>) -> Result<Json<RoleDto>, AppError> {
+pub(crate) async fn get_role(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<Json<RoleDto>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -103,6 +113,7 @@ pub(crate) async fn get_role(Path(_id): Path<String>) -> Result<Json<RoleDto>, A
     )
 )]
 pub(crate) async fn get_role_binding(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<RoleBindingDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -117,7 +128,10 @@ pub(crate) async fn get_role_binding(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn get_device(Path(_id): Path<String>) -> Result<Json<DeviceDto>, AppError> {
+pub(crate) async fn get_device(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<Json<DeviceDto>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -130,7 +144,10 @@ pub(crate) async fn get_device(Path(_id): Path<String>) -> Result<Json<DeviceDto
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn get_camera(Path(_id): Path<String>) -> Result<Json<CameraDto>, AppError> {
+pub(crate) async fn get_camera(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<Json<CameraDto>, AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -152,6 +169,7 @@ pub(crate) async fn get_camera(Path(_id): Path<String>) -> Result<Json<CameraDto
     )
 )]
 pub(crate) async fn list_audit_records(
+    _auth: Auth,
     Query(_q): Query<AuditListQuery>,
 ) -> Result<Json<Vec<AuditRecordDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -167,6 +185,7 @@ pub(crate) async fn list_audit_records(
     )
 )]
 pub(crate) async fn get_audit_record(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<AuditRecordDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -182,6 +201,7 @@ pub(crate) async fn get_audit_record(
     )
 )]
 pub(crate) async fn get_config_value(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<ConfigValueDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -199,6 +219,7 @@ pub(crate) async fn get_config_value(
     )
 )]
 pub(crate) async fn update_config_value(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateConfigValueRequest>,
 ) -> Result<Json<ConfigValueDto>, AppError> {
@@ -219,6 +240,7 @@ pub(crate) async fn update_config_value(
     )
 )]
 pub(crate) async fn list_config_values(
+    _auth: Auth,
     Query(_q): Query<ConfigValueListQuery>,
 ) -> Result<Json<Vec<ConfigValueDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -234,6 +256,7 @@ pub(crate) async fn list_config_values(
     )
 )]
 pub(crate) async fn get_config_definition(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<ConfigDefinitionDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -253,6 +276,7 @@ pub(crate) async fn get_config_definition(
     )
 )]
 pub(crate) async fn list_config_definitions(
+    _auth: Auth,
     Query(_q): Query<ConfigDefinitionListQuery>,
 ) -> Result<Json<Vec<ConfigDefinitionDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -386,6 +410,7 @@ pub(crate) struct ConfigValueListQuery {
     )
 )]
 pub(crate) async fn list_organization_units(
+    _auth: Auth,
     Query(_q): Query<ListQuery>,
 ) -> Result<Json<Vec<OrganizationUnitDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -402,6 +427,7 @@ pub(crate) async fn list_organization_units(
     )
 )]
 pub(crate) async fn create_organization_unit(
+    _auth: Auth,
     Json(_body): Json<CreateOrganizationUnitRequest>,
 ) -> Result<Json<OrganizationUnitDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -420,6 +446,7 @@ pub(crate) async fn create_organization_unit(
     )
 )]
 pub(crate) async fn update_organization_unit(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateOrganizationUnitRequest>,
 ) -> Result<Json<OrganizationUnitDto>, AppError> {
@@ -439,6 +466,7 @@ pub(crate) async fn update_organization_unit(
     )
 )]
 pub(crate) async fn move_organization_unit(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<MoveOrganizationUnitRequest>,
 ) -> Result<Json<OrganizationUnitDto>, AppError> {
@@ -454,7 +482,10 @@ pub(crate) async fn move_organization_unit(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_organization_unit(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_organization_unit(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -473,6 +504,7 @@ pub(crate) async fn delete_organization_unit(Path(_id): Path<String>) -> Result<
     )
 )]
 pub(crate) async fn list_spatial_nodes(
+    _auth: Auth,
     Query(_q): Query<ListQuery>,
 ) -> Result<Json<Vec<SpatialNodeDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -489,6 +521,7 @@ pub(crate) async fn list_spatial_nodes(
     )
 )]
 pub(crate) async fn create_spatial_node(
+    _auth: Auth,
     Json(_body): Json<CreateSpatialNodeRequest>,
 ) -> Result<Json<SpatialNodeDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -504,6 +537,7 @@ pub(crate) async fn create_spatial_node(
     )
 )]
 pub(crate) async fn get_spatial_node(
+    _auth: Auth,
     Path(_id): Path<String>,
 ) -> Result<Json<SpatialNodeDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -522,6 +556,7 @@ pub(crate) async fn get_spatial_node(
     )
 )]
 pub(crate) async fn update_spatial_node(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateSpatialNodeRequest>,
 ) -> Result<Json<SpatialNodeDto>, AppError> {
@@ -541,6 +576,7 @@ pub(crate) async fn update_spatial_node(
     )
 )]
 pub(crate) async fn move_spatial_node(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<MoveSpatialNodeRequest>,
 ) -> Result<Json<SpatialNodeDto>, AppError> {
@@ -556,7 +592,10 @@ pub(crate) async fn move_spatial_node(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_spatial_node(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_spatial_node(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -574,6 +613,7 @@ pub(crate) async fn delete_spatial_node(Path(_id): Path<String>) -> Result<(), A
     )
 )]
 pub(crate) async fn list_users(
+    _auth: Auth,
     Query(_q): Query<ListQuery>,
 ) -> Result<Json<Vec<UserDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -590,6 +630,7 @@ pub(crate) async fn list_users(
     )
 )]
 pub(crate) async fn create_user(
+    _auth: Auth,
     Json(_body): Json<CreateUserRequest>,
 ) -> Result<Json<UserDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -608,6 +649,7 @@ pub(crate) async fn create_user(
     )
 )]
 pub(crate) async fn update_user(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateUserRequest>,
 ) -> Result<Json<UserDto>, AppError> {
@@ -627,6 +669,7 @@ pub(crate) async fn update_user(
     )
 )]
 pub(crate) async fn change_user_status(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<ChangeUserStatusRequest>,
 ) -> Result<Json<UserDto>, AppError> {
@@ -645,6 +688,7 @@ pub(crate) async fn change_user_status(
     )
 )]
 pub(crate) async fn set_user_password(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<SetPasswordRequest>,
 ) -> Result<(), AppError> {
@@ -664,6 +708,7 @@ pub(crate) async fn set_user_password(
     )
 )]
 pub(crate) async fn manage_user_mfa(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<ManageMfaRequest>,
 ) -> Result<Json<UserDto>, AppError> {
@@ -681,6 +726,7 @@ pub(crate) async fn manage_user_mfa(
     )
 )]
 pub(crate) async fn create_service_account(
+    _auth: Auth,
     Json(_body): Json<CreateServiceAccountRequest>,
 ) -> Result<Json<ApiKeyCreatedDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -699,6 +745,7 @@ pub(crate) async fn create_service_account(
     )
 )]
 pub(crate) async fn list_roles(
+    _auth: Auth,
     Query(_q): Query<ListQuery>,
 ) -> Result<Json<Vec<RoleDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -715,6 +762,7 @@ pub(crate) async fn list_roles(
     )
 )]
 pub(crate) async fn create_role(
+    _auth: Auth,
     Json(_body): Json<CreateRoleRequest>,
 ) -> Result<Json<RoleDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -733,6 +781,7 @@ pub(crate) async fn create_role(
     )
 )]
 pub(crate) async fn update_role(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateRoleRequest>,
 ) -> Result<Json<RoleDto>, AppError> {
@@ -748,7 +797,7 @@ pub(crate) async fn update_role(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_role(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_role(_auth: Auth, Path(_id): Path<String>) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -767,6 +816,7 @@ pub(crate) async fn delete_role(Path(_id): Path<String>) -> Result<(), AppError>
     )
 )]
 pub(crate) async fn list_role_bindings(
+    _auth: Auth,
     Query(_q): Query<ListQuery>,
 ) -> Result<Json<Vec<RoleBindingDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -783,6 +833,7 @@ pub(crate) async fn list_role_bindings(
     )
 )]
 pub(crate) async fn create_role_binding(
+    _auth: Auth,
     Json(_body): Json<CreateRoleBindingRequest>,
 ) -> Result<Json<RoleBindingDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -801,6 +852,7 @@ pub(crate) async fn create_role_binding(
     )
 )]
 pub(crate) async fn update_role_binding(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateRoleBindingRequest>,
 ) -> Result<Json<RoleBindingDto>, AppError> {
@@ -816,7 +868,10 @@ pub(crate) async fn update_role_binding(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_role_binding(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_role_binding(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -831,6 +886,7 @@ pub(crate) async fn delete_role_binding(Path(_id): Path<String>) -> Result<(), A
     )
 )]
 pub(crate) async fn explain_auth(
+    _auth: Auth,
     Json(_body): Json<AuthExplainRequest>,
 ) -> Result<Json<AuthExplainResponse>, AppError> {
     Err(AppError::NotImplemented)
@@ -852,6 +908,7 @@ pub(crate) async fn explain_auth(
     )
 )]
 pub(crate) async fn list_devices(
+    _auth: Auth,
     Query(_q): Query<DeviceListQuery>,
 ) -> Result<Json<Vec<DeviceDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -868,6 +925,7 @@ pub(crate) async fn list_devices(
     )
 )]
 pub(crate) async fn create_device(
+    _auth: Auth,
     Json(_body): Json<CreateDeviceRequest>,
 ) -> Result<Json<DeviceDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -886,6 +944,7 @@ pub(crate) async fn create_device(
     )
 )]
 pub(crate) async fn update_device(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateDeviceRequest>,
 ) -> Result<Json<DeviceDto>, AppError> {
@@ -904,6 +963,7 @@ pub(crate) async fn update_device(
     )
 )]
 pub(crate) async fn change_device_lifecycle(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<ChangeDeviceLifecycleRequest>,
 ) -> Result<Json<DeviceDto>, AppError> {
@@ -919,7 +979,7 @@ pub(crate) async fn change_device_lifecycle(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_device(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_device(_auth: Auth, Path(_id): Path<String>) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -939,6 +999,7 @@ pub(crate) async fn delete_device(Path(_id): Path<String>) -> Result<(), AppErro
     )
 )]
 pub(crate) async fn list_cameras(
+    _auth: Auth,
     Query(_q): Query<CameraListQuery>,
 ) -> Result<Json<Vec<CameraDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -955,6 +1016,7 @@ pub(crate) async fn list_cameras(
     )
 )]
 pub(crate) async fn create_camera(
+    _auth: Auth,
     Json(_body): Json<CreateCameraRequest>,
 ) -> Result<Json<CameraDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -973,6 +1035,7 @@ pub(crate) async fn create_camera(
     )
 )]
 pub(crate) async fn update_camera(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateCameraRequest>,
 ) -> Result<Json<CameraDto>, AppError> {
@@ -988,7 +1051,7 @@ pub(crate) async fn update_camera(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_camera(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_camera(_auth: Auth, Path(_id): Path<String>) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -1007,6 +1070,7 @@ pub(crate) async fn delete_camera(Path(_id): Path<String>) -> Result<(), AppErro
     )
 )]
 pub(crate) async fn list_tags(
+    _auth: Auth,
     Query(_q): Query<TagListQuery>,
 ) -> Result<Json<Vec<TagDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -1023,6 +1087,7 @@ pub(crate) async fn list_tags(
     )
 )]
 pub(crate) async fn create_tag(
+    _auth: Auth,
     Json(_body): Json<CreateTagRequest>,
 ) -> Result<Json<TagDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -1040,6 +1105,7 @@ pub(crate) async fn create_tag(
     )
 )]
 pub(crate) async fn update_tag(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<UpdateTagRequest>,
 ) -> Result<Json<TagDto>, AppError> {
@@ -1055,7 +1121,7 @@ pub(crate) async fn update_tag(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_tag(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_tag(_auth: Auth, Path(_id): Path<String>) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -1075,6 +1141,7 @@ pub(crate) async fn delete_tag(Path(_id): Path<String>) -> Result<(), AppError> 
     )
 )]
 pub(crate) async fn list_external_bindings(
+    _auth: Auth,
     Query(_q): Query<ExternalBindingListQuery>,
 ) -> Result<Json<Vec<ExternalBindingDto>>, AppError> {
     Err(AppError::NotImplemented)
@@ -1092,6 +1159,7 @@ pub(crate) async fn list_external_bindings(
     )
 )]
 pub(crate) async fn create_external_binding(
+    _auth: Auth,
     Json(_body): Json<CreateExternalBindingRequest>,
 ) -> Result<Json<ExternalBindingDto>, AppError> {
     Err(AppError::NotImplemented)
@@ -1110,6 +1178,7 @@ pub(crate) async fn create_external_binding(
     )
 )]
 pub(crate) async fn resolve_external_binding_conflict(
+    _auth: Auth,
     Path(_id): Path<String>,
     Json(_body): Json<ResolveExternalBindingConflictRequest>,
 ) -> Result<Json<ExternalBindingDto>, AppError> {
@@ -1125,7 +1194,10 @@ pub(crate) async fn resolve_external_binding_conflict(
         (status = 501, description = "Not implemented", body = ProblemDetailsDto)
     )
 )]
-pub(crate) async fn delete_external_binding(Path(_id): Path<String>) -> Result<(), AppError> {
+pub(crate) async fn delete_external_binding(
+    _auth: Auth,
+    Path(_id): Path<String>,
+) -> Result<(), AppError> {
     Err(AppError::NotImplemented)
 }
 
@@ -1143,6 +1215,7 @@ pub(crate) async fn delete_external_binding(Path(_id): Path<String>) -> Result<(
     )
 )]
 pub(crate) async fn list_projections(
+    _auth: Auth,
     Query(_q): Query<ProjectionListQuery>,
 ) -> Result<Json<Vec<ProjectionStateDto>>, AppError> {
     Err(AppError::NotImplemented)
