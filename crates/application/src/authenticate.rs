@@ -3,7 +3,7 @@
 use domain_identity::auth::{AuthenticationPolicy, AuthenticationResult};
 use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus, normalize_username};
-use foundation::{Clock, ErrorCode, PlatformError, RequestContext};
+use foundation::{Clock, ErrorCode, PlatformError, RandomSource, RequestContext};
 use std::net::IpAddr;
 use storage_api::{CredentialRepository, LoginAttemptRepository, TenantRepository, UserRepository};
 
@@ -16,6 +16,7 @@ pub async fn authenticate(
     attempts: &dyn LoginAttemptRepository,
     tenants: &dyn TenantRepository,
     hasher: &Argon2idPasswordHasher,
+    random: &dyn RandomSource,
     policy: &AuthenticationPolicy,
     clock: &dyn Clock,
     ctx: &RequestContext,
@@ -166,7 +167,7 @@ pub async fn authenticate(
         Ok(true) => {
             let mut credential = credential;
             if hasher.needs_rehash(&credential.value).unwrap_or(false)
-                && let Ok(new_hash) = hasher.hash(password)
+                && let Ok(new_hash) = hasher.hash(password, random)
                 && credential.rotate(new_hash, "argon2id", clock).is_ok()
             {
                 let expected = credential.revision.prev();

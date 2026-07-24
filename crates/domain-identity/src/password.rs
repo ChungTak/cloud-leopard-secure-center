@@ -2,10 +2,9 @@
 
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, Salt, SaltString},
 };
-use foundation::PlatformError;
-use rand_core::OsRng;
+use foundation::{PlatformError, RandomSource};
 
 const MAX_PASSWORD_BYTES: usize = 1024;
 
@@ -22,10 +21,13 @@ impl Argon2idPasswordHasher {
         Self { argon2 }
     }
 
-    /// Hash a plaintext password into a PHC string.
-    pub fn hash(&self, password: &str) -> Result<String, PlatformError> {
+    /// Hash a plaintext password into a PHC string using `random` for the salt.
+    pub fn hash(&self, password: &str, random: &dyn RandomSource) -> Result<String, PlatformError> {
         validate_password(password)?;
-        let salt = SaltString::generate(&mut OsRng);
+        let mut salt_bytes = [0u8; Salt::RECOMMENDED_LENGTH];
+        random.fill_bytes(&mut salt_bytes)?;
+        let salt = SaltString::encode_b64(&salt_bytes)
+            .map_err(|e| PlatformError::invalid("password", e.to_string()))?;
         self.argon2
             .hash_password(password.as_bytes(), &salt)
             .map(|hash| hash.to_string())
@@ -87,6 +89,7 @@ fn validate_password(password: &str) -> Result<(), PlatformError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use foundation::SystemRandom;
 
     fn ok_or_panic<T, E: std::fmt::Display>(result: Result<T, E>) -> T {
         match result {
@@ -98,30 +101,30 @@ mod tests {
     #[test]
     fn verify_correct_password_succeeds() {
         let hasher = Argon2idPasswordHasher::default();
-        let hash = ok_or_panic(hasher.hash("hunter2"));
+        let hash = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
         assert!(ok_or_panic(hasher.verify("hunter2", &hash)));
     }
 
     #[test]
     fn verify_wrong_password_fails() {
         let hasher = Argon2idPasswordHasher::default();
-        let hash = ok_or_panic(hasher.hash("hunter2"));
+        let hash = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
         assert!(!ok_or_panic(hasher.verify("wrong", &hash)));
     }
 
     #[test]
     fn different_passwords_produce_different_hashes() {
         let hasher = Argon2idPasswordHasher::default();
-        let a = ok_or_panic(hasher.hash("hunter2"));
-        let b = ok_or_panic(hasher.hash("hunter2"));
+        let a = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
+        let b = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
         assert_ne!(a, b);
     }
 
     #[test]
     fn empty_password_is_rejected() {
         let hasher = Argon2idPasswordHasher::default();
-        assert!(hasher.hash("").is_err());
-        let hash = ok_or_panic(hasher.hash("hunter2"));
+        assert!(hasher.hash("", &SystemRandom).is_err());
+        let hash = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
         assert!(hasher.verify("", &hash).is_err());
     }
 
@@ -129,8 +132,8 @@ mod tests {
     fn oversized_password_is_rejected() {
         let hasher = Argon2idPasswordHasher::default();
         let password = "a".repeat(1025);
-        assert!(hasher.hash(&password).is_err());
-        let hash = ok_or_panic(hasher.hash("hunter2"));
+        assert!(hasher.hash(&password, &SystemRandom).is_err());
+        let hash = ok_or_panic(hasher.hash("hunter2", &SystemRandom));
         assert!(hasher.verify(&password, &hash).is_err());
     }
 
@@ -146,7 +149,7 @@ mod tests {
         };
         let weak = Argon2idPasswordHasher::new(weak_params);
         let strong = Argon2idPasswordHasher::new(strong_params);
-        let hash = ok_or_panic(weak.hash("hunter2"));
+        let hash = ok_or_panic(weak.hash("hunter2", &SystemRandom));
         assert!(ok_or_panic(strong.needs_rehash(&hash)));
     }
 }
