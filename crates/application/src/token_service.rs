@@ -104,9 +104,9 @@ impl TokenService {
         Ok(claims)
     }
 
-    /// Verify an access token's signature, header, issuer, audience, expiration
-    /// and nbf/jti claims, returning the decoded claims. The caller is still
-    /// responsible for checking the session version against the stored user
+    /// Verify an access token's signature, header, issuer, audience, expiration,
+    /// not-before time and jti claims, returning the decoded claims. The caller is
+    /// still responsible for checking the session version against the stored user
     /// record, so this can be used before fetching the user.
     pub fn verify_access_token_claims(
         &self,
@@ -143,7 +143,7 @@ impl TokenService {
             .map_err(|_| PlatformError::new(ErrorCode::Unauthenticated, "invalid token"))?;
 
         claims.validate(&self.issuer, &self.audience, now)?;
-        self.validate_nbf_and_jti(&claims, now)?;
+        self.validate_jti(&claims)?;
 
         Ok(claims)
     }
@@ -164,19 +164,8 @@ impl TokenService {
         Ok(())
     }
 
-    fn validate_nbf_and_jti(
-        &self,
-        claims: &AccessTokenClaims,
-        now: UtcTimestamp,
-    ) -> Result<(), PlatformError> {
+    fn validate_jti(&self, claims: &AccessTokenClaims) -> Result<(), PlatformError> {
         if claims.jti.is_empty() {
-            return Err(PlatformError::new(
-                ErrorCode::Unauthenticated,
-                "invalid token",
-            ));
-        }
-        let now_seconds = now.timestamp_millis() / 1000;
-        if now_seconds < claims.nbf {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",

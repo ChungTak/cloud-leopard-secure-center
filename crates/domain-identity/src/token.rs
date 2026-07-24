@@ -25,13 +25,18 @@ pub struct AccessTokenClaims {
     pub jti: String,
 }
 
+/// Clock skew leeway applied to `nbf` and `exp` validation so minor time
+/// differences between issuer and verifier do not reject otherwise valid tokens.
+const CLOCK_SKEW_LEEWAY_SECONDS: i64 = 60;
+
 impl AccessTokenClaims {
     /// Return true if the token is expired at `now`.
     pub fn is_expired(&self, now: UtcTimestamp) -> bool {
         self.exp <= now.timestamp_millis() / 1000
     }
 
-    /// Validate issuer, audience, not-before time and expiration.
+    /// Validate issuer, audience, not-before time and expiration, allowing a
+    /// small leeway for clock skew.
     pub fn validate(
         &self,
         expected_issuer: &str,
@@ -51,13 +56,13 @@ impl AccessTokenClaims {
             ));
         }
         let now_seconds = now.timestamp_millis() / 1000;
-        if now_seconds < self.nbf {
+        if now_seconds < self.nbf - CLOCK_SKEW_LEEWAY_SECONDS {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
             ));
         }
-        if self.is_expired(now) {
+        if now_seconds > self.exp + CLOCK_SKEW_LEEWAY_SECONDS {
             return Err(PlatformError::new(
                 ErrorCode::Unauthenticated,
                 "invalid token",
