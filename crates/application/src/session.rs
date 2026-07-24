@@ -101,15 +101,17 @@ pub async fn refresh_token_pair(
         }
     };
 
-    if token.expires_at <= clock.now() {
+    if token.used {
+        // A replayed refresh token always revokes the entire family, even if
+        // the token has also expired since it was first consumed.
+        sessions.revoke_family(token.family_id, ctx).await?;
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
         ));
     }
 
-    if token.used {
-        sessions.revoke_family(token.family_id, ctx).await?;
+    if token.expires_at <= clock.now() {
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid token",
