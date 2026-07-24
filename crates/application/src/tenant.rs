@@ -6,6 +6,15 @@ use domain_organization::tenant::{Tenant, TenantStatus};
 use foundation::{Clock, IdGenerator, PlatformError, RequestContext, Revision, TenantId};
 use storage_api::{AuditWriter, ListOptions, Page, TenantRepository};
 
+/// Scope a request context to a specific tenant id. Used for platform-level
+/// operations where the caller may not have supplied a tenant in the incoming
+/// context but the repository call needs the row's tenant for RLS.
+fn with_tenant(ctx: &RequestContext, tenant_id: TenantId) -> RequestContext {
+    let mut scoped = ctx.clone();
+    scoped.tenant_id = Some(tenant_id);
+    scoped
+}
+
 use crate::authorization::AuthorizationPort;
 use crate::usecase::{self, WriteRequest, WriteResponse};
 
@@ -148,7 +157,10 @@ where
             Some(actor),
         )?;
 
-        self.repo.create(&tenant, ctx).await?;
+        // The new tenant is its own RLS scope, so run the repository call under
+        // a tenant-scoped context derived from the new tenant id.
+        let tenant_ctx = with_tenant(ctx, id);
+        self.repo.create(&tenant, &tenant_ctx).await?;
 
         usecase::audit_write(
             &self.audit,
@@ -182,7 +194,8 @@ where
             PlatformError::invalid("expected_revision", "revision is required for updates")
         })?;
 
-        let mut tenant = self.repo.by_id(request.payload.id, ctx).await?;
+        let tenant_ctx = with_tenant(ctx, request.payload.id);
+        let mut tenant = self.repo.by_id(request.payload.id, &tenant_ctx).await?;
         let tenant_id = tenant.id;
 
         let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
@@ -196,7 +209,7 @@ where
         }
         tenant.rename(request.payload.name, &self.clock, Some(actor))?;
 
-        self.repo.update(&tenant, expected, ctx).await?;
+        self.repo.update(&tenant, expected, &tenant_ctx).await?;
 
         usecase::audit_write(
             &self.audit,
@@ -233,7 +246,8 @@ where
             )
         })?;
 
-        let mut tenant = self.repo.by_id(request.payload.id, ctx).await?;
+        let tenant_ctx = with_tenant(ctx, request.payload.id);
+        let mut tenant = self.repo.by_id(request.payload.id, &tenant_ctx).await?;
         let tenant_id = tenant.id;
 
         let auth_req = usecase::platform_authorization(actor, "platform:tenant:write");
@@ -252,7 +266,7 @@ where
             }
         }
 
-        self.repo.update(&tenant, expected, ctx).await?;
+        self.repo.update(&tenant, expected, &tenant_ctx).await?;
 
         usecase::audit_write(
             &self.audit,
@@ -281,7 +295,8 @@ where
         let auth_req = usecase::platform_authorization(actor, "platform:tenant:read");
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
 
-        let tenant = self.repo.by_id(id, ctx).await?;
+        let tenant_ctx = with_tenant(ctx, id);
+        let tenant = self.repo.by_id(id, &tenant_ctx).await?;
         Ok(TenantDto::from(&tenant))
     }
 
