@@ -8,6 +8,16 @@ use foundation::{AlarmId, MessageId, TenantId, UtcTimestamp};
 pub mod linkage;
 pub mod notification;
 
+const MAX_TITLE_LEN: usize = 256;
+const MAX_DEDUP_VALUE_LEN: usize = 256;
+const MAX_EVIDENCE_OBJECT_KEY_LEN: usize = 1024;
+const MAX_EVIDENCE_ALGORITHM_LEN: usize = 64;
+const MAX_EVIDENCE_CHECKSUM_LEN: usize = 1024;
+const MAX_EVIDENCE_REFS: usize = 64;
+const MAX_ACTION_STRING_LEN: usize = 1024;
+const MAX_ASSIGNED_TO_LEN: usize = 256;
+const MAX_PAYLOAD_BYTES: usize = 256 * 1024;
+
 /// Alarm severity with explicit upper bounds per tenant policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -109,6 +119,51 @@ impl Alarm {
                 "info alarms require a dedup key",
             ));
         }
+        validate_alarm_string(&event.title, "title", MAX_TITLE_LEN)?;
+        if let Some(dedup) = &event.dedup {
+            validate_alarm_string(&dedup.value, "dedup.value", MAX_DEDUP_VALUE_LEN)?;
+        }
+        if event.evidence.len() > MAX_EVIDENCE_REFS {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "too many evidence references",
+            ));
+        }
+        for (i, evidence) in event.evidence.iter().enumerate() {
+            validate_alarm_string(
+                &evidence.object_key,
+                "evidence.object_key",
+                MAX_EVIDENCE_OBJECT_KEY_LEN,
+            )?;
+            validate_alarm_string(
+                &evidence.algorithm,
+                "evidence.algorithm",
+                MAX_EVIDENCE_ALGORITHM_LEN,
+            )?;
+            validate_alarm_string(
+                &evidence.checksum,
+                "evidence.checksum",
+                MAX_EVIDENCE_CHECKSUM_LEN,
+            )?;
+            if evidence.object_key.trim().is_empty() {
+                return Err(AlarmError::new(
+                    AlarmErrorKind::Invalid,
+                    format!("evidence[{i}] object_key is empty"),
+                ));
+            }
+        }
+        let payload_bytes = serde_json::to_vec(&event.payload).map_err(|e| {
+            AlarmError::new(
+                AlarmErrorKind::Invalid,
+                format!("payload is not serializable: {e}"),
+            )
+        })?;
+        if payload_bytes.len() > MAX_PAYLOAD_BYTES {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "payload exceeds maximum size",
+            ));
+        }
         Ok(Self {
             id,
             tenant_id,
@@ -128,14 +183,40 @@ impl Alarm {
     /// Apply an action, validating the state transition.
     pub fn apply(&mut self, action: AlarmAction, now: UtcTimestamp) -> Result<(), AlarmError> {
         let next = match (self.state, action) {
-            (AlarmState::New, AlarmAction::Acknowledge { .. }) => AlarmState::Acknowledged,
-            (AlarmState::New, AlarmAction::Assign { .. }) => AlarmState::Acknowledged,
-            (AlarmState::Acknowledged, AlarmAction::Assign { .. }) => self.state,
-            (AlarmState::Acknowledged, AlarmAction::Resolve { .. }) => AlarmState::Resolved,
-            (AlarmState::Processing, AlarmAction::Resolve { .. }) => AlarmState::Resolved,
+            (AlarmState::New, AlarmAction::Acknowledge { by, note }) => {
+                validate_alarm_string(&by, "by", MAX_ASSIGNED_TO_LEN)?;
+                if let Some(note) = &note {
+                    validate_alarm_string(note, "note", MAX_ACTION_STRING_LEN)?;
+                }
+                AlarmState::Acknowledged
+            }
+            (AlarmState::New, AlarmAction::Assign { to }) => {
+                validate_alarm_string(&to, "to", MAX_ASSIGNED_TO_LEN)?;
+                self.assigned_to = Some(to);
+                AlarmState::Acknowledged
+            }
+            (AlarmState::Acknowledged, AlarmAction::Assign { to }) => {
+                validate_alarm_string(&to, "to", MAX_ASSIGNED_TO_LEN)?;
+                self.assigned_to = Some(to);
+                self.state
+            }
+            (AlarmState::Acknowledged, AlarmAction::Resolve { reason }) => {
+                validate_alarm_string(&reason, "reason", MAX_ACTION_STRING_LEN)?;
+                AlarmState::Resolved
+            }
+            (AlarmState::Processing, AlarmAction::Resolve { reason }) => {
+                validate_alarm_string(&reason, "reason", MAX_ACTION_STRING_LEN)?;
+                AlarmState::Resolved
+            }
             (AlarmState::Resolved, AlarmAction::Close) => AlarmState::Closed,
-            (AlarmState::Resolved, AlarmAction::Reopen { .. }) => AlarmState::Reopened,
-            (AlarmState::Closed, AlarmAction::Reopen { .. }) => AlarmState::Reopened,
+            (AlarmState::Resolved, AlarmAction::Reopen { reason }) => {
+                validate_alarm_string(&reason, "reason", MAX_ACTION_STRING_LEN)?;
+                AlarmState::Reopened
+            }
+            (AlarmState::Closed, AlarmAction::Reopen { reason }) => {
+                validate_alarm_string(&reason, "reason", MAX_ACTION_STRING_LEN)?;
+                AlarmState::Reopened
+            }
             (_, AlarmAction::Suppress { .. }) => AlarmState::Suppressed,
             (_, AlarmAction::Merge { .. }) => AlarmState::Merged,
             _ => {
@@ -150,6 +231,16 @@ impl Alarm {
         self.updated_at = now;
         Ok(())
     }
+}
+
+fn validate_alarm_string(value: &str, field: &str, max: usize) -> Result<(), AlarmError> {
+    if value.trim().is_empty() || value.len() > max {
+        return Err(AlarmError::new(
+            AlarmErrorKind::Invalid,
+            format!("{field} is empty or exceeds maximum length"),
+        ));
+    }
+    Ok(())
 }
 
 /// Alarm domain error.
