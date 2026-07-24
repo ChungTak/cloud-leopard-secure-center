@@ -588,6 +588,24 @@ impl RequestContext {
         self.deadline = Some(deadline);
         self
     }
+
+    /// Set the correlation identifier.
+    pub fn with_correlation_id(mut self, id: MessageId) -> Self {
+        self.correlation_id = Some(id);
+        self
+    }
+
+    /// Set the trace identifier.
+    pub fn with_trace_id(mut self, id: impl Into<String>) -> Self {
+        self.trace_id = Some(id.into());
+        self
+    }
+
+    /// Set the organization scope.
+    pub fn with_organization_id(mut self, id: OrganizationId) -> Self {
+        self.organization_id = Some(id);
+        self
+    }
 }
 
 /// Public crate version.
