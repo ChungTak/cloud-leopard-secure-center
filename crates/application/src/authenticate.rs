@@ -2,7 +2,7 @@
 
 use domain_identity::auth::{AuthenticationPolicy, AuthenticationResult};
 use domain_identity::password::Argon2idPasswordHasher;
-use domain_identity::user::{User, UserStatus};
+use domain_identity::user::{User, UserStatus, normalize_username};
 use foundation::{ErrorCode, PlatformError, RequestContext};
 use std::net::IpAddr;
 use storage_api::{CredentialRepository, LoginAttemptRepository, TenantRepository, UserRepository};
@@ -28,8 +28,7 @@ pub async fn authenticate(
 
     let ip_string = ip.as_ref().map(|ip| ip.to_string());
 
-    let user_result = users.by_username(username, ctx).await;
-    let user = match user_result {
+    let normalized_username = match normalize_username(username) {
         Ok(u) => u,
         Err(_) => {
             let _ = attempts
@@ -39,9 +38,26 @@ pub async fn authenticate(
         }
     };
 
+    let user_result = users.by_username(&normalized_username, ctx).await;
+    let user = match user_result {
+        Ok(u) => u,
+        Err(_) => {
+            let _ = attempts
+                .record(tenant_id, &normalized_username, ip_string, false, ctx)
+                .await;
+            return Ok(AuthenticationResult::InvalidCredentials);
+        }
+    };
+
     if user.deleted_at.is_some() || user.status != UserStatus::Active {
         let _ = attempts
-            .record(tenant_id, username, ip_string.clone(), false, ctx)
+            .record(
+                tenant_id,
+                &normalized_username,
+                ip_string.clone(),
+                false,
+                ctx,
+            )
             .await;
         return Ok(AuthenticationResult::InvalidCredentials);
     }
@@ -54,14 +70,26 @@ pub async fn authenticate(
         Ok(t) => t,
         Err(_) => {
             let _ = attempts
-                .record(tenant_id, username, ip_string.clone(), false, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string.clone(),
+                    false,
+                    ctx,
+                )
                 .await;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
     };
     if !tenant.allows_new_sessions() {
         let _ = attempts
-            .record(tenant_id, username, ip_string.clone(), false, ctx)
+            .record(
+                tenant_id,
+                &normalized_username,
+                ip_string.clone(),
+                false,
+                ctx,
+            )
             .await;
         return Ok(AuthenticationResult::InvalidCredentials);
     }
@@ -73,7 +101,13 @@ pub async fn authenticate(
         Ok(c) => c,
         Err(_) => {
             let _ = attempts
-                .record(tenant_id, username, ip_string.clone(), false, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string.clone(),
+                    false,
+                    ctx,
+                )
                 .await;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
@@ -90,17 +124,34 @@ pub async fn authenticate(
                 let _ = credentials.update(&credential, expected, ctx).await;
             }
             let _ = attempts
-                .record(tenant_id, username, ip_string.clone(), true, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string.clone(),
+                    true,
+                    ctx,
+                )
                 .await;
             Ok(AuthenticationResult::Authenticated)
         }
         Ok(false) => {
             let _ = attempts
-                .record(tenant_id, username, ip_string.clone(), false, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string.clone(),
+                    false,
+                    ctx,
+                )
                 .await;
 
             let identity_count = attempts
-                .count_failures_by_identity(tenant_id, username, policy.window_seconds, ctx)
+                .count_failures_by_identity(
+                    tenant_id,
+                    &normalized_username,
+                    policy.window_seconds,
+                    ctx,
+                )
                 .await
                 .unwrap_or(0);
             let source_count = if let Some(ip) = ip_string.clone() {
@@ -120,7 +171,7 @@ pub async fn authenticate(
         }
         Err(_) => {
             let _ = attempts
-                .record(tenant_id, username, ip_string, false, ctx)
+                .record(tenant_id, &normalized_username, ip_string, false, ctx)
                 .await;
             Ok(AuthenticationResult::InvalidCredentials)
         }

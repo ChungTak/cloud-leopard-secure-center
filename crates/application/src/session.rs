@@ -198,7 +198,10 @@ pub async fn change_password(
         .by_user_and_type(user.id, CredentialType::PasswordHash.as_str(), ctx)
         .await?;
 
-    if !hasher.verify(old_password, &credential.value)? {
+    if !hasher
+        .verify(old_password, &credential.value)
+        .unwrap_or(false)
+    {
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid credentials",

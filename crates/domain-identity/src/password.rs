@@ -7,6 +7,8 @@ use argon2::{
 use foundation::PlatformError;
 use rand_core::OsRng;
 
+const MAX_PASSWORD_BYTES: usize = 1024;
+
 /// Argon2id hasher with configurable parameters.
 #[derive(Debug, Clone)]
 pub struct Argon2idPasswordHasher {
@@ -22,6 +24,7 @@ impl Argon2idPasswordHasher {
 
     /// Hash a plaintext password into a PHC string.
     pub fn hash(&self, password: &str) -> Result<String, PlatformError> {
+        validate_password(password)?;
         let salt = SaltString::generate(&mut OsRng);
         self.argon2
             .hash_password(password.as_bytes(), &salt)
@@ -31,6 +34,7 @@ impl Argon2idPasswordHasher {
 
     /// Verify a plaintext password against a PHC hash string.
     pub fn verify(&self, password: &str, hash: &str) -> Result<bool, PlatformError> {
+        validate_password(password)?;
         let parsed = PasswordHash::new(hash)
             .map_err(|e| PlatformError::invalid("password_hash", e.to_string()))?;
         match self.argon2.verify_password(password.as_bytes(), &parsed) {
@@ -64,6 +68,22 @@ impl Default for Argon2idPasswordHasher {
     }
 }
 
+fn validate_password(password: &str) -> Result<(), PlatformError> {
+    if password.is_empty() {
+        return Err(PlatformError::invalid(
+            "password",
+            "password must not be empty",
+        ));
+    }
+    if password.len() > MAX_PASSWORD_BYTES {
+        return Err(PlatformError::invalid(
+            "password",
+            "password must be at most 1024 characters",
+        ));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,6 +115,23 @@ mod tests {
         let a = ok_or_panic(hasher.hash("hunter2"));
         let b = ok_or_panic(hasher.hash("hunter2"));
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn empty_password_is_rejected() {
+        let hasher = Argon2idPasswordHasher::default();
+        assert!(hasher.hash("").is_err());
+        let hash = ok_or_panic(hasher.hash("hunter2"));
+        assert!(hasher.verify("", &hash).is_err());
+    }
+
+    #[test]
+    fn oversized_password_is_rejected() {
+        let hasher = Argon2idPasswordHasher::default();
+        let password = "a".repeat(1025);
+        assert!(hasher.hash(&password).is_err());
+        let hash = ok_or_panic(hasher.hash("hunter2"));
+        assert!(hasher.verify(&password, &hash).is_err());
     }
 
     #[test]
