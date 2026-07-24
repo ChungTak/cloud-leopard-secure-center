@@ -1,6 +1,8 @@
 //! Configuration value aggregate scoped by platform, tenant, or module.
 
-use crate::config_definition::{ConfigDefinition, ConfigValueType};
+use crate::config_definition::{
+    ConfigDefinition, ConfigValueType, validate_config_key, validate_config_value,
+};
 use foundation::{PlatformError, Revision, TenantId};
 use serde::{Deserialize, Serialize};
 
@@ -65,19 +67,12 @@ impl ConfigValue {
         id: Option<ConfigValueId>,
         scope: ConfigScope,
         definition: &ConfigDefinition,
-        raw_value: impl Into<String>,
+        raw_value: impl AsRef<str>,
         secret_ref: Option<String>,
         revision: Revision,
     ) -> Result<Self, PlatformError> {
-        let raw_value = raw_value.into();
-        let config_key = definition.config_key.clone();
-
-        if raw_value.trim().is_empty() {
-            return Err(PlatformError::invalid(
-                "value",
-                "configuration value must not be empty",
-            ));
-        }
+        let raw_value = raw_value.as_ref();
+        validate_config_value(raw_value, "value")?;
 
         if definition.sensitive {
             if secret_ref.is_none() {
@@ -99,13 +94,22 @@ impl ConfigValue {
             ));
         }
 
-        let _ = definition.validate_value(&raw_value)?;
+        if let Some(ref secret_ref) = secret_ref
+            && (secret_ref.trim().is_empty() || secret_ref.len() > 512)
+        {
+            return Err(PlatformError::invalid(
+                "secret_ref",
+                "secret reference must be between 1 and 512 characters",
+            ));
+        }
+
+        let _ = definition.validate_value(raw_value)?;
 
         Ok(Self {
             id,
             scope,
-            config_key,
-            raw_value,
+            config_key: definition.config_key.clone(),
+            raw_value: raw_value.to_string(),
             secret_ref,
             revision,
         })
@@ -115,44 +119,28 @@ impl ConfigValue {
     pub fn from_parts(
         id: Option<ConfigValueId>,
         scope: ConfigScope,
-        config_key: impl Into<String>,
-        raw_value: impl Into<String>,
+        config_key: impl AsRef<str>,
+        raw_value: impl AsRef<str>,
         secret_ref: Option<String>,
         revision: Revision,
     ) -> Result<Self, PlatformError> {
-        let config_key = config_key.into();
-        let raw_value = raw_value.into();
-        if config_key.trim().is_empty() {
+        let config_key = config_key.as_ref();
+        validate_config_key(config_key)?;
+        let raw_value = raw_value.as_ref();
+        validate_config_value(raw_value, "value")?;
+        if let Some(ref secret_ref) = secret_ref
+            && (secret_ref.trim().is_empty() || secret_ref.len() > 512)
+        {
             return Err(PlatformError::invalid(
-                "config_key",
-                "configuration key must not be empty",
+                "secret_ref",
+                "secret reference must be between 1 and 512 characters",
             ));
-        }
-        if raw_value.trim().is_empty() {
-            return Err(PlatformError::invalid(
-                "value",
-                "configuration value must not be empty",
-            ));
-        }
-        if let Some(ref secret_ref) = secret_ref {
-            if secret_ref.trim().is_empty() {
-                return Err(PlatformError::invalid(
-                    "secret_ref",
-                    "secret reference must not be empty when present",
-                ));
-            }
-            if secret_ref.len() > 512 {
-                return Err(PlatformError::invalid(
-                    "secret_ref",
-                    "secret reference must be at most 512 characters",
-                ));
-            }
         }
         Ok(Self {
             id,
             scope,
-            config_key,
-            raw_value,
+            config_key: config_key.to_string(),
+            raw_value: raw_value.to_string(),
             secret_ref,
             revision,
         })
