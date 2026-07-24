@@ -41,7 +41,10 @@ pub async fn authenticate(
     let user_result = users.by_username(&normalized_username, ctx).await;
     let user = match user_result {
         Ok(u) => u,
-        Err(_) => {
+        Err(e) => {
+            if e.code() == ErrorCode::Unavailable {
+                return Err(e);
+            }
             attempts
                 .record(tenant_id, &normalized_username, ip_string, false, ctx)
                 .await?;
@@ -68,7 +71,10 @@ pub async fn authenticate(
     };
     let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
         Ok(t) => t,
-        Err(_) => {
+        Err(e) => {
+            if e.code() == ErrorCode::Unavailable {
+                return Err(e);
+            }
             attempts
                 .record(
                     tenant_id,
@@ -99,7 +105,10 @@ pub async fn authenticate(
         .await
     {
         Ok(c) => c,
-        Err(_) => {
+        Err(e) => {
+            if e.code() == ErrorCode::Unavailable {
+                return Err(e);
+            }
             attempts
                 .record(
                     tenant_id,
