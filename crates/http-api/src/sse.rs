@@ -19,6 +19,12 @@ use tokio_stream::wrappers::BroadcastStream;
 
 use crate::error::AppError;
 
+const MAX_EVENT_NAME_LEN: usize = 256;
+const MAX_EVENT_DATA_LEN: usize = 64 * 1024;
+const MAX_EVENT_FILTERS: usize = 64;
+const MAX_FILTER_LEN: usize = 256;
+const MAX_LAST_EVENT_ID_BYTES: usize = 1024;
+
 /// SSE event payload.
 #[derive(Debug, Clone)]
 pub struct Event {
@@ -57,8 +63,17 @@ where
             .get("last-event-id")
             .and_then(|value| value.to_str().ok())
             .map(str::trim)
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string());
+            .filter(|s| !s.is_empty());
+        let header = match header {
+            Some(s) if s.len() <= MAX_LAST_EVENT_ID_BYTES => Some(s.to_string()),
+            Some(_) => {
+                return Err(AppError::BadRequest {
+                    field: "last-event-id".to_string(),
+                    message: "last-event-id is too long".to_string(),
+                });
+            }
+            None => None,
+        };
         Ok(Self(header))
     }
 }
@@ -90,7 +105,11 @@ impl EventBus {
     }
 
     /// Publish an event and return its assigned id.
-    pub async fn publish(&self, name: impl Into<String>, data: impl Into<String>) -> String {
+    pub async fn publish(
+        &self,
+        name: impl Into<String>,
+        data: impl Into<String>,
+    ) -> Result<String, AppError> {
         self.publish_with_filters(name, data, Vec::new()).await
     }
 
@@ -100,12 +119,40 @@ impl EventBus {
         name: impl Into<String>,
         data: impl Into<String>,
         filters: Vec<String>,
-    ) -> String {
+    ) -> Result<String, AppError> {
+        let name = name.into();
+        let data = data.into();
+        if name.len() > MAX_EVENT_NAME_LEN || name.trim().is_empty() {
+            return Err(AppError::BadRequest {
+                field: "event.name".to_string(),
+                message: "event name is empty or too long".to_string(),
+            });
+        }
+        if data.len() > MAX_EVENT_DATA_LEN {
+            return Err(AppError::BadRequest {
+                field: "event.data".to_string(),
+                message: "event data exceeds maximum size".to_string(),
+            });
+        }
+        if filters.len() > MAX_EVENT_FILTERS {
+            return Err(AppError::BadRequest {
+                field: "event.filters".to_string(),
+                message: "too many event filters".to_string(),
+            });
+        }
+        for filter in &filters {
+            if filter.trim().is_empty() || filter.len() > MAX_FILTER_LEN {
+                return Err(AppError::BadRequest {
+                    field: "event.filter".to_string(),
+                    message: "event filter is empty or too long".to_string(),
+                });
+            }
+        }
         let id = self.next_id.fetch_add(1, Ordering::SeqCst).to_string();
         let event = Arc::new(Event {
             id: id.clone(),
-            name: name.into(),
-            data: data.into(),
+            name,
+            data,
             filters,
         });
         {
@@ -116,7 +163,7 @@ impl EventBus {
             history.push_back(Arc::clone(&event));
         }
         let _ = self.sender.send(event);
-        id
+        Ok(id)
     }
 
     /// Subscribe to events, optionally filtered by tag and replaying from `Last-Event-ID`.

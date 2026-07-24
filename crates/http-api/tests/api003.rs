@@ -351,11 +351,12 @@ async fn sse_filter_and_last_event_id_replay() {
         .into_body()
         .into_data_stream();
 
-    let _heartbeat = app.bus.publish("heartbeat", "ok").await;
+    let _heartbeat = app.bus.publish("heartbeat", "ok").await.unwrap();
     let alert1 = app
         .bus
         .publish_with_filters("alert", "fire", vec!["alerts".to_string()])
-        .await;
+        .await
+        .unwrap();
 
     let first = read_sse_line(&mut stream).await;
     assert!(first.contains("event: alert"));
@@ -381,7 +382,8 @@ async fn sse_filter_and_last_event_id_replay() {
     let alert2 = app
         .bus
         .publish_with_filters("alert", "motion", vec!["alerts".to_string()])
-        .await;
+        .await
+        .unwrap();
     let second = read_sse_line(&mut stream).await;
     assert!(second.contains("event: alert"));
     assert!(second.contains(&format!("id: {alert2}")));
@@ -423,7 +425,7 @@ async fn slow_sse_client_receives_gap_event() {
     // Publish more events than the broadcast buffer can hold while the client
     // is not polling. The receiver will lag and emit a gap event.
     for i in 0..10 {
-        app.bus.publish("event", i.to_string()).await;
+        app.bus.publish("event", i.to_string()).await.unwrap();
     }
 
     let first = read_sse_line(&mut stream).await;
