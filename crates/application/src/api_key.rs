@@ -77,8 +77,15 @@ pub async fn verify_api_key(
     };
 
     api_key.verify(source, scope, now)?;
+    let recorded = repo.record_usage(&token_hash, now, ctx).await?;
+    if !recorded {
+        // The key was revoked or expired between the read and the write.
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "api key is not valid",
+        ));
+    }
     api_key.record_usage(now);
-    repo.update(&api_key, ctx).await?;
     Ok(api_key)
 }
 
@@ -89,9 +96,15 @@ pub async fn revoke_api_key(
     clock: &dyn Clock,
     ctx: &RequestContext,
 ) -> Result<(), PlatformError> {
-    let mut key = repo.by_id(id, ctx).await?;
-    key.revoke(clock.now());
-    repo.update(&key, ctx).await
+    let revoked_at = clock.now();
+    let revoked = repo.revoke(id, revoked_at, ctx).await?;
+    if !revoked {
+        return Err(PlatformError::new(
+            ErrorCode::NotFound,
+            "api key not found or already revoked",
+        ));
+    }
+    Ok(())
 }
 
 fn generate_random_string(random: &dyn RandomSource, len: usize) -> Result<String, PlatformError> {

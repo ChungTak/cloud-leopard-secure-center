@@ -456,8 +456,23 @@ pub trait ApiKeyRepository: Send + Sync {
         ctx: &RequestContext,
     ) -> Result<Option<ApiKey>, PlatformError>;
 
-    /// Update an existing API key.
-    async fn update(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError>;
+    /// Revoke an API key. Returns `true` if the key existed and was not already
+    /// revoked, `false` otherwise.
+    async fn revoke(
+        &self,
+        id: Uuid,
+        revoked_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError>;
+
+    /// Record that a key was used. Returns `true` if the key exists and has not
+    /// been revoked or expired, `false` otherwise.
+    async fn record_usage(
+        &self,
+        token_hash: &str,
+        used_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError>;
 
     /// List API keys for an owner.
     async fn list_by_owner(

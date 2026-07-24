@@ -100,30 +100,51 @@ impl ApiKeyRepository for PostgresApiKeyRepository {
         Ok(api_key)
     }
 
-    async fn update(&self, api_key: &ApiKey, ctx: &RequestContext) -> Result<(), PlatformError> {
+    async fn revoke(
+        &self,
+        id: Uuid,
+        revoked_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
-        sqlx::query(
+        let result = sqlx::query(
             "UPDATE iam.api_keys
-             SET name = $2, scopes = $3, allowed_sources = $4, token_hash = $5,
-                 expires_at = $6, revoked_at = $7, created_at = $8, last_used_at = $9
-             WHERE id = $1",
+             SET revoked_at = $2
+             WHERE id = $1 AND revoked_at IS NULL",
         )
-        .bind(api_key.id)
-        .bind(&api_key.name)
-        .bind(&api_key.scopes)
-        .bind(&api_key.allowed_sources)
-        .bind(&api_key.token_hash)
-        .bind(utc_to_db(api_key.expires_at))
-        .bind(api_key.revoked_at.map(utc_to_db))
-        .bind(utc_to_db(api_key.created_at))
-        .bind(api_key.last_used_at.map(utc_to_db))
+        .bind(id)
+        .bind(utc_to_db(revoked_at))
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
         drop(tx);
         tx_managed.commit().await.map_err(db_error)?;
-        Ok(())
+        Ok(result.rows_affected() > 0)
+    }
+
+    async fn record_usage(
+        &self,
+        token_hash: &str,
+        used_at: UtcTimestamp,
+        ctx: &RequestContext,
+    ) -> Result<bool, PlatformError> {
+        let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
+        let mut tx = tx_managed.lock().await;
+        let result = sqlx::query(
+            "UPDATE iam.api_keys
+             SET last_used_at = $2
+             WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > $3",
+        )
+        .bind(token_hash)
+        .bind(utc_to_db(used_at))
+        .bind(utc_to_db(used_at))
+        .execute(&mut *tx)
+        .await
+        .map_err(db_error)?;
+        drop(tx);
+        tx_managed.commit().await.map_err(db_error)?;
+        Ok(result.rows_affected() > 0)
     }
 
     async fn list_by_owner(
@@ -171,7 +192,7 @@ fn row_to_api_key(row: sqlx::postgres::PgRow) -> Result<ApiKey, PlatformError> {
     let created_at: DateTime<Utc> = row.try_get("created_at").map_err(db_error)?;
     let last_used_at: Option<DateTime<Utc>> = row.try_get("last_used_at").map_err(db_error)?;
 
-    let mut api_key = ApiKey::new(
+    ApiKey::from_parts(
         id,
         TenantId::parse_str(&tenant_id.to_string())?,
         UserId::parse_str(&owner_id.to_string())?,
@@ -180,11 +201,10 @@ fn row_to_api_key(row: sqlx::postgres::PgRow) -> Result<ApiKey, PlatformError> {
         allowed_sources,
         token_hash,
         expires_at.into(),
+        revoked_at.map(Into::into),
         created_at.into(),
-    )?;
-    api_key.revoked_at = revoked_at.map(Into::into);
-    api_key.last_used_at = last_used_at.map(Into::into);
-    Ok(api_key)
+        last_used_at.map(Into::into),
+    )
 }
 
 fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {

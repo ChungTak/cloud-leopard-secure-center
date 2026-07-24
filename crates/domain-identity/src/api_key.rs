@@ -106,6 +106,64 @@ impl ApiKey {
     pub fn record_usage(&mut self, now: UtcTimestamp) {
         self.last_used_at = Some(now);
     }
+
+    /// Reconstruct an API key from persisted parts.
+    #[allow(clippy::too_many_arguments)]
+    pub fn from_parts(
+        id: Uuid,
+        tenant_id: TenantId,
+        owner_id: UserId,
+        name: impl Into<String>,
+        scopes: Vec<String>,
+        allowed_sources: Vec<String>,
+        token_hash: impl Into<String>,
+        expires_at: UtcTimestamp,
+        revoked_at: Option<UtcTimestamp>,
+        created_at: UtcTimestamp,
+        last_used_at: Option<UtcTimestamp>,
+    ) -> Result<Self, PlatformError> {
+        let name = name.into();
+        let token_hash = token_hash.into();
+        validate_name(&name)?;
+        validate_scopes(&scopes)?;
+        validate_allowed_sources(&allowed_sources)?;
+        validate_token_hash(&token_hash)?;
+        if expires_at <= created_at {
+            return Err(PlatformError::invalid(
+                "expires_at",
+                "api key expiration must be after creation time",
+            ));
+        }
+        if let Some(revoked_at) = revoked_at
+            && revoked_at < created_at
+        {
+            return Err(PlatformError::invalid(
+                "revoked_at",
+                "api key revocation time must not be before creation time",
+            ));
+        }
+        if let Some(last_used_at) = last_used_at
+            && (last_used_at < created_at || last_used_at >= expires_at)
+        {
+            return Err(PlatformError::invalid(
+                "last_used_at",
+                "api key last used time must be between creation and expiration",
+            ));
+        }
+        Ok(Self {
+            id,
+            tenant_id,
+            owner_id,
+            name,
+            scopes,
+            allowed_sources,
+            token_hash,
+            expires_at,
+            revoked_at,
+            created_at,
+            last_used_at,
+        })
+    }
 }
 
 fn validate_name(name: &str) -> Result<(), PlatformError> {
