@@ -125,6 +125,10 @@ impl ConfigurationRepository for PostgresConfigurationRepository {
                  SET tenant_id = $1, scope_type = $2, scope_id = $3, config_key = $4,
                      value = $5::jsonb, raw_value = $6, secret_ref = $7, revision = revision + 1
                  WHERE config_value_id = $8 AND revision = $9
+                   AND tenant_id IS NOT DISTINCT FROM $1
+                   AND scope_type = $2
+                   AND COALESCE(scope_id, '') = COALESCE($3, '')
+                   AND config_key = $4
                  RETURNING config_value_id, revision",
             )
             .bind(tenant_id)
