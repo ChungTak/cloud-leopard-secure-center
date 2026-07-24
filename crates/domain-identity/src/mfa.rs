@@ -120,7 +120,7 @@ impl MfaFactor {
         if !self.enabled {
             return Ok(false);
         }
-        let step = time_step(now);
+        let step = time_step(now)?;
         if self.last_used_step == Some(step)
             && let Some(ref last) = self.last_used_code
             && code.len() == last.len()
@@ -251,9 +251,12 @@ fn hash_raw(raw: &str) -> String {
     Base64UrlUnpadded::encode_string(&digest)
 }
 
-fn time_step(now: UtcTimestamp) -> u64 {
-    let seconds = (now.timestamp_millis() / 1000) as u64;
-    seconds / 30
+fn time_step(now: UtcTimestamp) -> Result<u64, PlatformError> {
+    let millis: u64 = now
+        .timestamp_millis()
+        .try_into()
+        .map_err(|_| PlatformError::invalid("totp", "timestamp is out of the supported range"))?;
+    Ok(millis / 1000 / 30)
 }
 
 fn constant_time_eq(a: &str, b: &str) -> bool {
