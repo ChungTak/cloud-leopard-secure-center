@@ -253,6 +253,9 @@ pub async fn disable_user(
     user_id: UserId,
 ) -> Result<(), PlatformError> {
     let mut user = users.by_id(user_id, ctx).await?;
+    if user.status == UserStatus::Disabled {
+        return Ok(());
+    }
     let expected = user.revision;
     user.disable(clock, ctx.actor_id)?;
     user.bump_session_version(clock, ctx.actor_id)?;

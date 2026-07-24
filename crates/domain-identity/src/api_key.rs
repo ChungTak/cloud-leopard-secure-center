@@ -110,8 +110,7 @@ impl ApiKey {
                     PlatformError::new(ErrorCode::Denied, "source is not allowed for this key")
                 })?;
             let allowed = self.allowed_sources.iter().any(|s| {
-                parse_allowed_source(s.trim())
-                    .is_some_and(|net| net.contains(&source_ip))
+                parse_allowed_source(s.trim()).is_some_and(|net| net.contains(&source_ip))
             });
             if !allowed {
                 return Err(PlatformError::new(
