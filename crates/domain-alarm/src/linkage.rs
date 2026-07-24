@@ -10,6 +10,13 @@ use foundation::TenantId;
 
 use crate::{Alarm, AlarmError, AlarmErrorKind};
 
+const MAX_RULE_ID_LEN: usize = 256;
+const MAX_EXCLUSION_ID_LEN: usize = 256;
+const MAX_EXCLUSIONS: usize = 256;
+const MAX_ACTIONS: usize = 64;
+const MAX_ACTION_STRING_LEN: usize = 1024;
+const MAX_LINKAGE_CONDITION_DEPTH: usize = 32;
+
 /// Conditions that trigger a linkage rule.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LinkageCondition {
@@ -34,6 +41,63 @@ pub enum LinkageAction {
     DeriveAlarm { title: String },
 }
 
+impl LinkageAction {
+    /// Validate the action string fields before execution.
+    pub fn validate(&self) -> Result<(), AlarmError> {
+        fn check(value: &str, field: &str) -> Result<(), AlarmError> {
+            if value.trim().is_empty() || value.len() > MAX_ACTION_STRING_LEN {
+                return Err(AlarmError::new(
+                    AlarmErrorKind::Invalid,
+                    format!("{field} is empty or exceeds maximum length"),
+                ));
+            }
+            Ok(())
+        }
+
+        match self {
+            LinkageAction::Notify {
+                channel,
+                recipient,
+                template,
+            } => {
+                check(channel, "notify.channel")?;
+                check(recipient, "notify.recipient")?;
+                check(template, "notify.template")?;
+            }
+            LinkageAction::Plugin { plugin, action } => {
+                check(plugin, "plugin.name")?;
+                check(action, "plugin.action")?;
+            }
+            LinkageAction::DeriveAlarm { title } => {
+                check(title, "derive_alarm.title")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl LinkageCondition {
+    /// Validate the condition tree depth to prevent stack overflow from a
+    /// maliciously nested upstream payload.
+    pub fn validate(&self, depth: usize) -> Result<(), AlarmError> {
+        if depth > MAX_LINKAGE_CONDITION_DEPTH {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "linkage condition exceeds maximum nesting depth",
+            ));
+        }
+        match self {
+            LinkageCondition::And(conditions) | LinkageCondition::Or(conditions) => {
+                for condition in conditions {
+                    condition.validate(depth + 1)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+}
+
 /// Linkage rule with cooling and depth limits.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AlarmLinkageRule {
@@ -47,6 +111,43 @@ pub struct AlarmLinkageRule {
     pub max_depth: u32,
     /// IDs of rules that must not be triggered in the same chain (loop guard).
     pub exclusions: HashSet<String>,
+}
+
+impl AlarmLinkageRule {
+    /// Validate the rule shape, bounds, and action strings.
+    pub fn validate(&self) -> Result<(), AlarmError> {
+        if self.rule_id.trim().is_empty() || self.rule_id.len() > MAX_RULE_ID_LEN {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "rule_id is empty or exceeds maximum length",
+            ));
+        }
+        if self.exclusions.len() > MAX_EXCLUSIONS {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "too many exclusion rule ids",
+            ));
+        }
+        for id in &self.exclusions {
+            if id.trim().is_empty() || id.len() > MAX_EXCLUSION_ID_LEN {
+                return Err(AlarmError::new(
+                    AlarmErrorKind::Invalid,
+                    "exclusion id is empty or exceeds maximum length",
+                ));
+            }
+        }
+        if self.actions.len() > MAX_ACTIONS {
+            return Err(AlarmError::new(
+                AlarmErrorKind::Invalid,
+                "too many linkage actions",
+            ));
+        }
+        for action in &self.actions {
+            action.validate()?;
+        }
+        self.condition.validate(0)?;
+        Ok(())
+    }
 }
 
 /// Result of a linkage workflow run.
@@ -90,8 +191,11 @@ impl LinkageWorkflow for UnsupportedLinkageWorkflow {
         &self,
         _tenant_id: TenantId,
         _alarm: &Alarm,
-        _rules: &[AlarmLinkageRule],
+        rules: &[AlarmLinkageRule],
     ) -> Result<LinkageOutcome, AlarmError> {
+        for rule in rules {
+            rule.validate()?;
+        }
         if self.enabled {
             Err(AlarmError::new(
                 AlarmErrorKind::Unsupported,
