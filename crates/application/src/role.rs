@@ -6,7 +6,8 @@ use domain_authorization::permission::Permission;
 use domain_authorization::role::Role;
 use domain_authorization::role_binding::ResourceRef;
 use foundation::{
-    Clock, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId, uuid::Uuid,
+    Clock, ErrorCode, IdGenerator, PlatformError, RequestContext, Revision, RoleId, TenantId,
+    uuid::Uuid,
 };
 use storage_api::{AuditWriter, ListOptions, Page, RoleRepository};
 
@@ -160,6 +161,16 @@ where
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let tenant_id = request.payload.tenant_id;
+
+        if let Some(t) = tenant_id
+            && ctx.tenant_id != Some(t)
+        {
+            return Err(PlatformError::new(
+                ErrorCode::Denied,
+                "tenant scope mismatch",
+            ));
+        }
+
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {

@@ -5,7 +5,8 @@ use domain_audit::audit_record::ActionRisk;
 use domain_authorization::role_binding::ResourceRef;
 use domain_organization::organization_unit::OrganizationUnit;
 use foundation::{
-    Clock, IdGenerator, OrganizationId, PlatformError, RequestContext, Revision, TenantId,
+    Clock, ErrorCode, IdGenerator, OrganizationId, PlatformError, RequestContext, Revision,
+    TenantId,
 };
 use storage_api::{AuditWriter, ListOptions, OrganizationUnitRepository, Page};
 
@@ -119,6 +120,13 @@ where
         usecase::check_deadline(ctx, &self.clock)?;
         let actor = usecase::require_actor(ctx)?;
         let tenant_id = request.payload.tenant_id;
+
+        if ctx.tenant_id != Some(tenant_id) {
+            return Err(PlatformError::new(
+                ErrorCode::Denied,
+                "tenant scope mismatch",
+            ));
+        }
 
         let resource = request
             .payload
