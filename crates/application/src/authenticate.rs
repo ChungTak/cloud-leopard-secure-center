@@ -5,7 +5,7 @@ use domain_identity::password::Argon2idPasswordHasher;
 use domain_identity::user::{User, UserStatus};
 use foundation::{ErrorCode, PlatformError, RequestContext};
 use std::net::IpAddr;
-use storage_api::{CredentialRepository, LoginAttemptRepository, UserRepository};
+use storage_api::{CredentialRepository, LoginAttemptRepository, TenantRepository, UserRepository};
 
 /// Authenticate a user with username and password, recording login attempts
 /// and enforcing rate/lockout policy.
@@ -14,6 +14,7 @@ pub async fn authenticate(
     users: &dyn UserRepository,
     credentials: &dyn CredentialRepository,
     attempts: &dyn LoginAttemptRepository,
+    tenants: &dyn TenantRepository,
     hasher: &Argon2idPasswordHasher,
     policy: &AuthenticationPolicy,
     ctx: &RequestContext,
@@ -38,7 +39,27 @@ pub async fn authenticate(
         }
     };
 
-    if user.status != UserStatus::Active {
+    if user.deleted_at.is_some() || user.status != UserStatus::Active {
+        let _ = attempts
+            .record(tenant_id, username, ip_string.clone(), false, ctx)
+            .await;
+        return Ok(AuthenticationResult::InvalidCredentials);
+    }
+
+    let tenant_ctx = RequestContext {
+        tenant_id: Some(user.tenant_id),
+        ..Default::default()
+    };
+    let tenant = match tenants.by_id(user.tenant_id, &tenant_ctx).await {
+        Ok(t) => t,
+        Err(_) => {
+            let _ = attempts
+                .record(tenant_id, username, ip_string.clone(), false, ctx)
+                .await;
+            return Ok(AuthenticationResult::InvalidCredentials);
+        }
+    };
+    if !tenant.allows_new_sessions() {
         let _ = attempts
             .record(tenant_id, username, ip_string.clone(), false, ctx)
             .await;
