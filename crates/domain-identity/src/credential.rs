@@ -67,14 +67,16 @@ impl Credential {
     pub fn new_password(
         tenant_id: TenantId,
         user_id: UserId,
-        phc_hash: impl Into<String>,
-        parameters: impl Into<String>,
+        phc_hash: impl AsRef<str>,
+        parameters: impl AsRef<str>,
         clock: &dyn foundation::Clock,
     ) -> Result<Self, PlatformError> {
-        let value = phc_hash.into();
-        let parameters = parameters.into();
-        validate_credential_value(&value)?;
-        validate_credential_parameters(&parameters)?;
+        let value = phc_hash.as_ref();
+        let parameters = parameters.as_ref();
+        validate_credential_value(value)?;
+        validate_credential_parameters(parameters)?;
+        let value = value.to_string();
+        let parameters = parameters.to_string();
         let now = clock.now();
         Ok(Self {
             tenant_id,
@@ -94,16 +96,18 @@ impl Credential {
         tenant_id: TenantId,
         user_id: UserId,
         credential_type: CredentialType,
-        value: impl Into<String>,
-        parameters: impl Into<String>,
+        value: impl AsRef<str>,
+        parameters: impl AsRef<str>,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
     ) -> Result<Self, PlatformError> {
-        let value = value.into();
-        let parameters = parameters.into();
-        validate_credential_value(&value)?;
-        validate_credential_parameters(&parameters)?;
+        let value = value.as_ref();
+        let parameters = parameters.as_ref();
+        validate_credential_value(value)?;
+        validate_credential_parameters(parameters)?;
+        let value = value.to_string();
+        let parameters = parameters.to_string();
         Ok(Self {
             tenant_id,
             user_id,
@@ -119,14 +123,16 @@ impl Credential {
     /// Replace the stored value and bump revision.
     pub fn rotate(
         &mut self,
-        phc_hash: impl Into<String>,
-        parameters: impl Into<String>,
+        phc_hash: impl AsRef<str>,
+        parameters: impl AsRef<str>,
         clock: &dyn foundation::Clock,
     ) -> Result<(), PlatformError> {
-        let value = phc_hash.into();
-        let parameters = parameters.into();
-        validate_credential_value(&value)?;
-        validate_credential_parameters(&parameters)?;
+        let value = phc_hash.as_ref();
+        let parameters = parameters.as_ref();
+        validate_credential_value(value)?;
+        validate_credential_parameters(parameters)?;
+        let value = value.to_string();
+        let parameters = parameters.to_string();
         self.value = value;
         self.parameters = parameters;
         self.updated_at = clock.now();

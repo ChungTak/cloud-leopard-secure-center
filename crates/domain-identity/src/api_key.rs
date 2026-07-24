@@ -45,15 +45,16 @@ impl ApiKey {
         id: Uuid,
         tenant_id: TenantId,
         owner_id: UserId,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         scopes: Vec<String>,
         allowed_sources: Vec<String>,
         token_hash: String,
         expires_at: UtcTimestamp,
         created_at: UtcTimestamp,
     ) -> Result<Self, PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         validate_scopes(&scopes)?;
         validate_allowed_sources(&allowed_sources)?;
         validate_token_hash(&token_hash)?;
@@ -138,21 +139,23 @@ impl ApiKey {
         id: Uuid,
         tenant_id: TenantId,
         owner_id: UserId,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         scopes: Vec<String>,
         allowed_sources: Vec<String>,
-        token_hash: impl Into<String>,
+        token_hash: impl AsRef<str>,
         expires_at: UtcTimestamp,
         revoked_at: Option<UtcTimestamp>,
         created_at: UtcTimestamp,
         last_used_at: Option<UtcTimestamp>,
     ) -> Result<Self, PlatformError> {
-        let name = name.into();
-        let token_hash = token_hash.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        let token_hash = token_hash.as_ref();
+        validate_name(name)?;
         validate_scopes(&scopes)?;
         validate_allowed_sources(&allowed_sources)?;
-        validate_token_hash(&token_hash)?;
+        validate_token_hash(token_hash)?;
+        let name = name.to_string();
+        let token_hash = token_hash.to_string();
         if expires_at <= created_at {
             return Err(PlatformError::invalid(
                 "expires_at",

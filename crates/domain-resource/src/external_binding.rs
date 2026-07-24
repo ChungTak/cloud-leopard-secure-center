@@ -73,22 +73,22 @@ impl ExternalBinding {
         tenant_id: TenantId,
         resource_type: ResourceType,
         resource_id: Uuid,
-        external_ref: impl Into<String>,
-        external_kind: impl Into<String>,
+        external_ref: impl AsRef<str>,
+        external_kind: impl AsRef<str>,
         clock: &dyn Clock,
     ) -> Result<Self, PlatformError> {
-        let external_ref = external_ref.into();
-        let external_kind = external_kind.into();
-        validate_ref(&external_ref)?;
-        validate_kind(&external_kind)?;
+        let external_ref = external_ref.as_ref();
+        let external_kind = external_kind.as_ref();
+        validate_ref(external_ref)?;
+        validate_kind(external_kind)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             resource_type,
             resource_id,
-            external_ref,
-            external_kind,
+            external_ref: external_ref.to_string(),
+            external_kind: external_kind.to_string(),
             state: ExternalBindingState::Pending,
             activated_at: None,
             revision: Revision::initial(),
@@ -105,8 +105,8 @@ impl ExternalBinding {
         tenant_id: TenantId,
         resource_type: ResourceType,
         resource_id: Uuid,
-        external_ref: impl Into<String>,
-        external_kind: impl Into<String>,
+        external_ref: impl AsRef<str>,
+        external_kind: impl AsRef<str>,
         state: ExternalBindingState,
         activated_at: Option<UtcTimestamp>,
         revision: Revision,
@@ -114,17 +114,17 @@ impl ExternalBinding {
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let external_ref = external_ref.into();
-        let external_kind = external_kind.into();
-        validate_ref(&external_ref)?;
-        validate_kind(&external_kind)?;
+        let external_ref = external_ref.as_ref();
+        let external_kind = external_kind.as_ref();
+        validate_ref(external_ref)?;
+        validate_kind(external_kind)?;
         Ok(Self {
             id,
             tenant_id,
             resource_type,
             resource_id,
-            external_ref,
-            external_kind,
+            external_ref: external_ref.to_string(),
+            external_kind: external_kind.to_string(),
             state,
             activated_at,
             revision,

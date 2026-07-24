@@ -36,8 +36,8 @@ impl TokenService {
     /// `access_ttl_seconds` must be positive.
     pub fn new(
         secret: impl AsRef<[u8]>,
-        issuer: impl Into<String>,
-        audience: impl Into<String>,
+        issuer: impl AsRef<str>,
+        audience: impl AsRef<str>,
         access_ttl_seconds: i64,
     ) -> Result<Self, PlatformError> {
         let secret = secret.as_ref().to_vec();
@@ -55,8 +55,8 @@ impl TokenService {
         }
         Ok(Self {
             secret,
-            issuer: issuer.into(),
-            audience: audience.into(),
+            issuer: issuer.as_ref().to_string(),
+            audience: audience.as_ref().to_string(),
             access_ttl_seconds,
         })
     }
@@ -68,7 +68,7 @@ impl TokenService {
         tenant_id: TenantId,
         session_version: u64,
         now: UtcTimestamp,
-        jti: impl Into<String>,
+        jti: impl AsRef<str>,
     ) -> Result<String, PlatformError> {
         let iat = now.timestamp_millis() / 1000;
         let exp = iat
@@ -82,7 +82,7 @@ impl TokenService {
             iss: self.issuer.clone(),
             nbf: iat,
             exp,
-            jti: jti.into(),
+            jti: jti.as_ref().to_string(),
         };
         self.sign(&claims)
     }

@@ -67,28 +67,28 @@ impl Tenant {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         id: TenantId,
-        code: impl Into<String>,
-        name: impl Into<String>,
-        locale: Option<impl Into<String>>,
-        timezone: Option<impl Into<String>>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
+        locale: Option<impl AsRef<str>>,
+        timezone: Option<impl AsRef<str>>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
-        let locale = locale.map_or_else(|| "en-US".to_string(), Into::into);
-        validate_locale(&locale)?;
-        let timezone = timezone.map_or_else(|| "UTC".to_string(), Into::into);
-        validate_timezone(&timezone)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let locale = locale.as_ref().map(|l| l.as_ref()).unwrap_or("en-US");
+        validate_locale(locale)?;
+        let timezone = timezone.as_ref().map(|t| t.as_ref()).unwrap_or("UTC");
+        validate_timezone(timezone)?;
         let now = clock.now();
         Ok(Self {
             id,
-            code,
-            name,
-            locale,
-            timezone,
+            code: code.to_string(),
+            name: name.to_string(),
+            locale: locale.to_string(),
+            timezone: timezone.to_string(),
             status: TenantStatus::Active,
             revision: Revision::initial(),
             created_at: now,
@@ -101,30 +101,30 @@ impl Tenant {
     #[allow(clippy::too_many_arguments)]
     pub fn from_parts(
         id: TenantId,
-        code: impl Into<String>,
-        name: impl Into<String>,
-        locale: impl Into<String>,
-        timezone: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
+        locale: impl AsRef<str>,
+        timezone: impl AsRef<str>,
         status: TenantStatus,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
-        let locale = locale.into();
-        validate_locale(&locale)?;
-        let timezone = timezone.into();
-        validate_timezone(&timezone)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let locale = locale.as_ref();
+        validate_locale(locale)?;
+        let timezone = timezone.as_ref();
+        validate_timezone(timezone)?;
         Ok(Self {
             id,
-            code,
-            name,
-            locale,
-            timezone,
+            code: code.to_string(),
+            name: name.to_string(),
+            locale: locale.to_string(),
+            timezone: timezone.to_string(),
             status,
             revision,
             created_at,
@@ -136,13 +136,14 @@ impl Tenant {
     /// Rename the tenant and bump the revision.
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("rename")?;
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
@@ -156,13 +157,14 @@ impl Tenant {
     /// Update the default locale.
     pub fn set_locale(
         &mut self,
-        locale: impl Into<String>,
+        locale: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("set_locale")?;
-        let locale = locale.into();
-        validate_locale(&locale)?;
+        let locale = locale.as_ref();
+        validate_locale(locale)?;
+        let locale = locale.to_string();
         if locale == self.locale {
             return Ok(());
         }
@@ -176,13 +178,14 @@ impl Tenant {
     /// Update the default timezone.
     pub fn set_timezone(
         &mut self,
-        timezone: impl Into<String>,
+        timezone: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.ensure_not_closed("set_timezone")?;
-        let timezone = timezone.into();
-        validate_timezone(&timezone)?;
+        let timezone = timezone.as_ref();
+        validate_timezone(timezone)?;
+        let timezone = timezone.to_string();
         if timezone == self.timezone {
             return Ok(());
         }

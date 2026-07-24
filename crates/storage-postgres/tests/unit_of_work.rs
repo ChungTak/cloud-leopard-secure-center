@@ -35,8 +35,8 @@ fn ctx_for(tenant: &str) -> RequestContext {
 fn new_tenant(id: Uuid, code: &str, name: &str) -> domain_organization::tenant::Tenant {
     ok_or_panic(domain_organization::tenant::Tenant::new(
         parse_tenant(&id.to_string()),
-        code.to_string(),
-        name.to_string(),
+        code,
+        name,
         None::<String>,
         None::<String>,
         &SystemClock,
