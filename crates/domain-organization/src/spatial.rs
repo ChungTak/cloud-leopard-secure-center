@@ -76,17 +76,17 @@ impl Site {
         id: SiteId,
         tenant_id: TenantId,
         organization_unit_id: Option<OrganizationId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
-        address: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
+        address: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
-        let address = address.into();
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let address = address.as_ref();
         if address.len() > 256 {
             return Err(PlatformError::invalid(
                 "site_address",
@@ -98,9 +98,9 @@ impl Site {
             id,
             tenant_id,
             organization_unit_id,
-            code,
-            name,
-            address,
+            code: code.to_string(),
+            name: name.to_string(),
+            address: address.to_string(),
             timezone: "UTC".to_string(),
             revision: Revision::initial(),
             created_at: now,
@@ -113,36 +113,36 @@ impl Site {
         id: SiteId,
         tenant_id: TenantId,
         organization_unit_id: Option<OrganizationId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
-        address: impl Into<String>,
-        timezone: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
+        address: impl AsRef<str>,
+        timezone: impl AsRef<str>,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
-        let address = address.into();
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let address = address.as_ref();
         if address.len() > 256 {
             return Err(PlatformError::invalid(
                 "site_address",
                 "site address must be at most 256 characters",
             ));
         }
-        let timezone = timezone.into();
-        validate_timezone(&timezone)?;
+        let timezone = timezone.as_ref();
+        validate_timezone(timezone)?;
         Ok(Self {
             id,
             tenant_id,
             organization_unit_id,
-            code,
-            name,
-            address,
-            timezone,
+            code: code.to_string(),
+            name: name.to_string(),
+            address: address.to_string(),
+            timezone: timezone.to_string(),
             revision,
             created_at,
             updated_at,
@@ -152,12 +152,13 @@ impl Site {
 
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
@@ -170,18 +171,18 @@ impl Site {
 
     pub fn set_address(
         &mut self,
-        address: impl Into<String>,
+        address: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let address = address.into();
+        let address = address.as_ref();
         if address.len() > 256 {
             return Err(PlatformError::invalid(
                 "site_address",
                 "site address must be at most 256 characters",
             ));
         }
-        self.address = address;
+        self.address = address.to_string();
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
@@ -190,12 +191,13 @@ impl Site {
 
     pub fn set_timezone(
         &mut self,
-        timezone: impl Into<String>,
+        timezone: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let timezone = timezone.into();
-        validate_timezone(&timezone)?;
+        let timezone = timezone.as_ref();
+        validate_timezone(timezone)?;
+        let timezone = timezone.to_string();
         if timezone == self.timezone {
             return Ok(());
         }
@@ -212,22 +214,22 @@ impl Building {
         id: BuildingId,
         tenant_id: TenantId,
         site_id: SiteId,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             site_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             revision: Revision::initial(),
             created_at: now,
             updated_at: now,
@@ -239,23 +241,23 @@ impl Building {
         id: BuildingId,
         tenant_id: TenantId,
         site_id: SiteId,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         Ok(Self {
             id,
             tenant_id,
             site_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             revision,
             created_at,
             updated_at,
@@ -265,12 +267,13 @@ impl Building {
 
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
@@ -287,29 +290,29 @@ impl Floor {
         id: FloorId,
         tenant_id: TenantId,
         building_id: BuildingId,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         level: i32,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
+        let code = code.as_ref();
+        validate_code(code)?;
         if !(-10..=200).contains(&level) {
             return Err(PlatformError::invalid(
                 "floor_level",
                 "floor level must be between -10 and 200",
             ));
         }
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             building_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             level,
             revision: Revision::initial(),
             created_at: now,
@@ -322,30 +325,30 @@ impl Floor {
         id: FloorId,
         tenant_id: TenantId,
         building_id: BuildingId,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         level: i32,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
+        let code = code.as_ref();
+        validate_code(code)?;
         if !(-10..=200).contains(&level) {
             return Err(PlatformError::invalid(
                 "floor_level",
                 "floor level must be between -10 and 200",
             ));
         }
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         Ok(Self {
             id,
             tenant_id,
             building_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             level,
             revision,
             created_at,
@@ -356,12 +359,13 @@ impl Floor {
 
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
@@ -398,23 +402,23 @@ impl Area {
         tenant_id: TenantId,
         floor_id: Option<FloorId>,
         parent_id: Option<AreaId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             floor_id,
             parent_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             coordinate_system: "WGS84".to_string(),
             latitude: None,
             longitude: None,
@@ -431,9 +435,9 @@ impl Area {
         tenant_id: TenantId,
         floor_id: Option<FloorId>,
         parent_id: Option<AreaId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
-        coordinate_system: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
+        coordinate_system: impl AsRef<str>,
         latitude: Option<f64>,
         longitude: Option<f64>,
         altitude: Option<f64>,
@@ -442,20 +446,20 @@ impl Area {
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
-        let coordinate_system = coordinate_system.into();
-        validate_coordinates(&coordinate_system, latitude, longitude)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let coordinate_system = coordinate_system.as_ref();
+        validate_coordinates(coordinate_system, latitude, longitude)?;
         Ok(Self {
             id,
             tenant_id,
             floor_id,
             parent_id,
-            code,
-            name,
-            coordinate_system,
+            code: code.to_string(),
+            name: name.to_string(),
+            coordinate_system: coordinate_system.to_string(),
             latitude,
             longitude,
             altitude,
@@ -468,12 +472,13 @@ impl Area {
 
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
@@ -486,16 +491,16 @@ impl Area {
 
     pub fn set_coordinates(
         &mut self,
-        coordinate_system: impl Into<String>,
+        coordinate_system: impl AsRef<str>,
         latitude: Option<f64>,
         longitude: Option<f64>,
         altitude: Option<f64>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let coordinate_system = coordinate_system.into();
-        validate_coordinates(&coordinate_system, latitude, longitude)?;
-        self.coordinate_system = coordinate_system;
+        let coordinate_system = coordinate_system.as_ref();
+        validate_coordinates(coordinate_system, latitude, longitude)?;
+        self.coordinate_system = coordinate_system.to_string();
         self.latitude = latitude;
         self.longitude = longitude;
         self.altitude = altitude;

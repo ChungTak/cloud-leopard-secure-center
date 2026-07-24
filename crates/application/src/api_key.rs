@@ -37,7 +37,7 @@ pub async fn create_api_key(
     clock: &dyn Clock,
     ctx: &RequestContext,
     owner_id: UserId,
-    name: impl Into<String>,
+    name: impl AsRef<str>,
     scopes: Vec<String>,
     allowed_sources: Vec<String>,
     expires_at: UtcTimestamp,

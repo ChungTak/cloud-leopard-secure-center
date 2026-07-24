@@ -69,7 +69,7 @@ impl MfaFactor {
         id: Uuid,
         tenant_id: TenantId,
         user_id: UserId,
-        secret_ref: impl Into<String>,
+        secret_ref: impl AsRef<str>,
         recovery_code_count: usize,
         random: &dyn RandomSource,
         clock: &dyn foundation::Clock,
@@ -81,6 +81,9 @@ impl MfaFactor {
                 format!("must be at most {MAX_RECOVERY_CODES}"),
             ));
         }
+        let secret_ref = secret_ref.as_ref();
+        validate_secret_ref(secret_ref)?;
+
         let mut raw_codes = Vec::with_capacity(recovery_code_count);
         let mut recovery_codes = Vec::with_capacity(recovery_code_count);
         for _ in 0..recovery_code_count {
@@ -91,8 +94,7 @@ impl MfaFactor {
             raw_codes.push(raw);
         }
 
-        let secret_ref = secret_ref.into();
-        validate_secret_ref(&secret_ref)?;
+        let secret_ref = secret_ref.to_string();
         let factor = Self {
             id,
             tenant_id,
@@ -165,7 +167,7 @@ impl MfaFactor {
         tenant_id: TenantId,
         user_id: UserId,
         factor_type: MfaFactorType,
-        secret_ref: String,
+        secret_ref: impl AsRef<str>,
         enabled: bool,
         verified_at: Option<UtcTimestamp>,
         created_at: UtcTimestamp,
@@ -174,7 +176,9 @@ impl MfaFactor {
         last_used_step: Option<u64>,
         last_used_code: Option<String>,
     ) -> Result<Self, PlatformError> {
-        validate_secret_ref(&secret_ref)?;
+        let secret_ref = secret_ref.as_ref();
+        validate_secret_ref(secret_ref)?;
+        let secret_ref = secret_ref.to_string();
         if recovery_code_hashes.len() != recovery_code_used.len() {
             return Err(PlatformError::invalid(
                 "recovery_codes",

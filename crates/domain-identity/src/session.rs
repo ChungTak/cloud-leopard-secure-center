@@ -50,13 +50,13 @@ impl RefreshToken {
         tenant_id: TenantId,
         user_id: UserId,
         family_id: Uuid,
-        token_hash: impl Into<String>,
+        token_hash: impl AsRef<str>,
         session_version: u64,
         used: bool,
         expires_at: UtcTimestamp,
         created_at: UtcTimestamp,
     ) -> Result<Self, foundation::PlatformError> {
-        let token_hash = token_hash.into();
+        let token_hash = token_hash.as_ref();
         if token_hash.trim().is_empty() {
             return Err(foundation::PlatformError::invalid(
                 "token_hash",
@@ -75,6 +75,7 @@ impl RefreshToken {
                 "refresh token expiration must be after creation time",
             ));
         }
+        let token_hash = token_hash.to_string();
         Ok(Self {
             id,
             tenant_id,

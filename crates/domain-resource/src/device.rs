@@ -105,24 +105,24 @@ impl ManagedDevice {
     pub fn new(
         id: DeviceId,
         tenant_id: TenantId,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         serial: Option<String>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             organization_id: None,
             area_id: None,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             serial,
             lifecycle: DeviceLifecycle::Draft,
             online_state: OnlineState::Unknown,
@@ -140,8 +140,8 @@ impl ManagedDevice {
         tenant_id: TenantId,
         organization_id: Option<OrganizationId>,
         area_id: Option<AreaId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         serial: Option<String>,
         lifecycle: DeviceLifecycle,
         online_state: OnlineState,
@@ -150,17 +150,17 @@ impl ManagedDevice {
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         Ok(Self {
             id,
             tenant_id,
             organization_id,
             area_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             serial,
             lifecycle,
             online_state,
@@ -265,12 +265,13 @@ impl ManagedDevice {
     /// Rename the device.
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }

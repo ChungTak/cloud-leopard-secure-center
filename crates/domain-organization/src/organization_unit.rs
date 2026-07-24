@@ -31,22 +31,22 @@ impl OrganizationUnit {
         id: OrganizationId,
         tenant_id: TenantId,
         parent_id: Option<OrganizationId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         let now = clock.now();
         Ok(Self {
             id,
             tenant_id,
             parent_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             revision: Revision::initial(),
             created_at: now,
             updated_at: now,
@@ -60,23 +60,23 @@ impl OrganizationUnit {
         id: OrganizationId,
         tenant_id: TenantId,
         parent_id: Option<OrganizationId>,
-        code: impl Into<String>,
-        name: impl Into<String>,
+        code: impl AsRef<str>,
+        name: impl AsRef<str>,
         revision: Revision,
         created_at: UtcTimestamp,
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let code = code.into();
-        validate_code(&code)?;
-        let name = name.into();
-        validate_name(&name)?;
+        let code = code.as_ref();
+        validate_code(code)?;
+        let name = name.as_ref();
+        validate_name(name)?;
         Ok(Self {
             id,
             tenant_id,
             parent_id,
-            code,
-            name,
+            code: code.to_string(),
+            name: name.to_string(),
             revision,
             created_at,
             updated_at,
@@ -87,12 +87,13 @@ impl OrganizationUnit {
     /// Rename the unit and bump the revision.
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         if name == self.name {
             return Ok(());
         }
