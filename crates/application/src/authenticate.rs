@@ -33,7 +33,7 @@ pub async fn authenticate(
         Ok(u) => u,
         Err(_) => {
             attempts
-                .record(tenant_id, username, ip_string, false, ctx)
+                .record(tenant_id, username, ip_string, false, clock.now(), ctx)
                 .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
@@ -47,7 +47,14 @@ pub async fn authenticate(
                 return Err(e);
             }
             attempts
-                .record(tenant_id, &normalized_username, ip_string, false, ctx)
+                .record(
+                    tenant_id,
+                    &normalized_username,
+                    ip_string,
+                    false,
+                    clock.now(),
+                    ctx,
+                )
                 .await?;
             return Ok(AuthenticationResult::InvalidCredentials);
         }
@@ -60,6 +67,7 @@ pub async fn authenticate(
                 &normalized_username,
                 ip_string.clone(),
                 false,
+                clock.now(),
                 ctx,
             )
             .await?;
@@ -82,6 +90,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -95,6 +104,7 @@ pub async fn authenticate(
                 &normalized_username,
                 ip_string.clone(),
                 false,
+                clock.now(),
                 ctx,
             )
             .await?;
@@ -116,6 +126,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -125,12 +136,19 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string.clone() {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0
@@ -163,6 +181,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     true,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -175,6 +194,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -184,12 +204,19 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string.clone() {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0
@@ -208,6 +235,7 @@ pub async fn authenticate(
                     &normalized_username,
                     ip_string.clone(),
                     false,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
@@ -217,12 +245,19 @@ pub async fn authenticate(
                     tenant_id,
                     &normalized_username,
                     policy.window_seconds,
+                    clock.now(),
                     ctx,
                 )
                 .await?;
             let source_count = if let Some(ip) = ip_string {
                 attempts
-                    .count_failures_by_source(tenant_id, ip, policy.window_seconds, ctx)
+                    .count_failures_by_source(
+                        tenant_id,
+                        ip,
+                        policy.window_seconds,
+                        clock.now(),
+                        ctx,
+                    )
                     .await?
             } else {
                 0

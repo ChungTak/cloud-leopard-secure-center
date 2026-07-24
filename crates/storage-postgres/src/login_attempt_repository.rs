@@ -2,7 +2,10 @@
 
 use crate::db_error;
 use async_trait::async_trait;
-use foundation::{PlatformError, RequestContext, TenantId};
+use foundation::{
+    PlatformError, RequestContext, TenantId, UtcTimestamp,
+    chrono::{DateTime, Utc},
+};
 use storage_api::LoginAttemptRepository;
 
 use crate::begin_tenant_transaction;
@@ -28,18 +31,20 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         identity: &str,
         ip: Option<String>,
         success: bool,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<(), PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
         let mut tx = tx_managed.lock().await;
         sqlx::query(
             "INSERT INTO audit.login_attempts (tenant_id, identity, success, ip_address, created_at)
-             VALUES ($1, $2, $3, $4, now())",
+             VALUES ($1, $2, $3, $4, $5)",
         )
         .bind(*tenant_id.as_uuid())
         .bind(identity)
         .bind(success)
         .bind(ip)
+        .bind(utc_to_db(now))
         .execute(&mut *tx)
         .await
         .map_err(db_error)?;
@@ -53,6 +58,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         tenant_id: TenantId,
         identity: &str,
         window_seconds: i64,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -60,10 +66,11 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM audit.login_attempts
              WHERE tenant_id = $1 AND identity = $2 AND success = false
-               AND created_at > now() - ($3 || ' seconds')::interval",
+               AND created_at > $3 - ($4 || ' seconds')::interval",
         )
         .bind(*tenant_id.as_uuid())
         .bind(identity)
+        .bind(utc_to_db(now))
         .bind(window_seconds)
         .fetch_one(&mut *tx)
         .await
@@ -78,6 +85,7 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         tenant_id: TenantId,
         ip: String,
         window_seconds: i64,
+        now: UtcTimestamp,
         ctx: &RequestContext,
     ) -> Result<i64, PlatformError> {
         let tx_managed = begin_tenant_transaction(&self.pool, ctx).await?;
@@ -85,10 +93,11 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         let row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM audit.login_attempts
              WHERE tenant_id = $1 AND ip_address = $2 AND success = false
-               AND created_at > now() - ($3 || ' seconds')::interval",
+               AND created_at > $3 - ($4 || ' seconds')::interval",
         )
         .bind(*tenant_id.as_uuid())
         .bind(ip)
+        .bind(utc_to_db(now))
         .bind(window_seconds)
         .fetch_one(&mut *tx)
         .await
@@ -97,4 +106,8 @@ impl LoginAttemptRepository for PostgresLoginAttemptRepository {
         tx_managed.commit().await.map_err(db_error)?;
         Ok(row.0)
     }
+}
+
+fn utc_to_db(ts: UtcTimestamp) -> DateTime<Utc> {
+    ts.into()
 }

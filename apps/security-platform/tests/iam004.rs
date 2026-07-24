@@ -5,6 +5,7 @@ use application::mfa::{
 use domain_identity::assurance::AssuranceLevel;
 use domain_identity::totp;
 use domain_identity::user::User;
+use domain_organization::tenant::Tenant;
 use foundation::{
     Clock, ErrorCode, FakeClock, RequestContext, SystemClock, SystemIdGenerator, SystemRandom,
     TenantId, UserId, UtcTimestamp,
@@ -12,10 +13,10 @@ use foundation::{
 };
 use std::collections::HashMap;
 use std::sync::Mutex;
-use storage_api::{ApiKeyRepository, UserRepository};
+use storage_api::{ApiKeyRepository, TenantRepository, UserRepository};
 use storage_postgres::{
     api_key_repository::PostgresApiKeyRepository, mfa_repository::PostgresMfaRepository,
-    user_repository::PostgresUserRepository,
+    tenant_repository::PostgresTenantRepository, user_repository::PostgresUserRepository,
 };
 
 fn parse_tenant(s: &str) -> TenantId {
@@ -39,11 +40,25 @@ fn ctx_for(tenant: &str) -> RequestContext {
     }
 }
 
-async fn seed_user(pool: sqlx::PgPool) -> (User, PostgresUserRepository) {
+async fn seed_user(pool: sqlx::PgPool) -> (User, PostgresUserRepository, PostgresTenantRepository) {
+    let pool_clone = pool.clone();
     let users = PostgresUserRepository::new(pool);
+    let tenants = PostgresTenantRepository::new(pool_clone);
     let id_gen = SystemIdGenerator::new(SystemClock, SystemRandom);
     let tenant_id = parse_tenant("018e1234-5678-7abc-8def-0123456789ab");
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
+
+    let tenant = ok_or_panic(Tenant::new(
+        tenant_id,
+        "acme",
+        "Acme",
+        None::<String>,
+        None::<String>,
+        &SystemClock,
+        None,
+    ));
+    ok_or_panic(tenants.create(&tenant, &ctx).await);
+
     let mut user = ok_or_panic(User::new(
         ok_or_panic(UserId::generate(&id_gen)),
         tenant_id,
@@ -54,7 +69,7 @@ async fn seed_user(pool: sqlx::PgPool) -> (User, PostgresUserRepository) {
     ));
     ok_or_panic(user.activate(&SystemClock, None));
     ok_or_panic(users.create(&user, &ctx).await);
-    (user, users)
+    (user, users, tenants)
 }
 
 fn future<C: Clock>(clock: &C, seconds: i64) -> UtcTimestamp {
@@ -94,7 +109,7 @@ impl SecretResolver for MemorySecretResolver {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, tenant_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
@@ -117,6 +132,7 @@ async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
     let verified = ok_or_panic(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &created.raw_token,
             None,
@@ -134,7 +150,7 @@ async fn api_key_round_trip(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, tenant_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
     let clock = FakeClock::from_millis(0);
@@ -159,6 +175,7 @@ async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
     assert!(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &created.raw_token,
             None,
@@ -175,7 +192,7 @@ async fn expired_api_key_is_rejected(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, tenant_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
@@ -197,6 +214,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     assert!(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &read_key.raw_token,
             None,
@@ -226,6 +244,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     assert!(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &source_key.raw_token,
             Some("10.0.0.2"),
@@ -239,6 +258,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
     assert!(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &source_key.raw_token,
             Some("10.0.0.1"),
@@ -255,7 +275,7 @@ async fn api_key_scope_and_source_restrictions(pool: sqlx::PgPool) -> sqlx::Resu
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_raw_value_is_not_stored(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, _tenant_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
@@ -285,7 +305,7 @@ async fn api_key_raw_value_is_not_stored(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, tenant_repo) = seed_user(pool.clone()).await;
     let repo = PostgresApiKeyRepository::new(pool);
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
 
@@ -309,6 +329,7 @@ async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()>
     assert!(
         verify_api_key(
             &user_repo,
+            &tenant_repo,
             &repo,
             &created.raw_token,
             None,
@@ -325,7 +346,7 @@ async fn api_key_revocation_blocks_usage(pool: sqlx::PgPool) -> sqlx::Result<()>
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, _tenant_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");
@@ -355,7 +376,7 @@ async fn totp_round_trip_and_replay(pool: sqlx::PgPool) -> sqlx::Result<()> {
 
 #[sqlx::test(migrations = "../../migrations")]
 async fn recovery_code_one_time_use(pool: sqlx::PgPool) -> sqlx::Result<()> {
-    let (user, user_repo) = seed_user(pool.clone()).await;
+    let (user, user_repo, _tenant_repo) = seed_user(pool.clone()).await;
     let mfa_repo = PostgresMfaRepository::new(pool.clone());
     let resolver = MemorySecretResolver::new();
     let ctx = ctx_for("018e1234-5678-7abc-8def-0123456789ab");

@@ -7,7 +7,7 @@ use foundation::{
     Clock, ErrorCode, PlatformError, RandomSource, RequestContext, UserId, UtcTimestamp, uuid::Uuid,
 };
 use sha2::{Digest, Sha256};
-use storage_api::{ApiKeyRepository, UserRepository};
+use storage_api::{ApiKeyRepository, TenantRepository, UserRepository};
 
 /// A newly created API key. The raw token is only available here.
 #[derive(Clone)]
@@ -71,8 +71,10 @@ pub async fn create_api_key(
 
 /// Verify a raw API key for `scope` from `source` at `now`.
 /// Records usage on success.
+#[allow(clippy::too_many_arguments)]
 pub async fn verify_api_key(
     users: &dyn UserRepository,
+    tenants: &dyn TenantRepository,
     repo: &dyn ApiKeyRepository,
     raw_token: &str,
     source: Option<&str>,
@@ -112,6 +114,14 @@ pub async fn verify_api_key(
         || user.status != UserStatus::Active
         || user.tenant_id != api_key.tenant_id
     {
+        return Err(PlatformError::new(
+            ErrorCode::Unauthenticated,
+            "invalid api key",
+        ));
+    }
+
+    let tenant = tenants.by_id(api_key.tenant_id, &owner_ctx).await?;
+    if !tenant.allows_new_sessions() {
         return Err(PlatformError::new(
             ErrorCode::Unauthenticated,
             "invalid api key",
