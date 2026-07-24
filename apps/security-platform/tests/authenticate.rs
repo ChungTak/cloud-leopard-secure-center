@@ -11,8 +11,7 @@ use storage_api::{CredentialRepository, TenantRepository, UserRepository};
 use storage_postgres::{
     credential_repository::PostgresCredentialRepository,
     login_attempt_repository::PostgresLoginAttemptRepository,
-    tenant_repository::PostgresTenantRepository,
-    user_repository::PostgresUserRepository,
+    tenant_repository::PostgresTenantRepository, user_repository::PostgresUserRepository,
 };
 
 fn generator() -> SystemIdGenerator {

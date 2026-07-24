@@ -11,8 +11,7 @@ use foundation::{
 use storage_api::{CredentialRepository, TenantRepository, UserRepository};
 use storage_postgres::{
     credential_repository::PostgresCredentialRepository,
-    session_repository::PostgresSessionRepository,
-    tenant_repository::PostgresTenantRepository,
+    session_repository::PostgresSessionRepository, tenant_repository::PostgresTenantRepository,
     user_repository::PostgresUserRepository,
 };
 
