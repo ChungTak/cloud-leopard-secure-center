@@ -163,7 +163,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
@@ -217,7 +217,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
@@ -265,7 +265,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;
@@ -313,7 +313,7 @@ where
         let action = if tenant_id.is_some() {
             "tenant:role:write"
         } else {
-            "platform:tenant:write"
+            "platform:role:write"
         };
         let auth_req = auth_for_role(actor, tenant_id, action);
         usecase::authorize_or_fail(&self.auth, auth_req, ctx).await?;

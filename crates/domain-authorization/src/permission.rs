@@ -75,6 +75,8 @@ impl Permission {
 const KNOWN_PERMISSIONS: &[(&str, PermissionScope)] = &[
     ("platform:tenant:read", PermissionScope::Platform),
     ("platform:tenant:write", PermissionScope::Platform),
+    ("platform:role:read", PermissionScope::Platform),
+    ("platform:role:write", PermissionScope::Platform),
     ("tenant:user:read", PermissionScope::Tenant),
     ("tenant:user:write", PermissionScope::Tenant),
     ("tenant:role:read", PermissionScope::Tenant),
