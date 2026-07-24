@@ -10,8 +10,7 @@ export default function LoginPage(): ReactNode {
 
   function handleSubmit(event: FormEvent): void {
     event.preventDefault();
-    // eslint-disable-next-line no-console
-    console.log('login submitted', { username });
+    // Login is intentionally a stub until the backend token endpoint is wired.
   }
 
   return (
