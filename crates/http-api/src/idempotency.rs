@@ -104,50 +104,47 @@ pub async fn idempotency(req: Request<Body>, next: Next) -> Result<Response, App
     };
     let _guard = claim.lock().await;
 
-    // Check the cache now that we own the claim; remove the claim entry so it
-    // does not leak for keys that are already resolved.
-    {
-        let mut cache = state.cache.lock().await;
-        let now = Instant::now();
-        cache.retain(|_, cached| cached.expires_at > now);
-        if let Some(cached) = cache.get(&key).cloned() {
-            drop(cache);
-            state.claims.lock().await.remove(&key);
-            if cached.digest == digest {
-                return Ok(build_response(&cached));
-            }
-            return Err(AppError::Conflict);
-        }
-    }
-
-    let response = next.run(req).await;
-    let cached = cache_response(response, digest, state.ttl).await?;
-
-    // Cache the computed response and drop the per-key claim.
-    {
-        let mut cache = state.cache.lock().await;
-        let mut order = state.order.lock().await;
-        let now = Instant::now();
-        cache.retain(|_, cached| cached.expires_at > now);
-        while order.front().is_some_and(|k| !cache.contains_key(k)) {
-            order.pop_front();
-        }
-        cache.insert(key.clone(), cached.clone());
-        order.push_back(key.clone());
-        while cache.len() > MAX_CACHE_ENTRIES {
-            match order.pop_front() {
-                Some(old) => {
-                    cache.remove(&old);
+    // Execute the request while holding the claim, then remove the claim
+    // entry on every path so failed body collection does not leak the mutex.
+    let result: Result<Response, AppError> = {
+        {
+            let mut cache = state.cache.lock().await;
+            let now = Instant::now();
+            cache.retain(|_, cached| cached.expires_at > now);
+            if let Some(cached) = cache.get(&key).cloned() {
+                if cached.digest == digest {
+                    Ok(build_response(&cached))
+                } else {
+                    Err(AppError::Conflict)
                 }
-                None => break,
+            } else {
+                let response = next.run(req).await;
+                let cached = cache_response(response, digest, state.ttl).await?;
+
+                let mut order = state.order.lock().await;
+                cache.retain(|_, cached| cached.expires_at > now);
+                while order.front().is_some_and(|k| !cache.contains_key(k)) {
+                    order.pop_front();
+                }
+                cache.insert(key.clone(), cached.clone());
+                order.push_back(key.clone());
+                while cache.len() > MAX_CACHE_ENTRIES {
+                    match order.pop_front() {
+                        Some(old) => {
+                            cache.remove(&old);
+                        }
+                        None => break,
+                    }
+                }
+
+                Ok(build_response(&cached))
             }
         }
-        drop(cache);
-        drop(order);
-        state.claims.lock().await.remove(&key);
-    }
+    };
 
-    Ok(build_response(&cached))
+    drop(_guard);
+    state.claims.lock().await.remove(&key);
+    result
 }
 
 fn idempotency_key(req: &Request<Body>) -> Option<IdempotencyKey> {
