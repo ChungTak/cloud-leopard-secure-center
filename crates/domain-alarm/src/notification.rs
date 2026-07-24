@@ -8,6 +8,12 @@ use std::collections::{HashMap, HashSet};
 
 use foundation::{Deadline, TenantId};
 
+const MAX_RECIPIENT_LEN: usize = 1024;
+const MAX_TEMPLATE_LEN: usize = 256;
+const MAX_TEMPLATE_VARS: usize = 64;
+const MAX_TEMPLATE_KEY_LEN: usize = 64;
+const MAX_TEMPLATE_VALUE_LEN: usize = 4096;
+
 /// Supported notification channels. New channels can be added without breaking
 /// the port.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -31,6 +37,43 @@ pub struct Notification {
 }
 
 impl Notification {
+    /// Validate the notification shape and bounds before delivery.
+    pub fn validate(&self) -> Result<(), NotificationError> {
+        if self.recipient.trim().is_empty() || self.recipient.len() > MAX_RECIPIENT_LEN {
+            return Err(NotificationError::new(
+                NotificationErrorKind::Invalid,
+                "recipient is empty or exceeds maximum length",
+            ));
+        }
+        if self.template.trim().is_empty() || self.template.len() > MAX_TEMPLATE_LEN {
+            return Err(NotificationError::new(
+                NotificationErrorKind::Invalid,
+                "template is empty or exceeds maximum length",
+            ));
+        }
+        if self.template_vars.len() > MAX_TEMPLATE_VARS {
+            return Err(NotificationError::new(
+                NotificationErrorKind::Invalid,
+                "too many template variables",
+            ));
+        }
+        for (key, value) in &self.template_vars {
+            if key.trim().is_empty() || key.len() > MAX_TEMPLATE_KEY_LEN {
+                return Err(NotificationError::new(
+                    NotificationErrorKind::Invalid,
+                    "template variable key is empty or too long",
+                ));
+            }
+            if value.len() > MAX_TEMPLATE_VALUE_LEN {
+                return Err(NotificationError::new(
+                    NotificationErrorKind::Invalid,
+                    "template variable value is too long",
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Validate that every template variable is in the whitelist.
     pub fn validate_vars(&self, whitelist: &HashSet<String>) -> Result<(), NotificationError> {
         for key in self.template_vars.keys() {
@@ -96,7 +139,8 @@ impl UnsupportedNotificationPort {
 
 #[async_trait::async_trait]
 impl NotificationPort for UnsupportedNotificationPort {
-    async fn send(&self, _notification: &Notification) -> Result<(), NotificationError> {
+    async fn send(&self, notification: &Notification) -> Result<(), NotificationError> {
+        notification.validate()?;
         if self.enabled {
             Err(NotificationError::new(
                 NotificationErrorKind::Unsupported,
