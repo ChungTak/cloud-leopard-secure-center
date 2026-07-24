@@ -24,14 +24,15 @@ impl Role {
     pub fn new(
         id: RoleId,
         tenant_id: Option<TenantId>,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         is_builtin: bool,
         permissions: Vec<Permission>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         let permission_keys = validate_permissions(tenant_id, permissions)?;
         let now = clock.now();
         Ok(Self {
@@ -51,7 +52,7 @@ impl Role {
     pub fn from_parts(
         id: RoleId,
         tenant_id: Option<TenantId>,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         is_builtin: bool,
         permissions: Vec<Permission>,
         revision: Revision,
@@ -59,8 +60,9 @@ impl Role {
         updated_at: UtcTimestamp,
         actor: Option<UserId>,
     ) -> Result<Self, PlatformError> {
-        let name = name.into();
-        validate_name(&name)?;
+        let name = name.as_ref();
+        validate_name(name)?;
+        let name = name.to_string();
         let permission_keys = validate_permissions(tenant_id, permissions)?;
         Ok(Self {
             id,
@@ -78,14 +80,14 @@ impl Role {
     /// Rename the role and bump its revision.
     pub fn rename(
         &mut self,
-        name: impl Into<String>,
+        name: impl AsRef<str>,
         clock: &dyn Clock,
         actor: Option<UserId>,
     ) -> Result<(), PlatformError> {
         self.require_not_builtin("rename")?;
-        let name = name.into();
-        validate_name(&name)?;
-        self.name = name;
+        let name = name.as_ref();
+        validate_name(name)?;
+        self.name = name.to_string();
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();

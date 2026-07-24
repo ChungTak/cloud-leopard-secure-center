@@ -88,44 +88,31 @@ pub struct ConfigDefinition {
 impl ConfigDefinition {
     /// Create a new configuration definition.
     pub fn new(
-        config_key: impl Into<String>,
+        config_key: impl AsRef<str>,
         value_type: ConfigValueType,
         schema: Option<String>,
-        default_value: impl Into<String>,
+        default_value: impl AsRef<str>,
         sensitive: bool,
         dynamic: bool,
     ) -> Result<Self, PlatformError> {
-        let config_key = config_key.into();
-        let default_value = default_value.into();
-        if config_key.trim().is_empty() {
-            return Err(PlatformError::invalid(
-                "config_key",
-                "configuration key must not be empty",
-            ));
-        }
-        if default_value.trim().is_empty() {
-            return Err(PlatformError::invalid(
-                "default_value",
-                "default value must not be empty",
-            ));
-        }
+        validate_config_key(config_key.as_ref())?;
+        let default_value = default_value.as_ref();
+        validate_config_value(default_value, "default_value")?;
         if sensitive && value_type != ConfigValueType::Secret {
             return Err(PlatformError::invalid(
                 "sensitive",
                 "sensitive definitions must use the secret value type",
             ));
         }
-        let _ = value_type.validate(&default_value)?;
-        if let Some(ref schema) = schema
-            && schema.trim().is_empty()
-        {
-            return Err(PlatformError::invalid("schema", "schema must not be empty"));
+        let _ = value_type.validate(default_value)?;
+        if let Some(ref schema) = schema {
+            validate_config_value(schema, "schema")?;
         }
         Ok(Self {
-            config_key,
+            config_key: config_key.as_ref().to_string(),
             value_type,
             schema,
-            default_value,
+            default_value: default_value.to_string(),
             sensitive,
             dynamic,
         })
@@ -149,6 +136,35 @@ impl ConfigDefinition {
 fn validate_json_schema(_schema: &str, _value: &serde_json::Value) -> Result<(), PlatformError> {
     // Schema validation is intentionally a no-op in the current domain layer.
     // Concrete JSON Schema validation can be added later without changing the interface.
+    Ok(())
+}
+
+pub(crate) fn validate_config_key(key: &str) -> Result<(), PlatformError> {
+    if key.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "config_key",
+            "configuration key must not be empty",
+        ));
+    }
+    if key.len() > crate::MAX_CONFIG_KEY_BYTES {
+        return Err(PlatformError::invalid(
+            "config_key",
+            "configuration key exceeds maximum length",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_config_value(value: &str, field: &'static str) -> Result<(), PlatformError> {
+    if value.trim().is_empty() {
+        return Err(PlatformError::invalid(field, "value must not be empty"));
+    }
+    if value.len() > crate::MAX_CONFIG_VALUE_BYTES {
+        return Err(PlatformError::invalid(
+            field,
+            "value exceeds maximum length",
+        ));
+    }
     Ok(())
 }
 
