@@ -204,7 +204,12 @@ pub async fn audit_write(
     if let Some(trace_id) = &ctx.trace_id {
         record = record.with_trace_id(trace_id.clone());
     }
-    audit.write(&record, ctx).await?;
+    // Audit records are partitioned and RLS-protected by the record's tenant.
+    // For platform-level operations (e.g. tenant creation) the request context
+    // may have no tenant, so derive a tenant-scoped context from the record.
+    let mut audit_ctx = ctx.clone();
+    audit_ctx.tenant_id = Some(tenant_id);
+    audit.write(&record, &audit_ctx).await?;
     Ok(())
 }
 
