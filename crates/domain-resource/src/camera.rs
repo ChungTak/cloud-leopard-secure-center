@@ -71,6 +71,8 @@ impl Camera {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         let now = clock.now();
         Ok(Self {
             id,
@@ -78,7 +80,7 @@ impl Camera {
             device_id,
             area_id: None,
             code,
-            name: name.into(),
+            name,
             sensitivity,
             is_enabled: true,
             revision: Revision::initial(),
@@ -106,13 +108,15 @@ impl Camera {
     ) -> Result<Self, PlatformError> {
         let code = code.into();
         validate_code(&code)?;
+        let name = name.into();
+        validate_name(&name)?;
         Ok(Self {
             id,
             tenant_id,
             device_id,
             area_id,
             code,
-            name: name.into(),
+            name,
             sensitivity,
             is_enabled,
             revision,
@@ -152,11 +156,22 @@ impl Camera {
     }
 
     /// Rename the camera.
-    pub fn rename(&mut self, name: impl Into<String>, clock: &dyn Clock, actor: Option<UserId>) {
-        self.name = name.into();
+    pub fn rename(
+        &mut self,
+        name: impl Into<String>,
+        clock: &dyn Clock,
+        actor: Option<UserId>,
+    ) -> Result<(), PlatformError> {
+        let name = name.into();
+        validate_name(&name)?;
+        if name == self.name {
+            return Ok(());
+        }
+        self.name = name;
         self.updated_at = clock.now();
         self.actor = actor;
         self.revision = self.revision.next();
+        Ok(())
     }
 }
 
@@ -171,6 +186,22 @@ fn validate_code(code: &str) -> Result<(), PlatformError> {
         return Err(PlatformError::invalid(
             "code",
             "camera code must be at most 128 characters",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_name(name: &str) -> Result<(), PlatformError> {
+    if name.trim().is_empty() {
+        return Err(PlatformError::invalid(
+            "name",
+            "camera name must not be empty",
+        ));
+    }
+    if name.len() > 128 {
+        return Err(PlatformError::invalid(
+            "name",
+            "camera name must be at most 128 characters",
         ));
     }
     Ok(())
